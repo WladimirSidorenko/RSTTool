@@ -1,0 +1,152 @@
+analogy rst
+antithesis rst
+attribution rst
+background rst
+cause rst
+circumstance rst
+comparison rst
+comment rst
+concession rst
+conclusion rst
+condition rst
+consequence-s rst
+consequence-n rst
+contingency rst
+elaboration-additional rst
+elaboration-set-member rst
+elaboration-process-step rst
+elaboration-object-attribute rst
+elaboration-general-specific rst
+enablement rst
+evaluation-s rst
+evaluation-n rst
+evidence rst
+example rst
+explanation-argumentative rst
+hypothetical rst
+interpretation-s rst
+interpretation-n rst
+manner rst
+means rst
+otherwise rst
+parenthetical rst
+preference rst
+problem-solution-s rst
+problem-solution-n rst
+purpose rst
+question-answer-n rst
+question-answer-s rst
+reason rst
+restatement rst
+result rst
+rhetorical-question rst
+summary-s rst
+summary-n rst
+temporal-before rst
+temporal-same-time rst
+temporal-after rst
+topic-drift rst
+topic-shift rst
+OTHER-rel rst
+-
+analogy-e embedded
+antithesis-e embedded
+attribution-e embedded
+background-e embedded
+cause-e embedded
+circumstance-e embedded
+comparison-e embedded
+comment-e embedded
+concession-e embedded
+conclusion-e embedded
+condition-e embedded
+consequence-s-e embedded
+consequence-n-e embedded
+contingency-e embedded
+elaboration-additional-e embedded
+elaboration-set-member-e embedded
+elaboration-process-step-e embedded
+elaboration-object-attribute-e embedded
+elaboration-general-specific-e embedded
+enablement-e embedded
+evaluation-s-e embedded
+evaluation-n-e embedded
+evidence-e embedded
+example-e embedded
+explanation-argumentative-e embedded
+hypothetical-e embedded
+interpretation-s-e embedded
+interpretation-n-e embedded
+manner-e embedded
+means-e embedded
+nonrestrictive-relative-e embedded
+otherwise-e embedded
+preference-e embedded
+problem-solution-s-e embedded
+problem-solution-n-e embedded
+purpose-e embedded
+question-answer-s-e embedded
+question-answer-n-e embedded
+reason-e embedded
+relative-e embedded
+restatement-e embedded
+restrictive-rel-e embedded
+result-e embedded
+summary-s-e embedded
+summary-n-e embedded
+temporal-before-e embedded
+temporal-same-time-e embedded
+temporal-after-e embedded
+OTHER-rel-e embedded
+-
+Analogy multinuc
+Cause-Result multinuc
+Comment-Topic multinuc
+Comparison multinuc
+Consequence multinuc
+Contrast multinuc
+Disjunction multinuc
+Enablement multinuc
+Evaluation multinuc
+Interpretation multinuc
+Inverted-Sequence multinuc
+Joint multinuc
+List multinuc
+Otherwise multinuc
+Parallel multinuc
+Problem-Solution multinuc
+Proportion multinuc
+Question-Answer multinuc
+Reason multinuc
+Result multinuc
+Same-Unit multinuc
+Same-Unit-NS multinuc
+Same-Unit-SN multinuc
+Sequence multinuc
+Temporal-Same-Time multinuc
+TextualOrganization multinuc
+Topic-Comment multinuc 
+Topic-WA-Comment multinuc 
+Topic-Drift multinuc
+Topic-Shift multinuc
+OTHER-multinuc multinuc 
+-
+Title constit Paper
+Topic constit Paper
+Text constit Paper
+Attribution constit Paper
+Author  constit Paper
+Abstract  constit Paper
+SectionTitle constit Paper
+SectionText constit Paper
+Heading constit Section
+Summary  constit Section
+Column-Title constit Paper
+
+
+
+
+
+
+
+

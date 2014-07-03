@@ -1,0 +1,276 @@
+###########################################
+# DRAW
+# Functions used by RST-Tool for drawing arcs rst-nodes and
+# relation-arcs between them
+
+
+####################################################
+# Draw the RST Tree
+
+proc show-rst {} {
+  global node group_nodes text_nodes rstw visible_nodes
+# go through each text and seq node and display it.
+  foreach nid [concat $group_nodes $text_nodes] {
+    if $node($nid,visible) {
+      display-node $nid
+    }
+  }
+}
+
+
+proc display-node {nid} {
+  global node rstw node_width group_nodes wtn
+  debug "display-node: $nid"
+  set text $node($nid,text)
+  if { $nid > 5000 } {
+    set text "$text"
+  } else {
+    set text "($nid)\n$text"
+  }
+  set xpos $node($nid,xpos)
+  set ypos [expr $node($nid,ypos) + 2]
+
+  if { $node($nid,constit) != {} } {
+    set color "blue"
+    set wgt [draw-text $rstw $node($nid,constit) $xpos $ypos\
+                       "-width $node_width -fill $color"]
+  set ypos [expr $ypos + 15]
+  }
+
+  if [member $nid $group_nodes] {
+    set color "green"
+  } else {
+    set color "black"
+  }
+  set wgt [draw-text $rstw $text $xpos $ypos\
+                       "-width $node_width -fill $color"]
+
+  set node($nid,textwgt) $wgt
+  set wtn($wgt) $nid
+  display-span $nid
+  display-arc $nid
+}
+
+proc display-span {nid} {
+  global rstw node  half_node_width last_text_node_id
+  debug "display-span: $nid $node($nid,span)"
+  # draw span line, from start of first node, to end of second
+
+  if { $nid == 0 } { return }
+
+  set span $node($nid,span)
+  set ypos $node($nid,ypos)
+
+  set min 999999
+  set max 0
+
+#  # find the left+rightmost visible nodes
+#
+#  set flag 1
+#
+#  for  {set i [lindex $span 0]} {$i <= [lindex $span 1]} {incr i 1} {
+#   if { $flag && $i > $last_text_node_id } { 
+#     set i 5001 
+#     set flag 0
+#   }
+#   set par $node($i,parent)
+#   if { $node($i,visible) == 1} {
+#     if { $i < $min } {set min $i}
+#     if { $i > $max } {set max $i}
+#   } elseif { $node($i,relname) == "span" } {
+#     if { $node($par,visible) == 1 } {
+#       if { $i < $min } {set min $i}
+#       if { $i > $max } {set max $i}
+#     }
+#   } 
+#  }
+#
+#  if { $min == 999999 } { set min $nid}
+#  if { $max == 0      } { set max $nid}
+
+# find the positions of the left & rightmost visible nodes
+  set primary_children {}
+  if { $node($nid,type) == "text" } {
+  } elseif { $node($nid,type) == "span" } {
+      foreach child $node($nid,children) {
+	if { $node($child,relname) == "span" } {
+          lappend primary_children $child
+	}
+      }
+  } elseif { $node($nid,type) == "multinuc" } {
+      foreach child $node($nid,children) {
+	if { [group-relation-p $node($child,relname)] } {
+          lappend primary_children $child
+	}
+      }
+  } elseif { $node($nid,type) == "constit" } {
+      foreach child $node($nid,children) {
+	if { [group-relation-p $node($child,relname)] } {
+          lappend primary_children $child
+	}
+      }
+  }
+  while { $primary_children != {} } {
+      set next_generation {}
+      foreach child $primary_children {
+	foreach grandchild $node($child,children) {
+	  lappend next_generation $grandchild
+	}
+        if { $node($child,visible) == 1} {
+	  set this_xpos $node($child,xpos)
+	  if { $this_xpos < $min } {set min $this_xpos}
+	  if { $this_xpos > $max } {set max $this_xpos}
+	}
+      }
+      set primary_children $next_generation
+  }
+
+  set this_xpos $node($nid,xpos)
+  if { $min == 999999 } { set min $this_xpos }
+  if { $max == 0      } { set max $this_xpos }
+
+  # draw the span-line
+  set node($nid,spanwgt) [draw-line $rstw\
+        [expr $min - $half_node_width] $ypos\
+        [expr $max + $half_node_width] $ypos]
+#        [expr $node($min,xpos) - $half_node_width] $ypos\
+#        [expr $node($max,xpos) + $half_node_width] $ypos]
+ }
+
+
+proc display-arc {sat} {
+  global rstw node text_nodes  relations
+  debug "display-arc: $sat"
+  set nuc $node($sat,parent)
+  if {$nuc == {}} {return}
+
+# set some variables
+  set ypos $node($sat,ypos)
+  set reltype [relation-type $node($sat,relname)]
+  set color "red"
+  set satpnt "$node($sat,xpos) $node($sat,ypos)"
+  set nucbot [bottom-point [ntw $nuc]]
+  set label $node($sat,relname)
+
+  switch -- $reltype {
+    embedded { 	#draw an embedded linker (an arc from nuctop to sattop)
+		set color "blue"
+	       if {$node($nuc,constit) != {}} {
+                 set nucpnt [add-points [$rstw coords [ntw $nuc]] {0 -17}]
+	       } else {
+                 set nucpnt [add-points [$rstw coords [ntw $nuc]] {0 -2}]
+	       }
+               set midpnt [subtract-points [mid-point $nucpnt $satpnt] "0 20"] 
+               set labelpnt [subtract-points $midpnt {0 6}]
+               set node($sat,arrowwgt)\
+                    [draw-arc $rstw [concat $nucpnt $midpnt $satpnt]]
+         }
+    constit  { set node($sat,arrowwgt) \
+                 [$rstw create line [lindex $nucbot 0] [lindex $nucbot 1]\
+                                    [lindex $satpnt 0] [lindex $nucbot 1]\
+                                    [lindex $satpnt 0] [lindex $satpnt 1]]
+               set labelpnt [subtract-points $satpnt {0 15}]
+             }
+    multinuc { set node($sat,arrowwgt)\
+                  [draw-line-between $rstw $nucbot $satpnt]
+	       set labelpnt [add-points $nucbot {0 15}]}
+    span     { set node($sat,arrowwgt)\
+                     [draw-line-between $rstw $nucbot $satpnt]
+               set labelpnt [subtract-points $satpnt {0 15}]
+#NEW constit hack
+             }
+    rst {  #draw an rst linker (an arc from nuctop to sattop)
+	       if {$node($nuc,constit) != {}} {
+                 set nucpnt [add-points [$rstw coords [ntw $nuc]] {0 -17}]
+	       } else {
+                 set nucpnt [add-points [$rstw coords [ntw $nuc]] {0 -2}]
+	       }
+               set midpnt [subtract-points [mid-point $nucpnt $satpnt] "0 20"] 
+               set labelpnt [subtract-points $midpnt {0 6}]
+              # temp hack
+             # puts "XXX: $nuc [expr [find-first-text-node $sat] - 1]"
+           #   if { $nuc == [expr [find-first-text-node $sat] - 2] } {
+           #       set  labelpnt [add-points $labelpnt "40 0"]
+           #   }
+               set node($sat,arrowwgt)\
+                    [draw-arc $rstw [concat $nucpnt $midpnt $satpnt]]
+         }
+    }
+
+# Draw the Label
+  if { $reltype != "span" } {
+    set node($sat,labelwgt) [draw-text $rstw $label $labelpnt "-fill $color"]
+#TESTING
+#  } elseif { $reltype == "span" && $node($sat,constit) != {} } {
+#    set label $node($sat,constit)
+#    set node($sat,labelwgt) [draw-text $rstw $label $labelpnt "-fill $color"]
+  }
+#NEW constit hack
+}
+
+proc erase-subtree {nid} {
+  global node
+  if $node($nid,visible) {
+    erase-node $nid
+    foreach cid $node($nid,children) {
+      erase-subtree $cid
+    }
+  }
+}
+  
+proc erase-node {nid} {
+  global rstw node
+  debug "erase-node: $nid $node($nid,spanwgt)"
+  if $node($nid,visible) {
+    $rstw delete [ntw $nid]
+    $rstw delete $node($nid,spanwgt)
+    set wtn([ntw $nid]) {}
+    set node($nid,textwgt) {}
+    set node($nid,spanwgt) {}
+    erase-arc $nid
+  }
+}
+
+proc erase-arc {nid} {
+  global rstw node
+  debug "erase-arc: $nid"
+  if { $node($nid,arrowwgt) != {} } {
+    $rstw delete $node($nid,arrowwgt)
+    $rstw delete $node($nid,labelwgt)
+  }
+}
+
+proc redraw-subtree {nid} {
+  global node
+
+  erase-node $nid
+  display-node $nid
+  foreach cid $node($nid,children) {
+    if $node($cid,visible) {
+      redraw-subtree $cid
+    }
+  }
+}
+
+proc redisplay-node {nid} {
+# wipes the old version before drawing
+  global node
+
+   if { $node($nid,textwgt) != {} } {
+         erase-node $nid
+   }
+      
+    display-node $nid
+}
+
+proc redraw-child-arcs {nid} {
+# redraws the child-arcs pointing at this node
+  global node 
+  debug "redraw-child-arcs: $nid"
+  foreach cid $node($nid,children) {
+    if $node($cid,visible) {
+     erase-arc $cid
+     display-arc $cid
+    }
+  }
+}

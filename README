@@ -1,0 +1,22 @@
+The doc subdirectory has three files:
+
+1. sysadmin.ps - contains the acknowledgment section and describes the 
+steps you are supposed to follow if you want to use the tool.
+
+2. manual.ps - the discourse tagging manual that we developed and use.
+
+3. tagging.ps - the paper below.
+
+
+@InProceedings{marcu-tagging99,
+  author = 	 {Daniel Marcu and Estibaliz Amorrort and Magdalena Romera},
+  title = 	 {Experiments in Constructing a Corpus of Discourse Trees},
+  booktitle = 	 {Proceedings of the ACL'99 Workshop on Standards and Tools for Discourse Tagging},
+  pages =	 { },
+  year =	 1999,
+  address =	 {University of Maryland},
+  month =	 {June 22}
+}
+
+
+Please send any comments and suggestions to marcu@isi.edu.

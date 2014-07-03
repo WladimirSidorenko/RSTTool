@@ -1,0 +1,19 @@
+interface {		The Structure Screen
+  How to link the last node you created to a node on the right hand branch:
+  How to link any node to any other node:
+
+		The Text Screen
+  How to select your next node:
+  How to add a parenthetical phrase to the last node you created:
+
+		The Menu Bar
+File - 
+	load text file
+	quit
+Display -
+	clear structure
+	redraw structure
+Save -
+	dot format
+	lisp format
+	sgml format}

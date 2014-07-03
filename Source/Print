@@ -1,0 +1,46 @@
+### CODE to Manage PS file saving
+
+proc save-subtree-as-ps {nid} {
+  global node rstw DIR
+  if { $nid !={} } {
+    set print_region [find-subtree-region $nid]
+    set file [fileselect "Save Postscript as" "untitled.ps" 0]
+    $rstw postscript -file $file \
+                   -x [lindex $print_region 0]\
+                   -y [lindex $print_region 1]\
+                   -width [expr [lindex $print_region 2] - [lindex $print_region 0] + 10]\
+                   -height [expr [lindex $print_region 3] - [lindex $print_region 1] + 10]\
+                   -pagex 0.i -pagey 11.i -pageanchor nw
+  set-mode link
+  }
+}
+
+
+proc find-subtree-region {nid} {
+  global node
+  puts "find-subtree-region: $nid"
+  set node_region [find-node-region $nid]
+  foreach cid $node($nid,children) {
+   if {$node($cid,visible) == 1} {
+      set node_region [unify-node-regions $node_region [find-subtree-region $cid]]
+   }
+  }
+  return $node_region
+}
+
+proc find-node-region {nid} {
+  global node half_node_width
+  puts "find-node-region: $nid"
+  set xmin [expr $node($nid,xpos) - $half_node_width]
+  set xmax [expr $node($nid,xpos) + $half_node_width]
+  set ymin $node($nid,ypos)
+  set ymax [lindex [bottom-point [ntw $nid]] 1]
+  return "$xmin $ymin $xmax $ymax"
+}
+
+proc unify-node-regions {reg1 reg2} {
+  return "[min [lindex $reg1 0] [lindex $reg2 0]]\
+          [min [lindex $reg1 1] [lindex $reg2 1]]\
+          [max [lindex $reg1 2] [lindex $reg2 2]]\
+          [max [lindex $reg1 3] [lindex $reg2 3]]"
+}
