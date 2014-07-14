@@ -6,8 +6,7 @@ wm protocol . WM_DELETE_WINDOW Quit
 frame .segmentframe
 
 ######################################
-# Load the modules
-
+# Load modules
 set LOGIN marcu
 set PRINTER ps9b_s
 set MAX_CLICK_DELAY 120
@@ -16,12 +15,13 @@ set VERSION UNIX
 if {$VERSION == "UNIX"} {
     set DIR   [exec pwd]
 } else {
+    # bad hardcode
     set DIR     "c:/windows/Desktop/RSTTool/"
 }
 set DOT_EXISTS YES
 #set DOT_EXISTS NO
 if {$DOT_EXISTS == "YES"} {
-    set DOT     "/nfs/etg/mediadoc/graphviz/src/cmd/dot/dot"
+    set DOT    "/nfs/etg/mediadoc/graphviz/src/cmd/dot/dot"
 } else {
     set DOT    {}
 }

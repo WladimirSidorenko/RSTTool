@@ -1,3 +1,5 @@
+# -*- mode: tcl; -*-
+
 #  RST EDITOR
 
 # 1. On hide, scroll to prior visible node
@@ -676,15 +678,15 @@ proc expand {nid {really {}} } {
     #END
 
 
-    proc hide-node {nid} { 
+    proc hide-node {nid} {
 	global node
 	set node($nid,visible) 0
 	foreach cid $node($nid,children) {
 	    hide-node $cid
 	}
     }
-    
-    proc show-node {nid} { 
+
+    proc show-node {nid} {
 	global node
 	set node($nid,visible) 1
 	foreach cid $node($nid,children) {
@@ -698,11 +700,11 @@ proc expand {nid {really {}} } {
     proc save-rst { {filenum {}} } {
 	global currentfile rstw node text_nodes group_nodes
 	if {"$filenum" == {} } {
-	    set rstfile [fileselect "Save RST File" $currentfile.rst 0]
+	    set rstfile [fileselect "Save RST File" [file dirname $currentfile]/rst [file tail [file rootname $currentfile]].0]
 	} else {
 	    set junk [string last / $currentfile]
 	    set junkplus [expr $junk + 1]
-	    set rstfile $currentfile.rst/$filenum
+	    set rstfile [file dirname $currentfile]/rst/[file tail [file rootname $currentfile]].$filenum
 	}
 	if {$rstfile == {}} {return}
 
@@ -767,7 +769,7 @@ proc expand {nid {really {}} } {
 	} else {
 	    set junk [string last / $currentfile]
 	    set junkplus [expr $junk + 1]
-	    set rstfile $currentfile.rst/$filenum
+	    set rstfile [file dirname $currentfile]/rst/[file tail [file rootname $currentfile]].$filenum
 	}
 	if {$rstfile == {}} {return}
 	set f [open $rstfile r]
@@ -777,8 +779,8 @@ proc expand {nid {really {}} } {
 	    clear-node $nid
 	    gets $f node($nid,text)
 	    gets $f node($nid,parent)
-	    gets $f node($nid,relname) 
-	    gets $f node($nid,constit) 
+	    gets $f node($nid,relname)
+	    gets $f node($nid,constit)
 	    if { $node($nid,relname) != {}
 		 && [relation-type $node($nid,relname) ] == 0 } {
 		puts "Load-RST: Unknown relation: $node($nid,relname) - ignoring."
@@ -790,9 +792,9 @@ proc expand {nid {really {}} } {
 	    if { [member  $node($nid,text) {span multinuc constit embedded}] } {
 		set node($nid,type) $node($nid,text)
 		if ![member $nid $group_nodes] {add-group-node $nid}
-	    } else { 
+	    } else {
 		set node($nid,type) "text"
-		add-text-node $nid 
+		add-text-node $nid
 		set node($nid,span) "$nid $nid"
 	    }
 	}
