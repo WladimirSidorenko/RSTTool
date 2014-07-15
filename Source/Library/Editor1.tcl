@@ -66,7 +66,7 @@ proc reload-current-file {} {
 }
 
 proc load-file {filename {really {1}}} {
-    global currentfile undoer theText theGraph collapsed_nodes
+    global currentfile undoer theText theForrest collapsed_nodes
     global step_file
 
     set last_element [llength $collapsed_nodes]
@@ -77,18 +77,57 @@ proc load-file {filename {really {1}}} {
     if {$step_file != {}} { close-step-file }
     if { $filename == {} } {return}
 
-    # 2. Load the named file
+    # 2. Load named file
     set f [open $filename]
     .editor.text delete 1.0 end
+
     set theText ""
     set textPortion ""
     set lines []
+    set line ""
+    set remainder ""
+    set origlen 0
+    set id_end 0
+
+    set t_id ""
+    set prnt_id ""
+    set t_trimmed ""
+    set t_lvl 0
+    set prev_lvl 0
+    set t_text ""
+
     while {![eof $f]} {
 	# obtain next 1k symbols from stream
 	set textPortion [read $f 1000]
+	# if we have string left from previous read, we append it to `TextPortion`
+	if {$remainder != ""} {
+	    set textPortion "$remainder$textPortion"
+	    set remainder ""
+	}
+	# split read text chunk
 	set lines [split $textPortion "\n"]
+	# if read text chunk did not end with a newline, pop the last element
+	# from the list and store it in the variable `$remainder`
+	if {[string index $textPortion end] != "\n"} {
+	    set remainder [lindex $lines end]
+	    set lines [lreplace $lines end end]
+	}
+	# iterate over obtained lines
 	foreach line $lines {
-	    line{}
+	    # parse line by obtaining the id of described tweet and the
+	    # nestedness level of that tweet in discussion
+	    puts "original line = $line"
+
+	    set origlen [string length $line]
+	    set line [string trimleft $line "\t"]
+	    set t_nested [expr $origlen - [string length $line]]
+	    set id_end [string wordend $line 0]
+	    set t_id [string range $line 0 $id_end]
+	    set line [string trimleft [string range $line $id_end end]]
+
+	    puts "t_nested = $t_nested"
+	    puts "t_id = $t_id"
+	    puts "modified line = $line"
 	}
 	append theText ${textPortion}
     }
