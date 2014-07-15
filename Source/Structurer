@@ -70,26 +70,45 @@ $File add command -label "Load Text File" -command {
 			"File $filename already open."\
 			warning 0 {Replace} "Cancel"]
 	if { $result == 1 } {
-	    set a_different_file 0
 	    set result 2
 	} else {
-	    set a_different_file 0
 	    set result 0
 	}
+	set a_different_file 0
     } elseif {$currentfile != {}} {
 	print_lisp
 	set result 0
     }
     if {$a_different_file} {
+	# select file in which new annotation should be stored and
+	# which probably contains old annotation
 	set directory [file dirname $filename]
-	# probably a bug, filename in `rst` directory should
-	# probably look differently
-	if {[file exists $directory/rst/[file tail $filename]]} {
-	    set result [tk_dialog .d1 {File Already Structured}\
-			    "$filename has already been at least partially structured. \
-	    If you chose \"Clear & Load\" that work will be erased."\
-			    warning 0 {Clear & Load} {Reload Structure} "Cancel"]
+	set default_anno_file $directory/rst/[file tail $filename]
+
+	set result0 [tk_dialog .d1 {Select Annotation File}\
+			 "Annotation will be loaded/stored in file \"$default_anno_file\".  \
+Click \"New\" to create another file or \"Choose\" to select another existing one.\n" info 0 \
+			 "Use default" "New" "Choose" "Cancel"]
+
+	# get the name of the file from which annotation should be loaded
+	if {$result0 == 1} {
+	    set anno_file [fileselect "Select Annotation File" $default_anno_file 0]
+	} elseif {$result0 == 2} {
+	    set anno_file [fileselect "Select Annotation File" $default_anno_file 1]
+	} elseif {$result0 == 0} {
+	    set anno_file $default_anno_file
+	}
+
+	# check if an already existing file should be erased
+	set result1 -1
+	if {[file readable $anno_file]} {
+	    set result1 [tk_dialog .d1 {File Already Structured}\
+                       "Annotation file \"$anno_file\" already exists. \
+Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 	} else {
+	    if {! [file exists [file dirname $anno_file]]} {
+		file mkdir $anno_file
+	    }
 	    export-time
 	    load-file $filename
 	    set savenum 0
@@ -98,21 +117,19 @@ $File add command -label "Load Text File" -command {
 	    start-time
 	}
     }
-    if { $result == 2 } {
-    } elseif { $result == 0 } {
-	set sure [tk_dialog .d2 {Doublecheck}\
-		      "Are you sure?"\
-		      warning 0 {Clear & Load} "Cancel"]
+
+    if { $result1 == 0 } {
+	set sure [tk_dialog .d2 {Doublecheck} "Are you sure?" warning 0 {Erase} "Cancel"]
 	if { $sure == 0 } {
 	    if {$a_different_file == 1} { export-time }
- 	    set mystepfile [set-file-name step $filename]
-	    wincopy $filename.rst/$mystepfile $filename.rst/$mystepfile.backup
+ 	    set mystepfile [file dirname $filename]/rst/[set-file-name step $filename]
+	    wincopy $mystepfile $mystepfile.bak
             load-file $filename
 	    set savenum 0
 	    reset-and-redisplay
 	    start-time reset
 	} else { return }
-    } elseif { $result == 1 } {
+    } elseif { $result1 == 1 } {
 	export-time
 	set currentfile $filename
 	set savenum 0
@@ -120,6 +137,7 @@ $File add command -label "Load Text File" -command {
 	start-time
     }
 }
+
 $File add command -label "Peruse Text File" -command {
     export-time
 
@@ -1954,8 +1972,8 @@ proc expand {nid {really {}} } {
 	    set cancelled 0
 	    undo_by_reload
 	}
-    }  
-    
+    }
+
     proc fix-children {new_node clicked_node dragged_node} {
 	global node
 	foreach child $node($new_node,children) {

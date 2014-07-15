@@ -270,19 +270,19 @@ proc min {args} {
 }
 
 
-proc fileselect {{title "File Selection"} {default {}} {mustExist 1} } {
+proc fileselect {{title "Select File"} {default {}} {mustExist 1} {prnt .}}  {
     global currentfile
 
-    if {[string length $currentfile]} {
+    if {[string length $currentfile] != 0} {
 	set cur_dir [file dirname $currentfile]
     } else {
 	set cur_dir $::env(HOME)
     }
 
     if {$mustExist == 1} {
-	tk_getOpenFile -initialdir $cur_dir -initialfile $default -title $title
+	tk_getOpenFile -initialdir $cur_dir -initialfile $default -parent $prnt -title $title
     } else {
-	tk_getSaveFile -initialdir $cur_dir -initialfile $default -title $title
+	tk_getSaveFile -initialdir $cur_dir -initialfile $default -parent $prnt -title $title
     }
 }
 

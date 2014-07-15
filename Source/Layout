@@ -1,3 +1,5 @@
+# -*- mode: tcl; -*-
+
 ###########################################
 # Layout
 # Functions used by RST-Tool for laying-out RSt structures
