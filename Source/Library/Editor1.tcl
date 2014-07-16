@@ -65,8 +65,107 @@ proc reload-current-file {} {
     .editor.text tag add new 1.0 end
 }
 
+proc read-file {a_istream} {
+    global theText theRoots theForrest
+
+    set origlen 0; # length of complete line
+    set modlen 0;  # length of modified line
+    set modline ""; # auxiliary variable for storing text trimmed of tabs
+
+    set t_id "";		# id of thew tweet
+    set t_lvl 0;		# nestedness level of the tweet
+    set t_text "";		# tweet's text
+
+    set lvl_diff 0;		# difference between current and
+				# previous nestedness levels
+    set prev_lvl 0;		# previous nestedness level
+    set prev_id "";		# previous tweet id
+    set prnt_id "";		# id of parent tweet
+    set parents {};		# stack of parents
+
+    set chunk "";		# text chunk read from file
+    set remainder "";		# incompletely read line part
+    set line "";		# single line
+    set lines [];		# array of split lines
+
+    set theText "";
+    while {![eof $a_istream]} {
+	# obtain next 1k symbols from the input stream
+	set chunk [read $a_istream 1000]
+	# if there is string left from the previous run, append it to `TextPortion`
+	if {$remainder != ""} {
+	    set chunk "$remainder$chunk"
+	    set remainder ""
+	}
+	# split read text chunk
+	set lines [split $chunk "\n"]
+	# if read text chunk did not end with a newline, pop the last element
+	# from the list and store it in the variable `$remainder`
+	if {[string index $chunk end] != "\n"} {
+	    set remainder [lindex $lines end]
+	    set lines [lreplace $lines end end]
+	}
+	# iterate over obtained lines
+	foreach line $lines {
+	    # parse line by obtaining the id of described tweet and
+	    # the nestedness level of that tweet in discussion
+	    set origlen [string length $line]
+	    set line [string trimleft $line "\t"]
+	    set modlen [string length $line]
+	    if {$modlen == 0} {
+		set prnt_id "";
+		set prv_lvl 0;
+		continue;
+	    }
+	    set t_lvl [expr $origlen - $modlen];
+	    # get id of the tweet
+	    set id_end [string wordend $line 0];
+	    incr id_end -1;
+	    set t_id [string range $line 0 $id_end];
+	    if {[string length $t_id] == 0} {error "Tweet id could not be obtained for line '$line'."};
+	    incr id_end 2;
+	    set t_text [string trimleft [string range $line $id_end end]];
+	    # if {[string length $t_text] == 0} {error "Empty text specified at line '$line'."};
+	    # check that given tweet id was not seen previously
+	    if {[info exists theForrest($t_id)]} {error "Duplicate id: '$t_id'";}
+	    # store id of the tweet which starts the discussions in
+	    # the list of discussion roots
+	    if {$t_lvl == 0} {
+		lappend theRoots $t_id;
+		set parents {};
+		set prnt_id NaN;
+	    } else {
+		set lvl_diff [expr $t_lvl - $prev_lvl];
+		if  {[expr $lvl_diff < 0]} {
+		    # successively pop last elements from the stack of
+		    # parents
+		    for {set i 0} {$i > $lvl_diff} {incr i -1} {
+			set parents [lreplace $parents end end];
+		    }
+		} elseif {[expr $lvl_diff > 0]} {
+		    # if nestedness level is greater than level of the
+		    # previous tweet, then this tweet is the reply to the
+		    # previous one
+		    if {$lvl_diff > 1} {error "Incorrect line format.\
+ An answer to non-existing message detected (check the number of initial indentations):\n'$line'";}
+		    lappend parents $prev_id;
+		};
+		# the new topmost element will serve as parent
+		set prnt_id [lindex $parents end];
+		# append id of current message to the list of children of the parent of that message
+		lset theForrest($prnt_id) end [concat [lindex $theForrest($prnt_id) end] [list $t_id]];
+	    }
+	    # create new entry in `theForrest` for current tweet
+	    set theForrest($t_id) [list "$t_text" $prnt_id {}];
+	    # remember previous nestedness level
+	    set prev_lvl $t_lvl;
+	    set prev_id $t_id;
+	}
+    }
+}
+
 proc load-file {filename {really {1}}} {
-    global currentfile undoer theText theForrest collapsed_nodes
+    global currentfile undoer collapsed_nodes
     global step_file
 
     set last_element [llength $collapsed_nodes]
@@ -80,57 +179,7 @@ proc load-file {filename {really {1}}} {
     # 2. Load named file
     set f [open $filename]
     .editor.text delete 1.0 end
-
-    set theText ""
-    set textPortion ""
-    set lines []
-    set line ""
-    set remainder ""
-    set origlen 0
-    set id_end 0
-
-    set t_id ""
-    set prnt_id ""
-    set t_trimmed ""
-    set t_lvl 0
-    set prev_lvl 0
-    set t_text ""
-
-    while {![eof $f]} {
-	# obtain next 1k symbols from stream
-	set textPortion [read $f 1000]
-	# if we have string left from previous read, we append it to `TextPortion`
-	if {$remainder != ""} {
-	    set textPortion "$remainder$textPortion"
-	    set remainder ""
-	}
-	# split read text chunk
-	set lines [split $textPortion "\n"]
-	# if read text chunk did not end with a newline, pop the last element
-	# from the list and store it in the variable `$remainder`
-	if {[string index $textPortion end] != "\n"} {
-	    set remainder [lindex $lines end]
-	    set lines [lreplace $lines end end]
-	}
-	# iterate over obtained lines
-	foreach line $lines {
-	    # parse line by obtaining the id of described tweet and the
-	    # nestedness level of that tweet in discussion
-	    puts "original line = $line"
-
-	    set origlen [string length $line]
-	    set line [string trimleft $line "\t"]
-	    set t_nested [expr $origlen - [string length $line]]
-	    set id_end [string wordend $line 0]
-	    set t_id [string range $line 0 $id_end]
-	    set line [string trimleft [string range $line $id_end end]]
-
-	    puts "t_nested = $t_nested"
-	    puts "t_id = $t_id"
-	    puts "modified line = $line"
-	}
-	append theText ${textPortion}
-    }
+    read-file $f
     close $f
 
     # 3. Stop undo past installation
