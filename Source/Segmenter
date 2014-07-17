@@ -1,3 +1,5 @@
+# -*- mode: tcl; -*-
+
 # Define Frame for a text-segmentation window
 # And Procedures to support it
 

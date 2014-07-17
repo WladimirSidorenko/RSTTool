@@ -174,64 +174,50 @@ proc scrolled-text {name args} {
     # -height <integer>
     # -font <font-spec>
     # -titlevar varname : variable containing the name of the frame title
+    set bg [getarg -b $args]
+    if {$bg == {}} {set bg white}
     set height [getarg -height $args]
     if { $height == {} } {set height 40}
-    frame $name -height $height
-    label $name.title -textvariable [getarg -titlevar $args]
-    text  $name.text  -bg white -relief sunken\
-	-yscrollcommand "$name.scroll set"
-    scrollbar $name.scroll -command "$name.text yview"
-    set messagebar [getarg -messagebar $args]
-    if { $messagebar == "t"} {
-	text  $name.msg  -bg grey -relief raised
-    }
-    set font [getarg -font $args]
-    if { $font != {} } {
-	$name.text configure -font $font
-    }
-    pack $name.title -side top
-    pack $name.scroll -side right -fill y 
-    pack $name.text -fill both -expand 1 -side left
-    if {$messagebar == "t"} {
-	pack $name.msg  -fill x -expand 1 -side top
-    }
-}
 
-proc scrolled-text {name args} {
-    # Returns a scrollable text widget
-    # $name.text is the actual text widger
-    # $name.title is the title
-    #
-    # Args: (all optional)
-    # -height <integer>
-    # -font <font-spec>
-    # -titlevar varname : variable containing the name of the frame title
-    set height [getarg -height $args]
-    if { $height == {} } {set height 40}
     frame $name -height $height
-    frame $name.textwindow
+    # add buttons for navigating around discussions
+    set navibar [frame $name.navibar]
+    pack $navibar -side top;
+    set btnNext [button $name.btnNextMsg -text "Next"];
+    set btnPrev [button $name.btnPrevMsg -text "Previous"];
+    pack $btnPrev $btnNext -in $navibar -side left;
+
+    frame $name.textWindowPrnt
+    frame $name.textWindow
     label $name.title -textvariable [getarg -titlevar $args]
 
-    text  $name.text  -bg white -relief sunken\
-	-yscrollcommand "$name.scroll set"
+    text  $name.textPrnt  -bg $bg -relief sunken -yscrollcommand "$name.scrollPrnt set"
+    scrollbar $name.scrollPrnt -command "$name.textPrnt yview"
+
+    text  $name.text  -bg $bg -relief sunken -yscrollcommand "$name.scroll set"
     scrollbar $name.scroll -command "$name.text yview"
+
     set messagebar [getarg -messagebar $args]
     if { $messagebar == "t"} {
 	frame $name.msgbar -height 10
-	text  $name.msg  -bg grey -relief raised -height 1.2
+	text  $name.msg  -bg $bg -relief raised -height 1.2
     }
     set font [getarg -font $args]
     if { $font != {} } {
 	$name.text configure -font $font
     }
     pack $name.title  -side top  -fill x
-    pack $name.textwindow -side top -expand 1 -fill both
+    pack $name.textWindowPrnt -side top -expand 1 -fill both
+    pack $name.textPrnt -in $name.textWindowPrnt -side left -fill both -expand 1
+    pack $name.scrollPrnt -in $name.textWindowPrnt -side right -fill y
+
+    pack $name.textWindow -side bottom -expand 1 -fill both
+    pack $name.text -in $name.textWindow -side left -fill both -expand 1
+    pack $name.scroll -in $name.textWindow -side right -fill y
     if {$messagebar == "t"} {
 	pack $name.msg -in $name.msgbar -fill x -expand 1 -side top
 	pack $name.msgbar -fill x  -side top
     }
-    pack $name.text -in $name.textwindow -fill both -expand 1 -side left
-    pack $name.scroll -in $name.textwindow -side right -fill y 
 }
 
 

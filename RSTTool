@@ -91,6 +91,7 @@ proc add-this-to-a-node { do_it {my_current {}} {dummy_param {}} } {
 	.editor.text insert my_sel.last "<p>"
     }
     if {$my_current == {} } {
+	return
 	set my_current current
     }
     .editor.text mark set insert $my_current
@@ -183,7 +184,8 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     global last_text_node_id newest_node savenum new_node_text
     global x1 x2
     if {$my_current == {} } {
-	set my_current current
+	return
+	# set my_current current
     }
     .editor.text mark set insert $my_current
     if {[.editor.text compare new.first > $my_current]} {return}

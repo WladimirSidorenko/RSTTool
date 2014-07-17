@@ -9,8 +9,8 @@
 # Define the Frame
 
 if {![winfo exists .editor]} {
-    scrolled-text .editor -height 30 -titlevar currentfile\
-	-font -*-Courier-Medium-R-Normal--16-140-*-*-*-*-*-*\
+    scrolled-text .editor -height 30 -titlevar currentfile \
+	-font -*-Courier-Medium-R-Normal--16-140-*-*-*-*-*-* \
 	-messagebar t
     global undoer
     set undoer [new textUndoer .editor.text]
@@ -26,7 +26,6 @@ proc pack-editor {} {
 
 ######################################
 # Define global vars
-
 set currentfile {}
 
 ######################################
@@ -66,7 +65,7 @@ proc reload-current-file {} {
 }
 
 proc read-file {a_istream} {
-    global theText theRoots theForrest
+    global theRoots theForrest theText
 
     set origlen 0; # length of complete line
     set modlen 0;  # length of modified line
@@ -88,10 +87,10 @@ proc read-file {a_istream} {
     set line "";		# single line
     set lines [];		# array of split lines
 
-    set theText "";
     while {![eof $a_istream]} {
 	# obtain next 1k symbols from the input stream
 	set chunk [read $a_istream 1000]
+	append theText $chunk
 	# if there is string left from the previous run, append it to `TextPortion`
 	if {$remainder != ""} {
 	    set chunk "$remainder$chunk"
@@ -160,12 +159,14 @@ proc read-file {a_istream} {
 	    # remember previous nestedness level
 	    set prev_lvl $t_lvl;
 	    set prev_id $t_id;
+
 	}
     }
 }
 
 proc load-file {filename {really {1}}} {
     global currentfile undoer collapsed_nodes
+    global theText theRootIdx msgQueue
     global step_file
 
     set last_element [llength $collapsed_nodes]
@@ -177,6 +178,9 @@ proc load-file {filename {really {1}}} {
     if { $filename == {} } {return}
 
     # 2. Load named file
+    set theText ""
+    set theRootIdx -1
+    set msgQueue {}
     set f [open $filename]
     .editor.text delete 1.0 end
     read-file $f
@@ -229,6 +233,37 @@ proc showText { {do_it {}} } {
 
 proc nextSentence { {do_it {}} } {
     global theText usedText currSentence abbreviations
+    global theRoots theRootIdx theForrest
+    global crntMsgId crntMsgTxt prntMsgId prntMsgTxt msgQueue
+
+    # if we have exhausted the queue of messages for current
+    # discussion, we proceed to the next discussion in the forrest
+    if {[llength $msgQueue] == 0} {
+	incr theRootIdx;
+	# if no more discussions are present, the return
+	if {$theRootIdx >= [llength $theRoots]} {
+	    return;
+	}
+	lappend msgQueue [lindex $theRoots $theRootIdx]
+    }
+
+    # assign the leftmost tweet on the Queue to crnt_msg and unshift the Queue
+    set crntMsgId [lindex $msgQueue 0]
+    set crnt_msg theForrest($crntMsgId)
+    set msgQueue [lreplace $msgQueue 0 0]; # pop message id from the queue
+
+    set crntMsgTxt [lindex $crnt_msg 0]; # obtain text of current message
+    set prntMsgId [lindex $crnt_msg 1];	# obtain id of the parent of current message
+    set children [lindex $crnt_msg end]; # obtain children of current message
+    set msgQueue [concat $msgQueue $children]; # append children to message queue
+
+    # if parent exists, obtain its text
+    if {$prntMsgId == NaN} {
+	set prntMsgTxt "";
+    } else {
+	set prntMsgTxt [lindex theForrest($prntMsgId) 0];
+    }
+
     set old_new_first [.editor.text index new.first]
     set flag 2
     set periods {}
@@ -236,14 +271,14 @@ proc nextSentence { {do_it {}} } {
     while { $flag } {
 	#search for the next end of sentence punctuation
 	set nextCutoff [string first .  $testText]
-	set exclaimation [string first ! $testText]
+	set exclamation [string first ! $testText]
 	set question [string first ? $testText]
 	if {$nextCutoff == -1} {
 	    set nextCutoff [string length $testText]
 	    incr nextCutoff -1
 	}
-	if {$exclaimation != -1 && $exclaimation < $nextCutoff} {
-	    set nextCutoff $exclaimation
+	if {$exclamation != -1 && $exclamation < $nextCutoff} {
+	    set nextCutoff $exclamation
 	}
 	if {$question != -1 && $question < $nextCutoff} {
 	    set nextCutoff $question
@@ -442,15 +477,3 @@ bind all <Meta-o> {
 proc editor-message {arg} {
     .editor.msg delete 1.0 end
     .editor.msg insert end $arg}
-
-
-
-
-
-
-
-
-
-
-
-
