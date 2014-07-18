@@ -76,7 +76,7 @@ proc read-file {a_istream} {
     set t_text "";		# tweet's text
 
     set lvl_diff 0;		# difference between current and
-				# previous nestedness levels
+    # previous nestedness levels
     set prev_lvl 0;		# previous nestedness level
     set prev_id "";		# previous tweet id
     set prnt_id "";		# id of parent tweet
@@ -112,7 +112,7 @@ proc read-file {a_istream} {
 	    set line [string trimleft $line "\t"]
 	    set modlen [string length $line]
 	    if {$modlen == 0} {
-		set prnt_id "";
+		set prnt_id {};
 		set prv_lvl 0;
 		continue;
 	    }
@@ -132,7 +132,7 @@ proc read-file {a_istream} {
 	    if {$t_lvl == 0} {
 		lappend theRoots $t_id;
 		set parents {};
-		set prnt_id NaN;
+		set prnt_id {};
 	    } else {
 		set lvl_diff [expr $t_lvl - $prev_lvl];
 		if  {[expr $lvl_diff < 0]} {
@@ -159,7 +159,6 @@ proc read-file {a_istream} {
 	    # remember previous nestedness level
 	    set prev_lvl $t_lvl;
 	    set prev_id $t_id;
-
 	}
     }
 }
@@ -179,8 +178,6 @@ proc load-file {filename {really {1}}} {
 
     # 2. Load named file
     set theText ""
-    set theRootIdx -1
-    set msgQueue {}
     set f [open $filename]
     .editor.text delete 1.0 end
     read-file $f
@@ -200,9 +197,9 @@ proc load-file {filename {really {1}}} {
     .editor.text tag add new 1.0 end
     #  save-step "load-file $filename"
     if { $really == 1 } {
-	nextSentence really
+	nextMessage really
     } else {
-	nextSentence fake
+	nextMessage fake
     }
 }
 
@@ -231,7 +228,7 @@ proc showText { {do_it {}} } {
     }
 }
 
-proc nextSentence { {do_it {}} } {
+proc nextMessage { {do_it {}} } {
     global theText usedText currSentence abbreviations
     global theRoots theRootIdx theForrest
     global crntMsgId crntMsgTxt prntMsgId prntMsgTxt msgQueue
@@ -249,25 +246,36 @@ proc nextSentence { {do_it {}} } {
 
     # assign the leftmost tweet on the Queue to crnt_msg and unshift the Queue
     set crntMsgId [lindex $msgQueue 0]
-    set crnt_msg theForrest($crntMsgId)
+    set crnt_msg $theForrest($crntMsgId)
     set msgQueue [lreplace $msgQueue 0 0]; # pop message id from the queue
 
     set crntMsgTxt [lindex $crnt_msg 0]; # obtain text of current message
+    set prev_prnt_msg_id $prntMsgId; # remember id of previous parent
     set prntMsgId [lindex $crnt_msg 1];	# obtain id of the parent of current message
     set children [lindex $crnt_msg end]; # obtain children of current message
     set msgQueue [concat $msgQueue $children]; # append children to message queue
 
-    # if parent exists, obtain its text
-    if {$prntMsgId == NaN} {
-	set prntMsgTxt "";
-    } else {
-	set prntMsgTxt [lindex theForrest($prntMsgId) 0];
+    # if parent has changed, reload it
+    if {$prntMsgId != $prev_prnt_msg_id} {
+	set prev_prnt_msg_id $prntMsgId;
+	# obtain text of new parent
+	if {$prntMsgId == {}} {
+	    set prntMsgTxt "";
+	} else {
+	    set prntMsgTxt [lindex $theForrest($prntMsgId) 0];
+	}
+	# if parent has changed, reload it
+	.editor.textPrnt delete 0.0 end
+	.editor.textPrnt insert end $prntMsgTxt
     }
+}
 
-    set old_new_first [.editor.text index new.first]
+# load next text chunk delimited by punctuation mark into the editor
+proc nextSentence {{do_it {}} {trgframe .editor.text}} {
     set flag 2
     set periods {}
     set testText $theText
+    set old_new_first [$trgframe index new.first]
     while { $flag } {
 	#search for the next end of sentence punctuation
 	set nextCutoff [string first .  $testText]
@@ -323,11 +331,11 @@ proc nextSentence { {do_it {}} } {
     incr textCutoff -1
     set theText [string range $theText $nextCutoff $textCutoff]
     set usedText "$currSentence$usedText"
-    .editor.text insert end "$currSentence"
-    if { [.editor.text tag ranges old] == {} } {
-	.editor.text tag add new 1.0 end
+    $trgframe insert end "$currSentence"
+    if { [$trgframe tag ranges old] == {} } {
+	$trgframe tag add new 1.0 end
     } else {
-	.editor.text tag add new $old_new_first end
+	$trgframe tag add new $old_new_first end
     }
     if {"$do_it" == "really"} {
 	save-step "nextSentence really"

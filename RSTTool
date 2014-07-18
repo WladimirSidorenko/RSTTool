@@ -11,7 +11,7 @@ set LOGIN marcu
 set PRINTER ps9b_s
 set MAX_CLICK_DELAY 120
 set VERSION UNIX
-#set VERSION PC
+# set VERSION PC
 if {$VERSION == "UNIX"} {
     set DIR   [exec pwd]
 } else {
@@ -54,8 +54,15 @@ load-relations [file join $RELS Relations]
 load_abbreviations [file join $RELS abbreviations]
 
 proc Quit {} {exit}
-
+# set global variables
 set currentfile tmp
+set crntMsgId {}
+set crntMsgTxt ""
+set prntMsgId {}
+set prntMsgTxt ""
+set msgQueue {}
+set theRoots {}
+set theRootIdx -1
 
 install-segmenter
 reset-rst

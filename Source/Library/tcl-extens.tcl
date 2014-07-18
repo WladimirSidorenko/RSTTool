@@ -180,43 +180,49 @@ proc scrolled-text {name args} {
     if { $height == {} } {set height 40}
 
     frame $name -height $height
+    grid columnconfigure $name 0 -weight 1
+    grid rowconfigure $name 2 -weight 2
+    grid rowconfigure $name 3 -weight 1
     # add buttons for navigating around discussions
     set navibar [frame $name.navibar]
-    pack $navibar -side top;
-    set btnNext [button $name.btnNextMsg -text "Next"];
+    grid $navibar -sticky "nsew" -row 0;
+    set btnNext [button $name.btnNextMsg -text "Next" -command {nextMessage really}];
     set btnPrev [button $name.btnPrevMsg -text "Previous"];
-    pack $btnPrev $btnNext -in $navibar -side left;
+    grid $btnPrev $btnNext -in $navibar;
 
-    frame $name.textWindowPrnt
-    frame $name.textWindow
     label $name.title -textvariable [getarg -titlevar $args]
 
+    frame $name.textWindowPrnt
     text  $name.textPrnt  -bg $bg -relief sunken -yscrollcommand "$name.scrollPrnt set"
     scrollbar $name.scrollPrnt -command "$name.textPrnt yview"
+    grid $name.title  -row 1  -sticky "ew"
+    grid $name.textPrnt -in $name.textWindowPrnt -column 0 -row 0 -sticky "nsew"
+    grid $name.scrollPrnt -in $name.textWindowPrnt -column 1 -row 0 -sticky "ns"
+    grid columnconfigure $name.textWindowPrnt 0 -weight 1
+    grid $name.textWindowPrnt -row 2 -column 0 -sticky "nsew"
 
+    frame $name.textWindow
     text  $name.text  -bg $bg -relief sunken -yscrollcommand "$name.scroll set"
     scrollbar $name.scroll -command "$name.text yview"
+    grid $name.text -in $name.textWindow -column 0 -row 0 -sticky "nsew"
+    grid $name.scroll -in $name.textWindow -column 1 -row 0 -sticky "ns"
+    grid columnconfigure $name.textWindow 0 -weight 1
+    grid $name.textWindow -row 3 -column 0 -sticky "nsew"
+
+    set font [getarg -font $args]
+    if {$font != {}} {
+	$name.textPrnt configure -font $font;
+	$name.text configure -font $font;
+    }
 
     set messagebar [getarg -messagebar $args]
-    if { $messagebar == "t"} {
-	frame $name.msgbar -height 10
-	text  $name.msg  -bg $bg -relief raised -height 1.2
-    }
-    set font [getarg -font $args]
-    if { $font != {} } {
-	$name.text configure -font $font
-    }
-    pack $name.title  -side top  -fill x
-    pack $name.textWindowPrnt -side top -expand 1 -fill both
-    pack $name.textPrnt -in $name.textWindowPrnt -side left -fill both -expand 1
-    pack $name.scrollPrnt -in $name.textWindowPrnt -side right -fill y
-
-    pack $name.textWindow -side bottom -expand 1 -fill both
-    pack $name.text -in $name.textWindow -side left -fill both -expand 1
-    pack $name.scroll -in $name.textWindow -side right -fill y
     if {$messagebar == "t"} {
-	pack $name.msg -in $name.msgbar -fill x -expand 1 -side top
-	pack $name.msgbar -fill x  -side top
+	frame $name.msgbar
+	# the value of bg color is a hard code here
+	text  $name.msg -bg gray84 -relief flat -height 1.2;
+	grid columnconfigure $name.msgbar 0 -weight 1
+    	grid $name.msg -in $name.msgbar -row 0 -column 0 -sticky "ew"
+    	grid $name.msgbar -column 0 -row 4 -sticky "ew"
     }
 }
 
