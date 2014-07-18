@@ -228,35 +228,63 @@ proc showText { {do_it {}} } {
     }
 }
 
-proc nextMessage { {do_it {}} } {
-    global theText usedText currSentence abbreviations
-    global theRoots theRootIdx theForrest
-    global crntMsgId crntMsgTxt prntMsgId prntMsgTxt msgQueue
+proc nextMessage { {do_it {}} {direction {forward}}} {
+    global theRoots theRootIdx theForrest theText usedtext
+    global crntMsgId crntMsgTxt prntMsgId prntMsgTxt
+    global msgQueue msgPrevQueue
 
-    # if we have exhausted the queue of messages for current
-    # discussion, we proceed to the next discussion in the forrest
-    if {[llength $msgQueue] == 0} {
-	incr theRootIdx;
-	# if no more discussions are present, the return
-	if {$theRootIdx >= [llength $theRoots]} {
+    # check direction to which we should proceed
+    if {$direction == {forward}} {
+	# if we have exhausted the queue of messages for current
+	# discussion, we proceed to the next discussion in the forrest
+	if {[llength $msgQueue] == 0} {
+	    incr theRootIdx;
+	    # if no more discussions are present, the return
+	    if {$theRootIdx >= [llength $theRoots]} {
+		tk_messageBox -message "Reached the end of the document."
+		return;
+	    }
+	    lappend msgQueue [lindex $theRoots $theRootIdx]
+	}
+
+	# remember current message in `msgPrevQueue`
+	if {$crntMsgId != {}} {
+	    lappend msgPrevQueue $crntMsgId;
+	}
+	# assign the leftmost tweet on the Queue to crnt_msg and unshift the Queue
+	set crntMsgId [lindex $msgQueue 0]
+	set crnt_msg $theForrest($crntMsgId)
+
+	set msgQueue [lreplace $msgQueue 0 0]; # pop message id from the queue
+	set children [lindex $crnt_msg end]; # obtain children of current message
+	set msgQueue [concat $msgQueue $children]; # append children to message queue
+    } else {
+	# if we have exhausted the queue of messages for current
+	# discussion, we proceed to the next discussion in the forrest
+	if {[llength $msgPrevQueue] == 0} {
+	    tk_messageBox -message "Reached the beginning of the document."
 	    return;
 	}
-	lappend msgQueue [lindex $theRoots $theRootIdx]
+
+	if {$crntMsgId != {}} {
+	    # remember popped message in `msgQueue`
+	    set msgQueue [linsert $msgQueue[set msgQueue {}] 0 $crntMsgId];
+	}
+	# assign the leftmost tweet on the Queue to crnt_msg and unshift the Queue
+	set crntMsgId [lindex $msgPrevQueue end]
+	set crnt_msg $theForrest($crntMsgId)
+	set msgPrevQueue [lreplace $msgPrevQueue end end]; # pop message id from the queue
     }
-
-    # assign the leftmost tweet on the Queue to crnt_msg and unshift the Queue
-    set crntMsgId [lindex $msgQueue 0]
-    set crnt_msg $theForrest($crntMsgId)
-    set msgQueue [lreplace $msgQueue 0 0]; # pop message id from the queue
-
+    # puts stderr "crntMsgId == $crntMsgId"
+    # puts stderr "msgPrevQueue == $msgPrevQueue"
+    # puts stderr "msgvQueue == $msgQueue"
     set crntMsgTxt [lindex $crnt_msg 0]; # obtain text of current message
     set prev_prnt_msg_id $prntMsgId; # remember id of previous parent
     set prntMsgId [lindex $crnt_msg 1];	# obtain id of the parent of current message
-    set children [lindex $crnt_msg end]; # obtain children of current message
-    set msgQueue [concat $msgQueue $children]; # append children to message queue
 
     # if parent has changed, reload it
     if {$prntMsgId != $prev_prnt_msg_id} {
+	# TODO: check that connection from child to parent was drawn
 	set prev_prnt_msg_id $prntMsgId;
 	# obtain text of new parent
 	if {$prntMsgId == {}} {
@@ -268,10 +296,18 @@ proc nextMessage { {do_it {}} } {
 	.editor.textPrnt delete 0.0 end
 	.editor.textPrnt insert end $prntMsgTxt
     }
+    # clear current message text area and place new text into it
+    set usedtext "";
+    set theText $crntMsgTxt;
+    .editor.text delete 0.0 end
+    .editor.text tag add new 0.0 end
+    nextSentence $do_it;
 }
 
 # load next text chunk delimited by punctuation mark into the editor
 proc nextSentence {{do_it {}} {trgframe .editor.text}} {
+    global theText usedText currSentence abbreviations
+
     set flag 2
     set periods {}
     set testText $theText

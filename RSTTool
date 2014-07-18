@@ -56,13 +56,14 @@ load_abbreviations [file join $RELS abbreviations]
 proc Quit {} {exit}
 # set global variables
 set currentfile tmp
-set crntMsgId {}
-set crntMsgTxt ""
-set prntMsgId {}
-set prntMsgTxt ""
-set msgQueue {}
-set theRoots {}
-set theRootIdx -1
+set crntMsgId {};	# id of the current message
+set crntMsgTxt "";	# text of the current message
+set prntMsgId {};	# id of the parent message
+set prntMsgTxt "";	# text of the parent message
+set msgQueue {};	# queue of messages not yet visited
+set msgPrevQueue {};	# queue of visited messages
+set theRoots {};	# id's of messages which start new discussions
+set theRootIdx -1;	# index of current discussion
 
 install-segmenter
 reset-rst
