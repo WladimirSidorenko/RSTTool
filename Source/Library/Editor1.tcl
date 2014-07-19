@@ -174,12 +174,11 @@ proc load-file {filename {really {1}}} {
 	set collapsed_nodes [lreplace $collapsed_nodes 0 $last_element]
     }
     if {$step_file != {}} { close-step-file }
-    if { $filename == {} } {return}
+    if {$filename == {}} {return}
 
     # 2. Load named file
     set theText ""
     set f [open $filename]
-    .editor.text delete 1.0 end
     read-file $f
     close $f
 
@@ -187,12 +186,10 @@ proc load-file {filename {really {1}}} {
     textUndoer:reset $undoer
 
     set currentfile $filename
-    if { $really == 1 } {
-	open-step-file
-    }
+    if { $really == 1 } {open-step-file}
 
     editor-message "opened file:  $filename"
-    .editor.text insert end "\n"
+    # .editor.text insert end "\n"
     .editor.text tag add old 1.0 1.0
     .editor.text tag add new 1.0 end
     #  save-step "load-file $filename"

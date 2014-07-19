@@ -39,10 +39,9 @@ button .rtbar.undo_by_reload -text "Undo" -command {undo_by_reload}
 button .rtbar.reduce -text "Reduce" -command {resize-display -50}
 button .rtbar.enlarge -text "Enlarge" -command {resize-display 50}
 button .rtbar.showtext -text "Show Text" -command {showText really}
-button .rtbar.nextsent -text "Next Sentence" -command {nextSentence really}
 
 pack .rtbar -side top
-pack .rtbar.autolink .rtbar.link .rtbar.disconnect .rtbar.modify .rtbar.change_rel .rtbar.change_schema .rtbar.undo_by_reload .rtbar.reduce .rtbar.enlarge .rtbar.showtext .rtbar.nextsent -in .rtbar -side left
+pack .rtbar.autolink .rtbar.link .rtbar.disconnect .rtbar.modify .rtbar.change_rel .rtbar.change_schema .rtbar.undo_by_reload .rtbar.reduce .rtbar.enlarge .rtbar.showtext -in .rtbar -side left
 
 bind .editor.text <Any-Key> {break}
 menu .menubar
@@ -86,17 +85,19 @@ $File add command -label "Load Text File" -command {
 	set default_anno_file $directory/rst/[file tail $filename]
 
 	set result0 [tk_dialog .d1 {Select Annotation File}\
-			 "Annotation will be loaded/stored in file \"$default_anno_file\".  \
-Click \"New\" to create another file or \"Choose\" to select another existing one.\n" info 0 \
+			 "Annotation will be loaded/stored in file \"$default_anno_file\".\n\
+Click \"New\" to create or \"Choose\" to select another file.\n" info 0 \
 			 "Use default" "New" "Choose" "Cancel"]
 
 	# get the name of the file from which annotation should be loaded
-	if {$result0 == 1} {
+	if {$result0 == 0} {
+	    set anno_file $default_anno_file
+	} elseif {$result0 == 1} {
 	    set anno_file [fileselect "Select Annotation File" $default_anno_file 0]
 	} elseif {$result0 == 2} {
 	    set anno_file [fileselect "Select Annotation File" $default_anno_file 1]
-	} elseif {$result0 == 0} {
-	    set anno_file $default_anno_file
+	} else {
+	    return;
 	}
 
 	# check if an already existing file should be erased
@@ -305,7 +306,7 @@ if {[winfo exists .rstframe]} {
     set rstw [canvas  .rstframe.canvas  -bg white -relief sunken\
 		  -yscrollcommand ".rstframe.yscroll set"\
 		  -xscrollcommand ".rstframe.xscroll set"\
-		  -height 800 -width 1000]
+		  -height 600 -width 1000]
     scrollbar .rstframe.yscroll -orient vertical\
 	-command ".rstframe.canvas yview"
     scrollbar .rstframe.xscroll -orient horizontal\

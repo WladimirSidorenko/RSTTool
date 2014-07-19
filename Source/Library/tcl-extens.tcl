@@ -181,7 +181,7 @@ proc scrolled-text {name args} {
 
     frame $name -height $height
     grid columnconfigure $name 0 -weight 1
-    grid rowconfigure $name 2 -weight 2
+    grid rowconfigure $name 2 -weight 1
     grid rowconfigure $name 3 -weight 1
     # add title bar
     label $name.title -textvariable [getarg -titlevar $args]
@@ -191,7 +191,8 @@ proc scrolled-text {name args} {
     grid $navibar -sticky "nsew" -row 1;
     set btnNext [button $name.btnNextMsg -text "Next" -command {nextMessage really}];
     set btnPrev [button $name.btnPrevMsg -text "Previous" -command {nextMessage really backward}];
-    grid $btnPrev $btnNext -in $navibar;
+    set btnNextSent [button $name.nextsent -text "Next Sentence" -command {nextSentence really}];
+    grid $btnPrev $btnNext $btnNextSent -in $navibar;
 
     frame $name.textWindowPrnt
     text  $name.textPrnt  -bg $bg -relief sunken -yscrollcommand "$name.scrollPrnt set"
