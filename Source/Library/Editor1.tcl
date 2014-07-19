@@ -326,7 +326,7 @@ proc nextSentence {{do_it {}} {trgframe .editor.text}} {
 	}
 	set last [llength periods]
 	incr last -1
-	if { $flag == 1 && $nextCutoff == "[lindex $periods $last]"} {
+	if {$flag == 1 && $nextCutoff == "[lindex $periods $last]"} {
 	    set flag 0
 	}
 	set wordStart $nextCutoff
@@ -353,9 +353,17 @@ proc nextSentence {{do_it {}} {trgframe .editor.text}} {
     foreach period $periods {
 	set nextCutoff [expr $nextCutoff + $period]
     }
-    set quotetest [expr $nextCutoff + 1]
-    if {[string index $theText $quotetest] == "\""} {
-	incr nextCutoff
+
+    set max_len [string length $theText]
+    while {$nextCutoff < $max_len} {
+	set quotetest [expr $nextCutoff + 1]
+	set ichar [string index $theText $quotetest]
+	if {[string is punct -strict $ichar] || \
+		[string is space -strict $ichar]} {
+	    incr nextCutoff
+	} else {
+	    break
+	}
     }
 
     set currSentence [string range $theText 0 $nextCutoff]
