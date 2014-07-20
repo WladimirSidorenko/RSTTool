@@ -191,13 +191,15 @@ set x2 {}
 proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     global last_text_node_id newest_node savenum new_node_text
     global x1 x2
-    if {$my_current == {} } {
-	return
-	# set my_current current
-    }
+
+    if {$my_current == {}} {set my_current current}
+    # put mark called `insert` before current position -- current is position
+    # nearest to the mouse pointer
     .editor.text mark set insert $my_current
-    if {[.editor.text compare new.first > $my_current]} {return}
-    .editor.text tag remove my_sel 1.0 end
+    # if we pointed with the mouse in an already analyzed area, then do nothing
+    if {[.editor.text compare new.first > $my_current]} {return};
+    # remove tag `my_sel` from the whole text area
+    .editor.text tag remove my_sel 0.0 end
 
     if { $do_it == "really" } {
 	.editor.text tag add sel new.first "insert wordend"
@@ -207,8 +209,10 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
 	.editor.text tag add my_sel new.first insert
     }
 
+    # obtain indices of the last char in selection and the end of the text
     set x [.editor.text index my_sel.last]
     set y [.editor.text index end]
+    # put mark `last_sel` just before the last character in `my_sel`
     .editor.text mark set last_sel my_sel.last
     if { $x == $y } {
 	.editor.text mark set last_sel "my_sel.last - 1 chars"
@@ -227,7 +231,6 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
   	set newest_node [make-node $new_node_text "text"]
   	redisplay-net
     }
-
 
     .editor.text tag add old my_sel.first last_sel
     .editor.text tag remove new my_sel.first last_sel
@@ -287,8 +290,7 @@ proc read-step-file {} {
 
     set mystepfile [set-file-name step]
 
-    set step_file [open $currentfile.rst/$mystepfile r]
-}
+    set step_file [open [file dirname $currentfile]/rst/$mystepfile r] }
 
 proc peruse-step-file {} {
     global step_file currentfile

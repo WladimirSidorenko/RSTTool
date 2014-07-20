@@ -236,7 +236,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	# discussion, we proceed to the next discussion in the forrest
 	if {[llength $msgQueue] == 0} {
 	    incr theRootIdx;
-	    # if no more discussions are present, the return
+	    # if no more discussions are present on the Queue, return
 	    if {$theRootIdx >= [llength $theRoots]} {
 		tk_messageBox -message "Reached the end of the document."
 		return;
@@ -281,7 +281,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 
     # if parent has changed, reload it
     if {$prntMsgId != $prev_prnt_msg_id} {
-	# TODO: check that connection from child to parent was drawn
+	# TODO: check that connection from child to parent has been established
 	set prev_prnt_msg_id $prntMsgId;
 	# obtain text of new parent
 	if {$prntMsgId == {}} {

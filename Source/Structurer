@@ -295,7 +295,7 @@ proc scale-size-select { } {
     pack .scalemenu.width .scalemenu.height -in .scalemenu
 }
 
-####################################################		   
+####################################################
 # Define The RST Frame
 
 if {[winfo exists .rstframe]} {
@@ -313,18 +313,18 @@ if {[winfo exists .rstframe]} {
 	-command ".rstframe.canvas xview"
 }
 label .rstframe.msg -textvariable new_node_text
-pack .rstframe.msg -side bottom -fill x 
-pack .rstframe.yscroll -side right -fill y 
+pack .rstframe.msg -side bottom -fill x
+pack .rstframe.yscroll -side right -fill y
 pack .rstframe.xscroll -side bottom -fill x
 pack .rstframe.canvas -fill both -expand 1 -side left
 
 
 
-####################################################	
+####################################################
 # 1. DEFINE PROCEDURES
 ####################################################
 
-##################################################	   
+##################################################
 # Variables
 
 # Data Structure
@@ -1354,7 +1354,7 @@ proc expand {nid {really {}} } {
 		AddMenuItem $my_menu $item "set pcfl_selection $item"
 	    } else {
 		#set underscore ""
-		#append underscore $item		
+		#append underscore $item
 		#set item $underscore
 		menu $my_menu.$item -tearoff 0
 		AddMenuCascade $my_menu NEXT $my_menu.$item

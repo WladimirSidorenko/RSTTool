@@ -7,167 +7,184 @@
 
 
 proc show-text-nodes {segs} {
-  global text_nodes
+    global text_nodes
 
-  if [info exists text_nodes] {
-     reinstall-text-nodes $segs
-  } else {
-     install-text-nodes $segs
-  }
+    if [info exists text_nodes] {
+	reinstall-text-nodes $segs
+    } else {
+	install-text-nodes $segs
+    }
 
-  # 4. Redisplay the graph
-  redisplay-net
-  set-mode link
+    # 4. Redisplay the graph
+    redisplay-net
+    set-mode link
 }
 
 proc install-text-nodes {segs} {
 
-  #1. Clear the network
-  reset-rst
+    #1. Clear the network
+    reset-rst
 
-  #2.  Build the new text nodes
-  foreach seg $segs { make-node [lindex $seg 0] "text"}
+    #2.  Build the new text nodes
+    foreach seg $segs { make-node [lindex $seg 0] "text"}
 }
 
 
 proc reinstall-text-nodes {segs} {
-  global node text_nodes group_nodes old_node old_text_nodes old_group_nodes
+    global node text_nodes group_nodes old_node old_text_nodes old_group_nodes
 
-  # 1. Move the old array (if any) to backup
-  array set old_node [array get node]
-  set old_text_nodes $text_nodes
-  set old_group_nodes $group_nodes
-  reset-rst
+    # 1. Move the old array (if any) to backup
+    array set old_node [array get node]
+    set old_text_nodes $text_nodes
+    set old_group_nodes $group_nodes
+    reset-rst
 
-  # 2. Build the new text nodes
-  foreach seg $segs {
-    reinstall-node [delete-newlines [lindex $seg 0]] "text" [lindex $seg 1]
-  }
+    # 2. Build the new text nodes
+    foreach seg $segs {
+	reinstall-node [delete-newlines [lindex $seg 0]] "text" [lindex $seg 1]
+    }
 
-  # 3. Link text nodes to their parents
-  foreach nid $text_nodes {
-    reinstall-parent $nid
-  }
+    # 3. Link text nodes to their parents
+    foreach nid $text_nodes {
+	reinstall-parent $nid
+    }
 }
 
 proc reinstall-node  {text type old_node_id} {
-  global node  old_node 
+    global node  old_node 
 
-  if { $type == "text" && $text == {} } {return 0 }
+    if { $type == "text" && $text == {} } {return 0 }
 
-  # make the node
-  set node_id [make-node $text $type]
+    # make the node
+    set node_id [make-node $text $type]
 
-  if { $old_node_id != {} } {
-    set node($node_id,oldindex) $old_node_id
-    set old_node($old_node_id,newindex) $node_id
-  }
-  return $node_id
+    if { $old_node_id != {} } {
+	set node($node_id,oldindex) $old_node_id
+	set old_node($old_node_id,newindex) $node_id
+    }
+    return $node_id
 }
 
 proc reinstall-parent {nid} {
-  global node  old_node 
+    global node  old_node 
 
-  set old_nid $node($nid,oldindex)
-  if { $old_nid == {} } { return 0 }
-  set old_pid $old_node($old_nid,parent)
-  if {  $old_pid != {} } {
+    set old_nid $node($nid,oldindex)
+    if { $old_nid == {} } { return 0 }
+    set old_pid $old_node($old_nid,parent)
+    if {  $old_pid != {} } {
 
-    set new_pid $old_node($old_pid,newindex)
+	set new_pid $old_node($old_pid,newindex)
 
-    # we have a parent to reinstall
+	# we have a parent to reinstall
 
-    if { $old_node($old_pid,type) == "text" } {
+	if { $old_node($old_pid,type) == "text" } {
 
-      #  the parent is text
-      if { $old_node($old_pid,newindex) == {} } {
-         # text parent dropped - no link to be made
-         return {}
-       } else {
-         link-nodes $new_pid $nid $old_node($old_nid,relname) 0
-       }
-    } else {
+	    #  the parent is text
+	    if { $old_node($old_pid,newindex) == {} } {
+		# text parent dropped - no link to be made
+		return {}
+	    } else {
+		link-nodes $new_pid $nid $old_node($old_nid,relname) 0
+	    }
+	} else {
 
-      # the parent is a group node
-       set parent_link_needed 0
-       if { $new_pid == {} } {
-         set new_pid [reinstall-node "" $old_node($old_pid,type) $old_pid]
-         # link the parent node if needed
-	 set parent_link_needed 1
-       }
+	    # the parent is a group node
+	    set parent_link_needed 0
+	    if { $new_pid == {} } {
+		set new_pid [reinstall-node "" $old_node($old_pid,type) $old_pid]
+		# link the parent node if needed
+		set parent_link_needed 1
+	    }
 
-       # link to the parent
-       link-nodes $new_pid $nid $old_node($old_nid,relname) 0
+	    # link to the parent
+	    link-nodes $new_pid $nid $old_node($old_nid,relname) 0
 
-       # relink the parent if needed
-       if $parent_link_needed {reinstall-parent $new_pid}
+	    # relink the parent if needed
+	    if $parent_link_needed {reinstall-parent $new_pid}
+	}
     }
-  }
 }
 
 
 proc make-node {text type} {
-  global node 
-  if { $type ==  "text"  } {
-    set nid [unique-text-node-id]
-  } else {
-    set nid [unique-group-node-id]
-  }
-  clear-node $nid
-  set node($nid,text) $text
-  set node($nid,type) $type
-  if { $type ==  "text"  } {
-    set node($nid,span) "$nid $nid"
-    add-text-node $nid
-  } else {
-    add-group-node $nid
-  }
-  return $nid
+    global node theAnnotations crntMsgId
+    if { $type ==  "text"  } {
+	set nid [unique-text-node-id]
+    } else {
+	# what are these nodes?
+	set nid [unique-group-node-id]
+    }
+
+    crntMsgId()
+    clear-node $nid
+    set node($nid,text) $text
+    set node($nid,type) $type
+    if { $type ==  "text"  } {
+	set node($nid,span) "$nid $nid"
+	add-text-node $nid
+    } else {
+	add-group-node $nid
+    }
+    return $nid
 }
 
 proc clear-node {nid} {
-  global node
-  set node($nid,text) {}
-  set node($nid,type) {}
-  set node($nid,textwgt) {}
-  set node($nid,labelwgt) {}
-  set node($nid,arrowwgt) {}
-  set node($nid,spanwgt) {}
-  set node($nid,relname) {}
-  set node($nid,children) {}
-  set node($nid,parent) {}
-  set node($nid,constituents) {}
-  set node($nid,visible) 1
-  set node($nid,span)  {}
-  set node($nid,xpos) 0
-  set node($nid,ypos) 0
-  set node($nid,oldindex) {}
-  set node($nid,newindex) {}
-  set node($nid,constit) {}
-  set node($nid,promotion) {}
+    global node
+    set node($nid,text) {}
+    set node($nid,type) {}
+    set node($nid,textwgt) {}
+    set node($nid,labelwgt) {}
+    set node($nid,arrowwgt) {}
+    set node($nid,spanwgt) {}
+    set node($nid,relname) {}
+    set node($nid,children) {}
+    set node($nid,parent) {}
+    set node($nid,constituents) {}
+    set node($nid,visible) 1
+    set node($nid,span)  {}
+    set node($nid,xpos) 0
+    set node($nid,ypos) 0
+    set node($nid,oldindex) {}
+    set node($nid,newindex) {}
+    set node($nid,constit) {}
+    set node($nid,promotion) {}
 }
 
 
 proc reset-rst {} {
-  global rstw node text_nodes group_nodes \
+    global rstw node text_nodes group_nodes \
 	last_text_node_id last_group_node_id wtn
-  if [info exists node] {unset node}
-  if [info exists wtn] {unset wtn}
-  set text_nodes {}
-  set group_nodes {}
-  set last_text_node_id 0
-  set last_group_node_id 5000 
+    if [info exists node] {unset node}
+    if [info exists wtn] {unset wtn}
+    set text_nodes {}
+    set group_nodes {}
+    set last_text_node_id 0
+    set last_group_node_id 5000
 }
 
 
-proc unique-text-node-id {} {
-  global last_text_node_id
-  return [incr last_text_node_id]
+proc unique-text-node-id {msg_id} {
+    global theAnnotations
+    # check if annotations for the given message already exist
+    if {[info exists theAnnotations($msg_id)]} {
+	return [llength [lindex $theAnnotations($msg_id) end]]
+    } else {
+	# an annotation entry includes 0) type of connection to the parent
+	# message; 1) id of the top-most EDU for the given message; 2) list of
+	# EDUs, where each EDU is a 5-tuple whose 0-th element is the start
+	# index of the EDU in the text string, 1-st element is its end index,
+	# the 2-nd element is the index of its parent EDU in the list, the
+	# 3-rd element is the connection type to the parent element, and,
+	# finally, the 4-th element is a list of list id's of child EDUs
+	set theAnnotations($msg_id) [list {} {} {}]
+	return 0;
+    }
+    return [incr last_text_node_id]
 }
 
 proc unique-group-node-id {} {
-  global last_group_node_id
-  return [incr last_group_node_id]
+    global last_group_node_id
+    return [incr last_group_node_id]
 }
 
 proc delete-newlines {text} {
