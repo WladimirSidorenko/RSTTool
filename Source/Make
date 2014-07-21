@@ -106,19 +106,27 @@ proc reinstall-parent {nid} {
 }
 
 
-proc make-node {text type} {
-    global node theAnnotations crntMsgId
+proc make-node {text type {start_offset {}} {end_offset {}}} {
+    global node crntMsgId msgid2nid nid2msgid
     if { $type ==  "text"  } {
 	set nid [unique-text-node-id]
+	# save mapping from node id to message id
+	set nid2msgid($nid) $crntMsgId
+	# save mapping from message id to node id
+	if {[info exists msgid2nid($crntMsgId)]} {
+	    lappend msgid2nid($crntMsgId) $nid
+	} else {
+	    set msgid2nid($crntMsgId) [list $nid]
+	}
     } else {
 	# what are these nodes?
 	set nid [unique-group-node-id]
     }
-
-    crntMsgId()
     clear-node $nid
     set node($nid,text) $text
     set node($nid,type) $type
+    set node($nid,offsets) [list $start_offset $end_offset]
+
     if { $type ==  "text"  } {
 	set node($nid,span) "$nid $nid"
 	add-text-node $nid
@@ -142,6 +150,7 @@ proc clear-node {nid} {
     set node($nid,constituents) {}
     set node($nid,visible) 1
     set node($nid,span)  {}
+    set node($nid,offsets)  {}
     set node($nid,xpos) 0
     set node($nid,ypos) 0
     set node($nid,oldindex) {}
@@ -163,22 +172,8 @@ proc reset-rst {} {
 }
 
 
-proc unique-text-node-id {msg_id} {
-    global theAnnotations
-    # check if annotations for the given message already exist
-    if {[info exists theAnnotations($msg_id)]} {
-	return [llength [lindex $theAnnotations($msg_id) end]]
-    } else {
-	# an annotation entry includes 0) type of connection to the parent
-	# message; 1) id of the top-most EDU for the given message; 2) list of
-	# EDUs, where each EDU is a 5-tuple whose 0-th element is the start
-	# index of the EDU in the text string, 1-st element is its end index,
-	# the 2-nd element is the index of its parent EDU in the list, the
-	# 3-rd element is the connection type to the parent element, and,
-	# finally, the 4-th element is a list of list id's of child EDUs
-	set theAnnotations($msg_id) [list {} {} {}]
-	return 0;
-    }
+proc unique-text-node-id {} {
+    global last_text_node_id
     return [incr last_text_node_id]
 }
 

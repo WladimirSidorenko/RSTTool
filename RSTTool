@@ -190,6 +190,7 @@ set x1 {}
 set x2 {}
 proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     global last_text_node_id newest_node savenum new_node_text
+    global offsetShift theText
     global x1 x2
 
     if {$my_current == {}} {set my_current current}
@@ -213,12 +214,16 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     set x [.editor.text index my_sel.last]
     set y [.editor.text index end]
     # put mark `last_sel` just before the last character in `my_sel`
+    puts "x == $x ('[string index $theText $x]')"
+    puts "y == $y ('[string index $theText $y]')"
     .editor.text mark set last_sel my_sel.last
-    if { $x == $y } {
+    if {$x == $y} {
 	.editor.text mark set last_sel "my_sel.last - 1 chars"
   	.editor.text tag remove sel last_sel sel.last
   	.editor.text tag remove my_sel last_sel my_sel.last
     }
+    puts "x == $x ('[string index $theText $x]')"
+    puts "y == $y ('[string index $theText $y]')"
 
     set the_selection [selection get]
     set new_node_text $the_selection
@@ -226,9 +231,13 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     regsub -all "\t" $new_node_text " " new_node_text
     regsub -all " +" $new_node_text " " new_node_text
     regsub -all "\"" $new_node_text "" new_node_text
+
+    puts "my_sel.first = [.editor.text index new.first]"
+    puts "my_sel.last = $x"
+
     if { "$do_it" == "really" } {
   	incr savenum
-  	set newest_node [make-node $new_node_text "text"]
+  	set newest_node [make-node $new_node_text "text" sel.first sel.last]
   	redisplay-net
     }
 
@@ -251,7 +260,7 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     editor-message "saved tmp.$savenum"
     set x [.editor.text index "end - 1 chars"]
     set y [.editor.text index insert]
-    if { $x == $y } {
+    if {$x == $y} {
 	nextSentence $do_it
     }
     set line_no [.editor.text index old.last]

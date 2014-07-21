@@ -124,7 +124,7 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 	if { $sure == 0 } {
 	    if {$a_different_file == 1} { export-time }
  	    set mystepfile [file dirname $filename]/rst/[set-file-name step $filename]
-	    wincopy $mystepfile $mystepfile.bak
+	    if {[file readable $mystepfile]} {wincopy $mystepfile $mystepfile.bak}
             load-file $filename
 	    set savenum 0
 	    reset-and-redisplay

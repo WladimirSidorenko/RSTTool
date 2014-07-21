@@ -229,7 +229,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     global theRoots theRootIdx theForrest theText usedtext
     global crntMsgId crntMsgTxt prntMsgId prntMsgTxt
     global msgQueue msgPrevQueue
-
+    global offsetShift
     # check direction to which we should proceed
     if {$direction == {forward}} {
 	# if we have exhausted the queue of messages for current
@@ -296,6 +296,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     # clear current message text area and place new text into it
     set usedtext "";
     set theText $crntMsgTxt;
+    set offsetShift 0;
     .editor.text delete 0.0 end
     .editor.text tag add new 0.0 end
     nextSentence $do_it;
