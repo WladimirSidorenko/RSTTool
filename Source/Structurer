@@ -186,7 +186,7 @@ $File add command -label "Quit" -command {
 	set fill fill
 	set orient landscape
 	set pages multi
-	print_dot 
+	print_dot
 	set my_dotfile [set-file-name dot]
 	if {$DOT_EXISTS == "YES"} {
 	    exec $DOT -Tps $currentfile.rst/$my_dotfile -o\
@@ -197,14 +197,21 @@ $File add command -label "Quit" -command {
     exit
 }
 $Display add command -label "Clear Structure" -command {
+    global theRoots theForrest
+
     set sure [tk_dialog .d3 {Doublecheck}\
 		  "Are you sure you want to erase this?"\
 		  warning 0 {Yes} {No} "Cancel"]
+
+    # clear data structures holding information about discussions
+    set theRoots {}
+    array unset theForrest
+
     if { $sure == 0 } {
 	set filename $currentfile
 	set $currentfile {}
 	load-file $filename
-	reset-rst 
+	reset-rst
 	redisplay-net
     }
 }
@@ -404,7 +411,7 @@ proc unlink-node {sat {redraw 1}} {
 }
 
 ##################################################
-# DESTROY NODE 
+# DESTROY NODE
 
 proc destroy-node {nid {redraw 1}} {
     global node rstw
@@ -412,7 +419,7 @@ proc destroy-node {nid {redraw 1}} {
 
     #1. Unlink the node if still connected
     if {$node($nid,parent) != {} } {
-	unlink-node $nid 
+	unlink-node $nid
     }
 
     #2. delete the graphic presentation
@@ -428,21 +435,21 @@ proc destroy-node {nid {redraw 1}} {
 
 
 ##################################################
-# Graph Change Server 
-
+# Graph Change Server
 proc adjust-after-change {nuc sat op {redraw 0}} {
+    global visitedNodes
 
     # Adjust nucleus
     restructure-upwards $nuc $redraw
 
     # Ajust satelite
-    if $redraw {
-	y-layout-subtree $sat 
-    }
+    array set visitedNodes {}
+    if $redraw {y-layout-subtree $sat}
+    array set visitedNodes {}
 }
 
 proc restructure-upwards {nid {redraw 0}} {
-    global node 
+    global node
     debug "restructure-upwards: $nid $redraw"
 
     # stop when no change in span nor in pos of node
@@ -484,13 +491,11 @@ proc restructure-upwards {nid {redraw 0}} {
 
     } else {set adjust_needed 1}
 
-    
-
     # 2. adjusts the span of parent nodes considering the expansion
     # of the current node.
     # Apply to parent also
     set par $node($nid,parent)
-    if { $adjust_needed  && $par != {} } {
+    if { $adjust_needed  && $par != {} && $par != $nid} {
 	restructure-upwards $par $redraw
     }
 }
@@ -950,18 +955,17 @@ proc expand {nid {really {}} } {
 	list [lindex [$rstw coords $item] 0]\
 	    [lindex [$rstw bbox $item] 3]
     }
-    
+
     proc clicked-widget {x y} {
 	global rstw wtn erased_nodes
-	set x1 [$rstw canvasx $x] 
+	set x1 [$rstw canvasx $x]
 	set y1 [$rstw canvasy $y]
 	set wgts [$rstw find overlapping [expr $x1-2] [expr $y1-2]\
 		      [expr $x1+2] [expr $y1+2]]
 
 	if { [lindex $wgts 1] != {} } {
 	    foreach wgt $wgts {
-
-		if [info exists wtn($wgt)] {
+		if {[info exists wtn($wgt)] && $erased_nodes != {}} {
 		    if {[lsearch $erased_nodes $wtn($wgt)] == -1} {
 			return $wgt
 		    }
@@ -979,26 +983,37 @@ proc expand {nid {really {}} } {
 
     proc legal-node {the_node {prev_node {}} } {
 	global node newest_node
-	if { $the_node == $newest_node } { 
+
+	if {$the_node == $newest_node} {
+	    puts stderr "node is legal (the_node == newest_node)"
 	    return $the_node
 	}
+
 	if { $prev_node == {} } {
 	    set prev_node $newest_node
 	    if { $node($newest_node,parent) == {} } {
 		incr prev_node -1
 	    }
 	}
+	puts stderr "legal-node: the_node == $the_node; prev_node == $prev_node"
+
 	if { $prev_node != 0 } {
-	    if { $the_node == $prev_node } { 
+	    if { $the_node == $prev_node } {
+		puts stderr "node is legal (the_node == prev_node)";
 		return $the_node
 	    } else {
-		if { $node($prev_node,parent) == {} } {
+		if {$node($prev_node,parent) == {}} {
+		    puts stderr "node is illegal (node(prev_node,parent) == {}; prev_node == $prev_node)";
 		    return 0
 		} else {
+		    puts stderr "recursive call (node == $the_node; prev_node == $prev_node)";
 		    legal-node $the_node $node($prev_node,parent)
 		}
 	    }
-	} else { return 0 }
+	} else {
+	    puts stderr "node is illegal (prev_node == 0)";
+	    return 0
+	}
     }
 
     proc wtn {widget} {
@@ -1091,6 +1106,16 @@ proc expand {nid {really {}} } {
 			compare-click-times
 			autolink_nodes [clicked-node %x %y] } }
 	    }
+	    autolink { $rstw config -cursor hand2
+		bind $rstw <ButtonPress-1> {}
+		bind $rstw <ButtonRelease-1> {
+		    set clicked_node [clicked-node %x %y]
+		    if { [legal-node $clicked_node] != 0} {
+			compare-click-times
+			autolink_nodes $clicked_node
+		    }
+		}
+	    }
 	    disconnect { $rstw config -cursor X_cursor
 		bind $rstw <ButtonPress-1> {}
 		$rstw bind nodes <Button-1> {}
@@ -1107,16 +1132,7 @@ proc expand {nid {really {}} } {
 			compare-click-times
 			disconnect_node [clicked-node %x %y] modify} }
 	    }
-	    autolink { $rstw config -cursor hand2 
-		bind $rstw <ButtonPress-1> {}
-		bind $rstw <ButtonRelease-1> {
-		    if { [legal-node [clicked-node %x %y]] != 0} {
-			compare-click-times
-			autolink_nodes [clicked-node %x %y]
-		    }
-		}
-	    }
-	    change_schema { $rstw config -cursor hand1 
+	    change_schema { $rstw config -cursor hand1
 		bind $rstw <ButtonPress-1> {}
 		bind $rstw <ButtonRelease-1> {
 		    if { [clicked-node %x %y] != 0} {
@@ -1125,7 +1141,7 @@ proc expand {nid {really {}} } {
 		    }
 		}
 	    }
-	    change { $rstw config -cursor hand1 
+	    change { $rstw config -cursor hand1
 		bind $rstw <ButtonPress-1> {}
 		bind $rstw <ButtonRelease-1> {
 		    if { [clicked-node %x %y] != 0} {
@@ -1218,6 +1234,8 @@ proc expand {nid {really {}} } {
 
     proc group-node-p {nid} {
 	global node
+	puts "node(nid,type) == $node($nid,type)"
+	puts "[member $node($nid,type) {span multinuc constit embedded}]"
 	member $node($nid,type) {span multinuc constit embedded}
     }
 
@@ -1321,9 +1339,10 @@ proc expand {nid {really {}} } {
 	set conv(multinuc) multinuc
 	set conv(schema) constit
 	set conv(constit) constit
-	set conv(nucleus-embedded) embedded	
+	set conv(nucleus-embedded) embedded
 	set conv(satelite-embedded) embedded
-	set conv(embedded) embedded	
+	set conv(embedded) embedded
+	puts stderr "type == $type"
 	set type $conv($type)
 
 	if [member $type {rst constit multinuc embedded}] {
@@ -1408,7 +1427,8 @@ proc expand {nid {really {}} } {
 	    set node($i,promotion) $i
 	    set j $i
 	    set j_relation $node($j,relname)
-	    while {$node($j,parent) != {} && [group-relation-p $j_relation]} { 
+	    while {$node($j,parent) != {} && $node($j,parent) != $j && \
+		       [group-relation-p $j_relation]} {
 		set j_parent $node($j,parent)
 		if {$node($j_parent,promotion) != {}} {
 		    append node($j_parent,promotion) " "
@@ -1831,11 +1851,9 @@ proc expand {nid {really {}} } {
 			     {ambiguity {}} {space_holder {}} } {
 	global newest_node rstw node savenum currentsat cancelled
 	global last_group_node_id disco_node
+	puts stderr "autolink_nodes called"
 
-
-	if {$dragged_node == {} } {
-	    set dragged_node $newest_node
-	}
+	if {$dragged_node == {} } {set dragged_node $newest_node}
 
 	if {$disco_node != {}} {
 	    set dragged_node $disco_node
@@ -1843,9 +1861,10 @@ proc expand {nid {really {}} } {
 	}
 
 	if {$node($dragged_node,parent) != {}} {return}
+	if {$type == {} && $clicked_node == $dragged_node} {return}
 
 	set this_step "autolink_nodes $clicked_node $dragged_node"
-	set par $node($clicked_node,parent)
+	# set par $node($clicked_node,parent)
 	set children $node($clicked_node,children)
 	if { $children != {} } {
 	    if { $node([lindex $children 0],visible) == 0 } {
@@ -1856,6 +1875,8 @@ proc expand {nid {really {}} } {
 		reestablish
 	    }
 	}
+	puts stderr "autolink_nodes called"
+
 	if {$type == {} } {
 	    set coords [screen-coords [ntw $clicked_node] $rstw]
 	    set type [popup-choose-from-list \
@@ -1875,18 +1896,19 @@ proc expand {nid {really {}} } {
 		foreach child $node($clicked_node,children) {
 		    if { [relation-type $node($child,relname)] == "rst" || [relation-type $node($child,relname)] == "embedded"} {
 			#1)ambiguous
-			set ambiguity "unknown" 
+			set ambiguity "unknown"
 		    }
 		}
 	    }
 	} elseif { $type == "multinuclear" } {
-	    if {"$node($clicked_node,type)" == "multinuc"} { 
+	    if {"$node($clicked_node,type)" == "multinuc"} {
 		#1)ambiguous
 		if { "$ambiguity" == {} } {
 		    set ambiguity "unknown"
 		}
-	    } 
+	    }
 	}
+
 	if { $ambiguity == "unknown" } {
 	    set coords [screen-coords [ntw $clicked_node] $rstw]
 	    set ambiguity [popup-choose-from-list {above below}\
@@ -1905,11 +1927,12 @@ proc expand {nid {really {}} } {
 		}
 		incr i
 	    }
+	    if {$clicked_node == $dragged_node} {return}
 	    link-par-to-child $clicked_node $dragged_node $relation
 	} elseif { ($type == "satelite" || $type == "satelite-embedded") && $ambiguity == "above" } {
 	    #exception #2
 	    set relation [choose-label $clicked_node $type]
-	    if {$relation != {}} {
+	    if {$relation != {} && $clicked_node != $dragged_node} {
 		link-par-to-child $clicked_node $dragged_node $relation
 	    } else {
 		return
@@ -1924,13 +1947,14 @@ proc expand {nid {really {}} } {
 	    }
 	} else {
 	    #standard algorithm
+	    puts stderr "Choosing relation..."
 	    set relation [choose-label $clicked_node $type]
-	    if {$relation == {}} {
-		return
-	    }
+	    puts stderr "Relation chosen..."
+	    if {$relation == {}} {return}
+	    puts "Establishing node..."
 
 	    incr last_group_node_id
-	    add-group-node $last_group_node_id     
+	    add-group-node $last_group_node_id
 	    clear-node $last_group_node_id
 	    put-in-place-of $clicked_node $last_group_node_id
 
@@ -1940,6 +1964,7 @@ proc expand {nid {really {}} } {
 		link-par-to-child $last_group_node_id $dragged_node $relation
 		fix-children $last_group_node_id $clicked_node $dragged_node
 	    } else {
+		# if {$clicked_node == $dragged_node} {return;}
 		set node($last_group_node_id,type) span
 		if {$type == "satelite" || $type == "satelite-embedded"} {
 		    link-par-to-child $last_group_node_id $clicked_node span
@@ -1961,9 +1986,10 @@ proc expand {nid {really {}} } {
 	save-rst $savenum
 	if { $type == "schema" } {
 	    set-mode autolink
-	} else {
-	    set-mode nothing
 	}
+	#  else {
+	#     set-mode nothing
+	# }
 	editor-message\
 	    "linked $dragged_node to $clicked_node as a $relation $type $ambiguity"
 	reestablish
@@ -1973,6 +1999,7 @@ proc expand {nid {really {}} } {
 	    set cancelled 0
 	    undo_by_reload
 	}
+	puts stderr "autolink_nodes finished"
     }
 
     proc fix-children {new_node clicked_node dragged_node} {
@@ -1988,8 +2015,10 @@ proc expand {nid {really {}} } {
 	}
     }
 
-    proc link-par-to-child { par child relation } {
+    proc link-par-to-child {par child relation } {
 	global node
+	puts "link-par-to-child $par $child $relation"
+	if {$par == $child} {return;}
 
 	lappend node($par,children) $child
 	set node($par,children) [lsort -integer $node($par,children)]

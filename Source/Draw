@@ -260,7 +260,7 @@ proc redisplay-node {nid} {
     if { $node($nid,textwgt) != {} } {
 	erase-node $nid
     }
-    
+
     display-node $nid
 }
 

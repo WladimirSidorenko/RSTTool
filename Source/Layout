@@ -5,232 +5,234 @@
 # Functions used by RST-Tool for laying-out RSt structures
 
 proc resize-display {change} {
-  global size_factor rstw current_xpos node_width text_nodes group_nodes node
-  set size_factor [expr $size_factor + $change]
-  set ymax 0
-  set xmax 0
-  foreach nid [concat $text_nodes $group_nodes] {
+    global size_factor rstw current_xpos node_width text_nodes group_nodes node
+    set size_factor [expr $size_factor + $change]
+    set ymax 0
+    set xmax 0
+    foreach nid [concat $text_nodes $group_nodes] {
 	if { $node($nid,visible) == 1 } {
 	    set ymax [max $ymax $node($nid,ypos)]
 	    set xmax [max $xmax $node($nid,xpos)]
-	   }
-  }
-  $rstw configure -scrollregion "0 1 [expr  $xmax + $node_width]\
+	}
+    }
+    $rstw configure -scrollregion "0 1 [expr  $xmax + $node_width]\
 	     [expr $ymax + $size_factor]"
 }
 
 proc redisplay-net {} {
-# 1. Layout the graph
-#  a. X-layout
-#  b. Y-Layout (for each node with no parents, layout children)
-# 2. Draw the links
-  global rstw current_xpos node_width text_nodes group_nodes node
+    # 1. Layout the graph
+    #  a. X-layout
+    #  b. Y-Layout (for each node with no parents, layout children)
+    # 2. Draw the links
+    global rstw current_xpos node_width text_nodes group_nodes node
 
-  # 1. Clean up from earlier structures
-  if [info exists wtn] {unset wtn}
-  $rstw delete all
+    # 1. Clean up from earlier structures
+    if [info exists wtn] {unset wtn}
+    $rstw delete all
 
-  # 2. layout and draw the new
-  x-layout
-  y-layout
+    # 2. layout and draw the new
+    x-layout
+    y-layout
 
-  # constrain the scrollbars
-  set ymax 0
-  set xmax 0
-  foreach nid [concat $text_nodes $group_nodes] {
-   if { $node($nid,visible) == 1 } {
-    set ymax [max $ymax $node($nid,ypos)]
-    set xmax [max $xmax $node($nid,xpos)]
-   }
-  }
-###################scroll
-  $rstw configure -scrollregion "0 1 [expr  $xmax + $node_width]\
+    # constrain the scrollbars
+    set ymax 0
+    set xmax 0
+    foreach nid [concat $text_nodes $group_nodes] {
+	if { $node($nid,visible) == 1 } {
+	    set ymax [max $ymax $node($nid,ypos)]
+	    set xmax [max $xmax $node($nid,xpos)]
+	}
+    }
+    ###################scroll
+    $rstw configure -scrollregion "0 1 [expr  $xmax + $node_width]\
           [expr $ymax + 130]"
-#prev ymax was 130
+    #prev ymax was 130
 
-# scroll to top left 
-#  $rstw xview moveto 0
-#  $rstw yview moveto 0
+    # scroll to top left
+    #  $rstw xview moveto 0
+    #  $rstw yview moveto 0
 }
 
 proc x-layout {} {
-  global node group_nodes text_nodes node_width visited_group_nodes current_xpos
+    global node group_nodes text_nodes node_width visited_group_nodes current_xpos
 
 
-  # set xpos of group-nodes to 0 (logically false)
-  foreach nid $group_nodes {
-    set node($nid,xpos) 0
-  }
-
-  set xinc [expr $node_width + 10]
-  set xpos [expr $node_width / 2 + 30]
-  set visited_group_nodes {}
-  foreach nid $text_nodes {
-    if $node($nid,visible) {
-      set node($nid,xpos) $xpos
-      set xpos [expr $xpos+$xinc]
-    } else {
-      if [parent-needs-space-p $nid $xpos] {
-        set xpos [expr $xpos+$xinc] 
-      }
+    # set xpos of group-nodes to 0 (logically false)
+    foreach nid $group_nodes {
+	set node($nid,xpos) 0
     }
-  }
 
-  foreach nid $group_nodes {
-    if { $node($nid,visible) } {
-      xlayout-group-node $nid
+    set xinc [expr $node_width + 10]
+    set xpos [expr $node_width / 2 + 30]
+    set visited_group_nodes {}
+    foreach nid $text_nodes {
+	if $node($nid,visible) {
+	    set node($nid,xpos) $xpos
+	    set xpos [expr $xpos+$xinc]
+	} else {
+	    if [parent-needs-space-p $nid $xpos] {
+		set xpos [expr $xpos+$xinc]
+	    }
+	}
     }
-  }
-  set current_xpos $xpos
+
+    foreach nid $group_nodes {
+	if { $node($nid,visible) } {
+	    xlayout-group-node $nid
+	}
+    }
+    set current_xpos $xpos
 }
 
 
 proc xlayout-group-node {nid} {
-  global node  node_width
+    global node  node_width
 
-  # only position nodes which are not yet positioned
-  if $node($nid,xpos) {return}
-  # don't position invalid nodes
-  if { $nid == 0 } {return}
+    # only position nodes which are not yet positioned
+    if $node($nid,xpos) {return}
+    # don't position invalid nodes
+    if { $nid == 0 } {return}
 
-  # 1. Collect x coords of constituents
-  set x_coords {}
+    # 1. Collect x coords of constituents
+    set x_coords {}
 
-  foreach dep $node($nid,children) {
-#  [group-relation-p $node($dep,relname)]
-    if { $node($dep,visible) } {
-       if { !$node($dep,xpos) } {
-         xlayout-group-node $dep
-       }
-       if { [group-relation-p $node($dep,relname)] } {
-           # we want to place the node over its members, not satelites
-          lappend x_coords $node($dep,xpos)
-       }
+    foreach dep $node($nid,children) {
+	#  [group-relation-p $node($dep,relname)]
+	if { $node($dep,visible) } {
+	    if { !$node($dep,xpos) } {
+		xlayout-group-node $dep
+	    }
+	    if { [group-relation-p $node($dep,relname)] } {
+		# we want to place the node over its members, not satelites
+		lappend x_coords $node($dep,xpos)
+	    }
+	}
     }
-  }
 
-  if { $x_coords == {} } {
-   # group-node, but all children invisible
-  # find the first visible text node BEFORE the first tn child
-    set first_tn [find-first-text-node $nid]
-    set prev_node [previous-visible-node $first_tn]
-    if { $prev_node > 0 } {
-    	set node($nid,xpos) [expr $node($prev_node,xpos)+  $node_width + 10]
+    if { $x_coords == {} } {
+	# group-node, but all children invisible
+	# find the first visible text node BEFORE the first tn child
+	set first_tn [find-first-text-node $nid]
+	set prev_node [previous-visible-node $first_tn]
+	if { $prev_node > 0 } {
+	    set node($nid,xpos) [expr $node($prev_node,xpos)+  $node_width + 10]
+	} else {
+	    set node($nid,xpos) [expr $node_width + 10]
+	}
+
     } else {
-	set node($nid,xpos) [expr $node_width + 10]
+	set min [eval min $x_coords] 
+	set max [eval max $x_coords]
+	set node($nid,xpos) [expr $min + ($max - $min) / 2]
     }
-
-  } else {
-    set min [eval min $x_coords] 
-    set max [eval max $x_coords]
-    set node($nid,xpos) [expr $min + ($max - $min) / 2]
- }
 }
 
 proc find-first-text-node {nid} {
-  global node
+    global node
 
-#come back here
+    #come back here
     if [text-node-p $nid] {return $nid}
-  # this just returns A child -- we can work back from any
-  # child since all children are invis.
-  set cid [lindex $node($nid,children) 0]
-  if [text-node-p $cid] {
-   return $cid
-  } else {
-   return [find-first-text-node $cid]
-  }
+    # this just returns A child -- we can work back from any
+    # child since all children are invis.
+    set cid [lindex $node($nid,children) 0]
+    if [text-node-p $cid] {
+	return $cid
+    } else {
+	return [find-first-text-node $cid]
+    }
 }
-    
-  
+
+
 proc previous-visible-node {nid} {
-  global node text_nodes
-  set pos [lsearch $text_nodes $nid]
-  for {set i [expr $pos - 1]} {$i > 0} {incr i -1} {
-      if $node($i,visible) {
-        return $i
-      }
-  }
-  return 0
+    global node text_nodes
+    set pos [lsearch $text_nodes $nid]
+    for {set i [expr $pos - 1]} {$i > 0} {incr i -1} {
+	if $node($i,visible) {
+	    return $i
+	}
+    }
+    return 0
 }
 
 
 
 ### need to stop centering of span nodes
 proc parent-needs-space-p {cid current_xpos} {
-  global node visited_group_nodes
-  set pid $node($cid,parent)
+    global node visited_group_nodes
+    set pid $node($cid,parent)
 
-  # if the parent of this invis node is a group node
-  # which has no vis children, make space.
+    # if the parent of this invis node is a group node
+    # which has no vis children, make space.
 
-  if {$pid != {} && [group-node-p $pid]\
-      && ![member $pid $visited_group_nodes]} {
-     lappend visited_group_nodes $pid
-     if $node($pid,visible) {
-       if {![visible-children-p $pid] } {
-         set node($pid,xpos) $current_xpos
-         return 1
-       }
-     } else {
-       return [parent-needs-space-p $pid $current_xpos]
-     }
-   }
-   return 0
+    if {$pid != {} && [group-node-p $pid]\
+	    && ![member $pid $visited_group_nodes]} {
+	lappend visited_group_nodes $pid
+	if $node($pid,visible) {
+	    if {![visible-children-p $pid] } {
+		set node($pid,xpos) $current_xpos
+		return 1
+	    }
+	} else {
+	    return [parent-needs-space-p $pid $current_xpos]
+	}
+    }
+    return 0
 }
 
 
 proc visible-children-p {nid} {
-  global node
-  foreach cid $node($nid,children) {
-    if $node($cid,visible) {return 1}
-  }
-  return 0
+    global node
+    foreach cid $node($nid,children) {
+	if $node($cid,visible) {return 1}
+    }
+    return 0
 }
-  
- 
+
 proc y-layout {} {
-  global node group_nodes text_nodes
+    global node group_nodes text_nodes
 
-  foreach nid [concat $text_nodes $group_nodes] {
-    if { $node($nid,visible) && $node($nid,parent) == {} } {
-       y-layout-subtree $nid
+    foreach nid [concat $text_nodes $group_nodes] {
+	if { $node($nid,visible) && $node($nid,parent) == {} } {
+	    y-layout-subtree $nid
+	}
     }
-  }
 }
 
-proc y-layout-subtree {nid } {
-  global rstw node y_top
+proc y-layout-subtree {nid} {
+    global rstw node y_top visitedNodes
 
-  # 1. Re-layout this node
-  y-layout-node $nid
+    # 1. Re-layout this node
+    y-layout-node $nid
+    # puts "call to y-layout-subtree {$nid}"
+    # if {[info exists visitedNodes($nid)]} {
+    # 	tk_messageBox -message "Infinite loop detected when linking node $nid.";
+    # 	return
+    # }
 
-  # 2. Re-layout children
-  foreach cid $node($nid,children) {
-    if $node($cid,visible) {
-      y-layout-subtree $cid
+    # 2. Re-layout children
+    foreach cid $node($nid,children) {
+	if $node($cid,visible) {
+	    # set visitedNodes($cid) 1;
+	    # puts "child: y-layout-subtree {$cid}"
+	    y-layout-subtree $cid
+	}
     }
-  }
 }
 
 proc y-layout-node {nid} {
-  global rstw node y_top
-#  Position this node under its parent
-  set nuc $node($nid,parent)
-  # 1. Position this node
+    global rstw node y_top
+    #  Position this node under its parent
+    set nuc $node($nid,parent)
+    # 1. Position this node
 
-  if {$nuc == {}} {
-     # toplevel node - position at top
-     set node($nid,ypos) $y_top
-  } elseif { [group-relation-p $node($nid,relname)] } {
-   # group node - position under parent
-     set node($nid,ypos) [expr [lindex [$rstw bbox [ntw $nuc]] 3] + 30]
-  } else {
-     set node($nid,ypos) $node($nuc,ypos)
-  }
-  redisplay-node $nid
+    if {$nuc == {}} {
+	# toplevel node - position at top
+	set node($nid,ypos) $y_top
+    } elseif { [group-relation-p $node($nid,relname)] } {
+	# group node - position under parent
+	set node($nid,ypos) [expr [lindex [$rstw bbox [ntw $nuc]] 3] + 30]
+    } else {
+	set node($nid,ypos) $node($nuc,ypos)
+    }
+    redisplay-node $nid
 }
-
-
-
-
