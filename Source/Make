@@ -51,7 +51,7 @@ proc reinstall-text-nodes {segs} {
 }
 
 proc reinstall-node  {text type old_node_id} {
-    global node  old_node 
+    global node  old_node
 
     if { $type == "text" && $text == {} } {return 0 }
 
@@ -66,7 +66,7 @@ proc reinstall-node  {text type old_node_id} {
 }
 
 proc reinstall-parent {nid} {
-    global node  old_node 
+    global node  old_node
 
     set old_nid $node($nid,oldindex)
     if { $old_nid == {} } { return 0 }
@@ -106,7 +106,7 @@ proc reinstall-parent {nid} {
 }
 
 
-proc make-node {text type {start_offset {}} {end_offset {}}} {
+proc make-node {text type {start_pos {}} {end_pos {}}} {
     global node crntMsgId msgid2nid nid2msgid
     if { $type ==  "text"  } {
 	set nid [unique-text-node-id]
@@ -125,7 +125,7 @@ proc make-node {text type {start_offset {}} {end_offset {}}} {
     clear-node $nid
     set node($nid,text) $text
     set node($nid,type) $type
-    set node($nid,offsets) [list $start_offset $end_offset]
+    set node($nid,offsets) [list $start_pos $end_pos]
 
     if { $type ==  "text"  } {
 	set node($nid,span) "$nid $nid"

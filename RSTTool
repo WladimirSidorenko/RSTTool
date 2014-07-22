@@ -193,7 +193,27 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     global offsetShift theText
     global x1 x2
 
-    if {$my_current == {}} {set my_current current}
+    # if no index was specified, set index position to the position of
+    # the cursor and move it to the left, if currently pointed
+    # character is a space
+    if {$my_current == {}} {
+	set my_current current
+	while {[string is space [.editor.text get $my_current]] && \
+		   [.editor.text compare $my_current > 1.0]} {
+	    set my_current "$my_current -1 chars"
+	}
+    }
+    # determine position of the last non-space character
+    set my_end "end -1 chars"
+    while {[.editor.text compare $my_end > 1.0]} {
+	if {[string is space [.editor.text get $my_end]]} {
+	    set my_end "$my_end -1 chars"
+	} else {
+	    set my_end "$my_end +1 chars"
+	    break
+	}
+    }
+
     # put mark called `insert` before current position -- current is position
     # nearest to the mouse pointer
     .editor.text mark set insert $my_current
@@ -214,16 +234,12 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     set x [.editor.text index my_sel.last]
     set y [.editor.text index end]
     # put mark `last_sel` just before the last character in `my_sel`
-    puts "x == $x ('[string index $theText $x]')"
-    puts "y == $y ('[string index $theText $y]')"
     .editor.text mark set last_sel my_sel.last
     if {$x == $y} {
 	.editor.text mark set last_sel "my_sel.last - 1 chars"
   	.editor.text tag remove sel last_sel sel.last
   	.editor.text tag remove my_sel last_sel my_sel.last
     }
-    puts "x == $x ('[string index $theText $x]')"
-    puts "y == $y ('[string index $theText $y]')"
 
     set the_selection [selection get]
     set new_node_text $the_selection
@@ -232,12 +248,11 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     regsub -all " +" $new_node_text " " new_node_text
     regsub -all "\"" $new_node_text "" new_node_text
 
-    puts "my_sel.first = [.editor.text index new.first]"
-    puts "my_sel.last = $x"
-
     if { "$do_it" == "really" } {
   	incr savenum
-  	set newest_node [make-node $new_node_text "text" sel.first sel.last]
+	set start_pos [expr [.editor.text count -chars 1.0 sel.first] - $offsetShift]
+	set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $offsetShift]
+  	set newest_node [make-node $new_node_text "text" $start_pos $end_pos]
   	redisplay-net
     }
 
@@ -245,7 +260,9 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     .editor.text tag remove new my_sel.first last_sel
 
     .editor.text mark set insert last_sel
-    .editor.text insert my_sel.last "<$last_text_node_id>"
+    set boundary_marker "<$last_text_node_id>"
+    set offsetShift [expr $offsetShift + [string length $boundary_marker]]
+    .editor.text insert my_sel.last "$boundary_marker"
     .editor.text tag remove sel 1.0 end
     if { "$do_it" == "really" } {
   	set myStep "create-a-node-here really [.editor.text index my_sel.last]"
@@ -258,9 +275,10 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     }
     set-mode autolink
     editor-message "saved tmp.$savenum"
-    set x [.editor.text index "end - 1 chars"]
+    set x [.editor.text index $my_end]
     set y [.editor.text index insert]
-    if {$x == $y} {
+
+    if {$x <= $y} {
 	nextSentence $do_it
     }
     set line_no [.editor.text index old.last]
