@@ -6,7 +6,7 @@
 # on return from edit, reinstantiate visibility
 
 ## ADD MEssage bar to display what one can do at each point.
-## perhpas change as mous goes over buttons
+## perhpas change as mouse goes over buttons
 ## Add: limits on scrolling
 ## auto-return to same point
 ## Add relation
@@ -922,11 +922,11 @@ proc expand {nid {really {}} } {
 	if [member $nid $text_nodes] {
 	    puts "add-text-node: error: $nid already defined"
 	}
-	
+
 	# add the node
 	lappend text_nodes $nid 
     }
-    
+
     proc delete-text-node {nid} {
 	global text_nodes
 
@@ -1085,27 +1085,17 @@ proc expand {nid {really {}} } {
 	bind $rstw <Shift-Control-ButtonRelease-1> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
-		expand [clicked-node %x %y] 
+		expand [clicked-node %x %y]
 		reestablish
 		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
 	bind $rstw <ButtonRelease-3> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
-		expand [clicked-node %x %y] 
+		expand [clicked-node %x %y]
 		reestablish
 		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
 
 	switch -- $mode {
-	    link   { $rstw config -cursor sb_h_double_arrow
-		$rstw bind nodes <Button-1> {}
-		bind $rstw <ButtonPress-1> {
-		    if {[clicked-node %x %y] != 0} {
-			set newest_node [clicked-node %x %y] } }
-		bind $rstw <ButtonRelease-1> {
-		    if {[clicked-node %x %y] != 0} {
-			compare-click-times
-			autolink_nodes [clicked-node %x %y] } }
-	    }
 	    autolink { $rstw config -cursor hand2
 		bind $rstw <ButtonPress-1> {}
 		bind $rstw <ButtonRelease-1> {
@@ -1115,6 +1105,16 @@ proc expand {nid {really {}} } {
 			autolink_nodes $clicked_node
 		    }
 		}
+	    }
+	    link   { $rstw config -cursor sb_h_double_arrow
+		$rstw bind nodes <Button-1> {}
+		bind $rstw <ButtonPress-1> {
+		    if {[clicked-node %x %y] != 0} {
+			set newest_node [clicked-node %x %y] } }
+		bind $rstw <ButtonRelease-1> {
+		    if {[clicked-node %x %y] != 0} {
+			compare-click-times
+			autolink_nodes [clicked-node %x %y] } }
 	    }
 	    disconnect { $rstw config -cursor X_cursor
 		bind $rstw <ButtonPress-1> {}
@@ -1234,8 +1234,6 @@ proc expand {nid {really {}} } {
 
     proc group-node-p {nid} {
 	global node
-	puts "node(nid,type) == $node($nid,type)"
-	puts "[member $node($nid,type) {span multinuc constit embedded}]"
 	member $node($nid,type) {span multinuc constit embedded}
     }
 

@@ -160,8 +160,6 @@ proc dialog {w title text bitmap default args} {
     return $button
 }
 
-
-
 #############################################
 # scrolled-text dialog item
 
