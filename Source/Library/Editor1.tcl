@@ -203,11 +203,12 @@ proc load-file {filename {really {1}}} {
 proc showNodes {msg_id {show 1} } {
     # set the visibility status for all nodes belonging to the message
     # `$msg_id` to $show
-
-    global msgid2nid
+    global msgid2nid node
+    puts stderr "Changing visibility for message $msg_id to $show"
 
     if {[info exists msgid2nid($msg_id)]} {
 	foreach nid $msgid2nid($msg_id) {
+	    puts stderr "visibility state of node $nid set to $show"
 	    set node($nid,visible) $show
 	}
     }
@@ -247,9 +248,14 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	if {$node($nid,type) != "text"} {continue;}
 
 	set offsets $node($nid,offsets)
+	if {$offsets == {}} {error "node $nid does not have valid offsets"}
 	set start [lindex $offsets 0]
 	set end [lindex $offsets end]
+
 	# obtain text span between offsets
+	puts stderr "start is $start"
+	puts stderr "end is $end"
+	puts stderr "txt is $txt"
 	set itext [string range $txt $start $end]
 	# insert text portion into the widget and add an EDU ending marker
 	$path_name insert end $itext
@@ -297,6 +303,9 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     global crntMsgId crntMsgTxt prntMsgId prntMsgTxt msgid2nid
     global msgQueue msgPrevQueue
     global offsetShift
+    puts stderr "nextMessage() called"
+    # remember current message id
+    set prev_msg_id $crntMsgId
     # check direction to which we should proceed
     if {$direction == {forward}} {
 	# if we have exhausted the queue of messages for current
@@ -312,9 +321,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	}
 
 	# remember current message in `msgPrevQueue`
-	if {$crntMsgId != {}} {
-	    lappend msgPrevQueue $crntMsgId;
-	}
+	if {$crntMsgId != {}} {lappend msgPrevQueue $crntMsgId;}
 	# assign the leftmost tweet on the Queue to crnt_msg and unshift the Queue
 	set crntMsgId [lindex $msgQueue 0]
 	set crnt_msg $theForrest($crntMsgId)
@@ -326,7 +333,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	# if we have exhausted the queue of messages for current
 	# discussion, we proceed to the next discussion in the forrest
 	if {[llength $msgPrevQueue] == 0} {
-	    tk_messageBox -message "Reached the beginning of the document."
+	    tk_messageBox -message "Reached the beginning of the document.";
 	    return;
 	}
 
@@ -351,7 +358,8 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	# remember new parent
 	set prev_prnt_msg_id $prntMsgId;
 	# display all known RST nodes for the new parent
-	showNodes $prntMsgId 1
+	# hide previous current node, if it is not the parent of the next message
+	if {$prntMsgId != $prev_msg_id} {showNodes $prntMsgId 1;}
 	# obtain text of the new parent
 	if {$prntMsgId == {}} {
 	    set prntMsgTxt "";
@@ -362,6 +370,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	.editor.textPrnt delete 0.0 end
 	showSentences .editor.textPrnt $prntMsgId 1
     }
+    if {$prntMsgId != $prev_msg_id} {showNodes $prev_msg_id 0;}
     # clear current message text area and place new text into it
     .editor.text delete 1.0 end
     .editor.text tag add new 1.0 end
