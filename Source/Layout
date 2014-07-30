@@ -203,7 +203,6 @@ proc y-layout-subtree {nid} {
 
     # 1. Re-layout this node
     y-layout-node $nid
-    # puts "call to y-layout-subtree {$nid}"
     # if {[info exists visitedNodes($nid)]} {
     # 	tk_messageBox -message "Infinite loop detected when linking node $nid.";
     # 	return

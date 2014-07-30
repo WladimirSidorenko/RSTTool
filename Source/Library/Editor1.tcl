@@ -200,6 +200,81 @@ proc load-file {filename {really {1}}} {
     }
 }
 
+proc showNodes {msg_id {show 1} } {
+    # set the visibility status for all nodes belonging to the message
+    # `$msg_id` to $show
+    global msgid2nid node
+    puts stderr "Changing visibility for message $msg_id to $show"
+
+    if {[info exists msgid2nid($msg_id)]} {
+	foreach nid $msgid2nid($msg_id) {
+	    puts stderr "visibility state of node $nid set to $show"
+	    set node($nid,visible) $show
+	}
+    }
+}
+
+proc showSentences {path_name msg_id {show_rest 0}} {
+    # display already EDU segements in widget `path_name`
+    global theForrest msgid2nid node
+    # obtain annotated EDUs for given message
+    if {! [info exists theForrest($msg_id)]} {
+	return {0 0};
+    } elseif {[info exists msgid2nid($msg_id)]} {
+	set nids $msgid2nid($msg_id);
+    } elseif {$show_rest} {
+	set nids {};
+    } else {
+	return {0 0};
+    }
+    # obtain text of the message to be displayed
+    set msg $theForrest($msg_id);
+    set txt [lindex $msg 0];
+    # for each node, obtain its serial number and span
+    set prev_nid -1
+    set offsets {}
+    set offset_shift 0
+    set start 0
+    set end 0
+    set bmarker ""
+    # we assume that node ids are topologically ordered
+    foreach nid $nids {
+	if {$nid > $prev_nid } {
+	    set prev_nid $nid
+	} else {
+	    error "Error while loading message $msg_id (EDU nodes for this message are\
+ not ordered topologically)"
+	}
+	if {$node($nid,type) != "text"} {continue;}
+
+	set offsets $node($nid,offsets)
+	if {$offsets == {}} {error "node $nid does not have valid offsets"}
+	set start [lindex $offsets 0]
+	set end [lindex $offsets end]
+
+	# obtain text span between offsets
+	puts stderr "start is $start"
+	puts stderr "end is $end"
+	puts stderr "txt is $txt"
+	set itext [string range $txt $start $end]
+	# insert text portion into the widget and add an EDU ending marker
+	$path_name insert end $itext
+	set bmarker [make-boundary-marker $nid]
+	$path_name insert end $bmarker
+	# update counter of artificial characters
+	set offset_shift [expr $offset_shift + [string length $bmarker]]
+    }
+    $path_name tag add old 1.0 "[$path_name index end] -1 chars"
+    # insert the rest of the text, if asked to do so
+    if {$show_rest} {
+    	$path_name insert end [string range $txt $end end];
+    	set end end
+    }
+    # return position of the last annotated character and the number
+    # of inserted artificial characters
+    return [list $end $offset_shift]
+}
+
 proc showText { {do_it {}} } {
     global theText usedText currSentence abbreviations
     set old_new_first [.editor.text index new.first]
@@ -220,16 +295,17 @@ proc showText { {do_it {}} } {
     } else {
 	.editor.text tag add new $old_new_first end
     }
-    if {"$do_it" == "really"} {
-	save-step "showText really"
-    }
+    if {"$do_it" == "really"} {save-step "showText really"}
 }
 
 proc nextMessage { {do_it {}} {direction {forward}}} {
     global theRoots theRootIdx theForrest theText usedtext
-    global crntMsgId crntMsgTxt prntMsgId prntMsgTxt
+    global crntMsgId crntMsgTxt prntMsgId prntMsgTxt msgid2nid
     global msgQueue msgPrevQueue
     global offsetShift
+    puts stderr "nextMessage() called"
+    # remember current message id
+    set prev_msg_id $crntMsgId
     # check direction to which we should proceed
     if {$direction == {forward}} {
 	# if we have exhausted the queue of messages for current
@@ -245,9 +321,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	}
 
 	# remember current message in `msgPrevQueue`
-	if {$crntMsgId != {}} {
-	    lappend msgPrevQueue $crntMsgId;
-	}
+	if {$crntMsgId != {}} {lappend msgPrevQueue $crntMsgId;}
 	# assign the leftmost tweet on the Queue to crnt_msg and unshift the Queue
 	set crntMsgId [lindex $msgQueue 0]
 	set crnt_msg $theForrest($crntMsgId)
@@ -259,7 +333,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	# if we have exhausted the queue of messages for current
 	# discussion, we proceed to the next discussion in the forrest
 	if {[llength $msgPrevQueue] == 0} {
-	    tk_messageBox -message "Reached the beginning of the document."
+	    tk_messageBox -message "Reached the beginning of the document.";
 	    return;
 	}
 
@@ -272,34 +346,50 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	set crnt_msg $theForrest($crntMsgId)
 	set msgPrevQueue [lreplace $msgPrevQueue end end]; # pop message id from the queue
     }
-    # puts stderr "crntMsgId == $crntMsgId"
-    # puts stderr "msgPrevQueue == $msgPrevQueue"
-    # puts stderr "msgvQueue == $msgQueue"
     set crntMsgTxt [lindex $crnt_msg 0]; # obtain text of current message
     set prev_prnt_msg_id $prntMsgId; # remember id of previous parent
     set prntMsgId [lindex $crnt_msg 1];	# obtain id of the parent of current message
 
     # if parent has changed, reload it
     if {$prntMsgId != $prev_prnt_msg_id} {
-	# TODO: check that connection from child to parent has been established
+	# hide all RST nodes in RST window which correspond to the
+	# previous parent
+	showNodes $prev_prnt_msg_id 0
+	# remember new parent
 	set prev_prnt_msg_id $prntMsgId;
-	# obtain text of new parent
+	# display all known RST nodes for the new parent
+	# hide previous current node, if it is not the parent of the next message
+	if {$prntMsgId != $prev_msg_id} {showNodes $prntMsgId 1;}
+	# obtain text of the new parent
 	if {$prntMsgId == {}} {
 	    set prntMsgTxt "";
 	} else {
 	    set prntMsgTxt [lindex $theForrest($prntMsgId) 0];
 	}
-	# if parent has changed, reload it
+	# reload the text
 	.editor.textPrnt delete 0.0 end
-	.editor.textPrnt insert end $prntMsgTxt
+	showSentences .editor.textPrnt $prntMsgId 1
     }
+    if {$prntMsgId != $prev_msg_id} {showNodes $prev_msg_id 0;}
     # clear current message text area and place new text into it
-    set usedtext "";
-    set theText $crntMsgTxt;
-    set offsetShift 0;
-    .editor.text delete 0.0 end
-    .editor.text tag add new 0.0 end
+    .editor.text delete 1.0 end
+    .editor.text tag add new 1.0 end
+    # show already annotated segments for current message and remember
+    # position of the last annotated character
+    set rvalues [showSentences .editor.text $crntMsgId]
+    # show next segment if possible
+    set boundary [lindex $rvalues 0]
+    set offsetShift [lindex $rvalues end]
+    # update what parts of the text have already been annotated and
+    # which haven't
+    set usedtext [string range $crntMsgTxt 0 $boundary];
+    set theText [string range $crntMsgTxt $boundary end];
+    # display next potential EDU chunk, if possible
     nextSentence $do_it;
+    # display any nodes and sentences that already were annotated for
+    # current message
+    showNodes $crntMsgId 1
+    redisplay-net
 }
 
 # load next text chunk delimited by punctuation mark into the editor
@@ -422,9 +512,7 @@ proc clear-current-file {} {
 proc save-file {{filename {}}} {
     global currentfile
 
-    if { $filename ==  {} } {
-	set filename $currentfile
-    }
+    if { $filename ==  {} } {set filename $currentfile}
 
     # 1. Save the file
     set f [open $filename w 0600]
