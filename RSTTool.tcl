@@ -1,4 +1,3 @@
-#!/local/bin/wish -f
 #!/usr/local/wish -f
 
 wm title . "RST Interface"
