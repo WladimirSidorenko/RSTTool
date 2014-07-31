@@ -437,15 +437,11 @@ proc destroy-node {nid {redraw 1}} {
 ##################################################
 # Graph Change Server
 proc adjust-after-change {nuc sat op {redraw 0}} {
-    global visitedNodes
-
     # Adjust nucleus
     restructure-upwards $nuc $redraw
 
     # Ajust satellite
-    array set visitedNodes {}
     if $redraw {y-layout-subtree $sat}
-    array set visitedNodes {}
 }
 
 proc restructure-upwards {nid {redraw 0}} {
@@ -567,7 +563,7 @@ proc change_rel {nid {relname {}} } {
 
 proc set-subtree-node-span {nid} {
     global node
-    
+
     # this function is like reset-parent-node-span, but works downwards
 
     #1. Ensure span of all children is known
@@ -601,7 +597,7 @@ proc find-node-span {nid} {
 
     # Span depends on node-type  
     switch -- $node($nid,type) {
-	
+
 	span { # span is min/max of nuc and all satellites
 	    foreach child $node($nid,children) {
 		if { $node($child,relname) == "span" 
@@ -701,7 +697,6 @@ proc expand {nid {really {}} } {
     }
     #END
 
-
     proc hide-node {nid} {
 	global node visible_nodes
 	if {[info exists visible_nodes($nid)]} {
@@ -790,7 +785,6 @@ proc expand {nid {really {}} } {
     proc load-rst { {filenum {}} } {
 	global rstfile node text_nodes currentfile group_nodes \
 	    last_text_node_id last_group_node_id
-	puts stderr "*** load-rst called"
 	set last_text_node_id 0
 	set last_group_node_id 5000
 	if {"$filenum" == {} } {
@@ -805,7 +799,6 @@ proc expand {nid {really {}} } {
 	set segs {}
 	reset-rst
 	while {[gets $f nid] >= 0} {
-	    puts stderr "*** clear-node called from load-rst"
 	    clear-node $nid
 	    gets $f node($nid,text)
 	    gets $f node($nid,parent)
@@ -989,10 +982,7 @@ proc expand {nid {really {}} } {
     proc legal-node {the_node {prev_node {}} } {
 	global node newest_node
 
-	if {$the_node == $newest_node} {
-	    puts stderr "node is legal (the_node == newest_node)"
-	    return $the_node
-	}
+	if {$the_node == $newest_node} {return $the_node}
 
 	if { $prev_node == {} } {
 	    set prev_node $newest_node
@@ -1000,23 +990,18 @@ proc expand {nid {really {}} } {
 		incr prev_node -1
 	    }
 	}
-	puts stderr "legal-node: the_node == $the_node; prev_node == $prev_node"
 
 	if { $prev_node != 0 } {
 	    if { $the_node == $prev_node } {
-		puts stderr "node is legal (the_node == prev_node)";
 		return $the_node
 	    } else {
 		if {$node($prev_node,parent) == {}} {
-		    puts stderr "node is illegal (node(prev_node,parent) == {}; prev_node == $prev_node)";
 		    return 0
 		} else {
-		    puts stderr "recursive call (node == $the_node; prev_node == $prev_node)";
 		    legal-node $the_node $node($prev_node,parent)
 		}
 	    }
 	} else {
-	    puts stderr "node is illegal (prev_node == 0)";
 	    return 0
 	}
     }
@@ -1240,6 +1225,7 @@ proc expand {nid {really {}} } {
 
     proc group-node-p {nid} {
 	global node
+	puts stderr "group-node-p $nid: $node($nid,type)"
 	member $node($nid,type) {span multinuc constit embedded}
     }
 
@@ -1346,7 +1332,6 @@ proc expand {nid {really {}} } {
 	set conv(nucleus-embedded) embedded
 	set conv(satellite-embedded) embedded
 	set conv(embedded) embedded
-	puts stderr "type == $type"
 	set type $conv($type)
 
 	if [member $type {rst constit multinuc embedded}] {
@@ -1792,7 +1777,6 @@ proc expand {nid {really {}} } {
 			    [lreplace $node($greatgrand,children) $index $index $par]
 		    }
 		    #eliminate grandpar
-		    puts stderr "*** clear-node called from disconnect_node"
 		    clear-node $grandpar
 		    set node($grandpar,type) span
 		    lappend erased_nodes $grandpar
@@ -1859,7 +1843,6 @@ proc expand {nid {really {}} } {
 	global msgid2nid nid2msgid theForrest
 	global visible_nodes
 
-	puts stderr "autolink_nodes called"
 	if {$dragged_node == {} } {set dragged_node $newest_node}
 
 	if {$disco_node != {}} {
@@ -1880,22 +1863,20 @@ proc expand {nid {really {}} } {
 	    }
 	    # reestablish
 	}
-	puts stderr "autolink_nodes called"
 
-	# obtain message id's and parent message id's of dragged and clicked nodes
+	# obtain message id's of dragged and clicked nodes
 	set dragged_msgid $nid2msgid($dragged_node)
 	set clicked_msgid $nid2msgid($clicked_node)
 	if {$type == {} } {
 	    set coords [screen-coords [ntw $clicked_node] $rstw]
-	    # determine which kind of relations may hold between the
-	    # edges
+	    # determine which kind of relationship may hold between the edges
 	    set nucleus nucleus
 	    set satellite satellite
-	    # if parent of the dragged node is the clicked node, we
-	    # cannot make the clicked node a satellite
+	    # if parent message of the dragged node is the message
+	    # corresponding to the clicked node, we cannot make the clicked
+	    # node a satellite
 	    set dragged_node_prnt_id [lindex $theForrest($dragged_msgid) 1]
 	    set clicked_node_prnt_id [lindex $theForrest($clicked_msgid) 1]
-
 	    if {$dragged_node_prnt_id == $clicked_msgid} {
 		set nucleus ""
 	    } elseif {$clicked_node_prnt_id == $dragged_msgid} {
@@ -1972,21 +1953,26 @@ proc expand {nid {really {}} } {
 	    }
 	} else {
 	    # standard algorithm
-	    puts stderr "Choosing relation..."
 	    set relation [choose-label $clicked_node $type]
-	    puts stderr "Relation chosen..."
 	    if {$relation == {}} {return}
-	    puts "Establishing node..."
 
 	    incr last_group_node_id
+	    puts "last_group_node_id: $last_group_node_id ..."
 	    add-group-node $last_group_node_id
 	    clear-node $last_group_node_id
 	    put-in-place-of $clicked_node $last_group_node_id
 	    # remember to which messages the new given group node belongs
 	    lappend msgid2nid($clicked_msgid) $last_group_node_id
+	    # show new group node
+	    set visible_nodes($last_group_node_id) 1
+	    puts "msgid2nid($clicked_msgid): $msgid2nid($clicked_msgid) ..."
+	    # if dragged and clicked nodes belong to one message, remember
+	    # that the new group node corresponds to that message id
 	    if {$dragged_msgid == $clicked_msgid} {
 		set nid2msgid($last_group_node_id) [list $clicked_msgid]
 	    } else {
+		# if dragged and clicked nodes belong to different messages,
+		# remember both messages for the new group node
 		set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
 		lappend msgid2nid($dragged_msgid) $last_group_node_id
 	    }

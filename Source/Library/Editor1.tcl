@@ -252,7 +252,7 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	    set prev_nid $nid
 	} else {
 	    error "Error while loading message $msg_id (EDU nodes for this message are\
- not ordered topologically)"
+ not ordered topologically; prev_nid = $prev_nid, nid = $nid)"
 	}
 	if {$node($nid,type) != "text"} {continue;}
 
