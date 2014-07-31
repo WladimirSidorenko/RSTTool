@@ -12,8 +12,8 @@
 ## Add relation
 
 
-global rstw node_width maxlen  node_width half_node_width  y_top\
-    currentsat
+global rstw node_width maxlen  node_width half_node_width
+global y_top currentsat
 
 ####################################################
 # 1. DEFINE WINDOW ELEMENTS
@@ -34,7 +34,7 @@ button .rtbar.disconnect   -text "Disconnect" -command {set-mode disconnect}
 button .rtbar.modify   -text "Modify" -command {set-mode modify}
 button .rtbar.change_rel -text "Change Relation" -command {set-mode change}
 button .rtbar.change_schema -text "Change Schema" -command {set-mode change_schema}
-#button .rtbar.undo_by_redo -text "Don't Touch" -command {undo_by_redo}
+# button .rtbar.undo_by_redo -text "Don't Touch" -command {undo_by_redo}
 button .rtbar.undo_by_reload -text "Undo" -command {undo_by_reload}
 button .rtbar.reduce -text "Reduce" -command {resize-display -50}
 button .rtbar.enlarge -text "Enlarge" -command {resize-display 50}
@@ -45,9 +45,9 @@ pack .rtbar.autolink .rtbar.link .rtbar.disconnect .rtbar.modify .rtbar.change_r
 
 bind .editor.text <Any-Key> {break}
 menu .menubar
-#attach it to the main window
+# attach it to the main window
 . config -menu .menubar
-#create more cascade menus
+# create more cascade menus
 foreach m {File Display Print Save Help} {
     set $m [menu .menubar.m$m -tearoff 0]
     .menubar add cascade -label $m -menu .menubar.m$m
@@ -86,7 +86,7 @@ $File add command -label "Load Text File" -command {
 
 	set result0 [tk_dialog .d1 {Select Annotation File}\
 			 "Annotation will be loaded/stored in file \"$default_anno_file\".\n\
-Click \"New\" to create or \"Choose\" to select another file.\n" info 0 \
+Click \"New\" to create another file or \"Choose\" to select an existing one.\n" info 0 \
 			 "Use default" "New" "Choose" "Cancel"]
 
 	# get the name of the file from which annotation should be loaded
@@ -104,7 +104,7 @@ Click \"New\" to create or \"Choose\" to select another file.\n" info 0 \
 	set result1 -1
 	if {[file readable $anno_file]} {
 	    set result1 [tk_dialog .d1 {File Already Structured}\
-                       "Annotation file \"$anno_file\" already exists. \
+			     "Annotation file \"$anno_file\" already exists. \
 Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 	} else {
 	    if {! [file exists [file dirname $anno_file]]} {
@@ -374,7 +374,7 @@ set currentsat {}
 # LINK NODES
 
 # when we link two nodes, we need to redraw
-# the satelite, and each of the parents.
+# the satellite, and each of the parents.
 # this also involves re-calculating the span
 # of each item.
 
@@ -396,7 +396,7 @@ proc unlink-node {sat {redraw 1}} {
     set node($sat,parent) {}
     set node($sat,relname) {}
 
-    # 2. Redraw the satelite substructure
+    # 2. Redraw the satellite substructure
     if {$redraw == 1} {y-layout-subtree $sat}
 
     # 3. If the parent is a sequence, and has no more children,
@@ -442,7 +442,7 @@ proc adjust-after-change {nuc sat op {redraw 0}} {
     # Adjust nucleus
     restructure-upwards $nuc $redraw
 
-    # Ajust satelite
+    # Ajust satellite
     array set visitedNodes {}
     if $redraw {y-layout-subtree $sat}
     array set visitedNodes {}
@@ -602,7 +602,7 @@ proc find-node-span {nid} {
     # Span depends on node-type  
     switch -- $node($nid,type) {
 	
-	span { # span is min/max of nuc and all satelites
+	span { # span is min/max of nuc and all satellites
 	    foreach child $node($nid,children) {
 		if { $node($child,relname) == "span" 
 		     || [constit-relation-p $node($child,relname)]} {
@@ -693,7 +693,7 @@ proc expand {nid {really {}} } {
 	foreach child  $node($nid,children) {
 	    show-node $child
 	}
-	
+
 	# Scroll to new position
 	# collapsed - scroll to the new node position
 	xscrollto [max [expr $node($nid,xpos) - 50] 0]
@@ -703,16 +703,20 @@ proc expand {nid {really {}} } {
 
 
     proc hide-node {nid} {
-	global node
-	set node($nid,visible) 0
-	foreach cid $node($nid,children) {
-	    hide-node $cid
+	global node visible_nodes
+	if {[info exists visible_nodes($nid)]} {
+	    unset visible_nodes($nid)
+	    foreach cid $node($nid,children) {
+		hide-node $cid
+	    }
+	} else {
+	    return
 	}
     }
 
     proc show-node {nid} {
-	global node
-	set node($nid,visible) 1
+	global node visible_nodes
+	set visible_nodes($nid) 1
 	foreach cid $node($nid,children) {
 	    show-node $cid
 	}
@@ -786,6 +790,7 @@ proc expand {nid {really {}} } {
     proc load-rst { {filenum {}} } {
 	global rstfile node text_nodes currentfile group_nodes \
 	    last_text_node_id last_group_node_id
+	puts stderr "*** load-rst called"
 	set last_text_node_id 0
 	set last_group_node_id 5000
 	if {"$filenum" == {} } {
@@ -800,6 +805,7 @@ proc expand {nid {really {}} } {
 	set segs {}
 	reset-rst
 	while {[gets $f nid] >= 0} {
+	    puts stderr "*** clear-node called from load-rst"
 	    clear-node $nid
 	    gets $f node($nid,text)
 	    gets $f node($nid,parent)
@@ -847,7 +853,6 @@ proc expand {nid {really {}} } {
 
 	# Layou/Draw the net
 	redisplay-net
-
     }
 
 
@@ -1064,7 +1069,8 @@ proc expand {nid {really {}} } {
 
     # managing modes
     proc set-mode {mode} {
-	global rstw currentmode newest_node waited_nid disco_node 
+	global rstw currentmode newest_node waited_nid disco_node
+
 	if ![info exists currentmode] { set currentmode link }
 	toggle-button $currentmode "raised"
 	set currentmode $mode
@@ -1073,26 +1079,26 @@ proc expand {nid {really {}} } {
 	bind $rstw <Control-ButtonRelease-1> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
-		collapse [clicked-node %x %y] 
-		reestablish
+		collapse [clicked-node %x %y]
+		# reestablish
 		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
 	bind $rstw <ButtonRelease-2> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
-		collapse [clicked-node %x %y] 
-		reestablish
+		collapse [clicked-node %x %y]
+		# reestablish
 		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
 	bind $rstw <Shift-Control-ButtonRelease-1> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
 		expand [clicked-node %x %y]
-		reestablish
+		# reestablish
 		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
 	bind $rstw <ButtonRelease-3> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
 		expand [clicked-node %x %y]
-		reestablish
+		# reestablish
 		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
 
 	switch -- $mode {
@@ -1280,7 +1286,7 @@ proc expand {nid {really {}} } {
 	return [member $rel $relations(constit)]
     }
 
-    proc node-has-satelites-p {nid} {
+    proc node-has-satellites-p {nid} {
 	global node
 	foreach child $node($nid,children) {
 	    if { [rst-relation-p $node($child,relname)] } {
@@ -1290,7 +1296,7 @@ proc expand {nid {really {}} } {
 	return 0
     }
 
-    proc node-is-satelite-p {nid} {
+    proc node-is-satellite-p {nid} {
 	global node
 	return [rst-relation-p $node($nid,relname)]
     }
@@ -1330,7 +1336,7 @@ proc expand {nid {really {}} } {
 	debug "choose-label: $sat $type"
 
 	set coords [screen-coords [ntw $sat] $rstw]
-	set conv(satelite) rst
+	set conv(satellite) rst
 	set conv(nucleus) rst
 	set conv(rst) rst
 	set conv(multinuclear) multinuc
@@ -1338,7 +1344,7 @@ proc expand {nid {really {}} } {
 	set conv(schema) constit
 	set conv(constit) constit
 	set conv(nucleus-embedded) embedded
-	set conv(satelite-embedded) embedded
+	set conv(satellite-embedded) embedded
 	set conv(embedded) embedded
 	puts stderr "type == $type"
 	set type $conv($type)
@@ -1737,7 +1743,7 @@ proc expand {nid {really {}} } {
     proc disconnect_node {clicked_node method} {
 	global node savenum disco_node erased_nodes
 
-	#we only allow disconnection of satelites and multinucs
+	#we only allow disconnection of satellites and multinucs
 	set relation $node($clicked_node,relname)
 	set par $node($clicked_node,parent)
 	if {$par == {} || $relation == "span" || $disco_node != {}} {
@@ -1786,6 +1792,7 @@ proc expand {nid {really {}} } {
 			    [lreplace $node($greatgrand,children) $index $index $par]
 		    }
 		    #eliminate grandpar
+		    puts stderr "*** clear-node called from disconnect_node"
 		    clear-node $grandpar
 		    set node($grandpar,type) span
 		    lappend erased_nodes $grandpar
@@ -1832,7 +1839,7 @@ proc expand {nid {really {}} } {
 	    set this_step "disconnect_node $clicked_node $method"
 	    save-step "$this_step"
 	    incr savenum
-	    save-rst $savenum
+	    # save-rst $savenum
 	    if {$method == "disconnect"} {
 		set disco_node {}
 		set-mode nothing
@@ -1849,8 +1856,10 @@ proc expand {nid {really {}} } {
 			     {ambiguity {}} {space_holder {}} } {
 	global newest_node rstw node savenum currentsat cancelled
 	global last_group_node_id disco_node
-	puts stderr "autolink_nodes called"
+	global msgid2nid nid2msgid theForrest
+	global visible_nodes
 
+	puts stderr "autolink_nodes called"
 	if {$dragged_node == {} } {set dragged_node $newest_node}
 
 	if {$disco_node != {}} {
@@ -1864,43 +1873,60 @@ proc expand {nid {really {}} } {
 	set this_step "autolink_nodes $clicked_node $dragged_node"
 	# set par $node($clicked_node,parent)
 	set children $node($clicked_node,children)
-	if { $children != {} } {
-	    if { $node([lindex $children 0],visible) == 0 } {
-		expand $clicked_node
-		foreach child $children {
-		    collapse $child
-		}
-		reestablish
+	if { $children != {} && ! [info exists visible_nodes([lindex $children 0])]} {
+	    expand $clicked_node
+	    foreach child $children {
+		collapse $child
 	    }
+	    # reestablish
 	}
 	puts stderr "autolink_nodes called"
 
+	# obtain message id's and parent message id's of dragged and clicked nodes
+	set dragged_msgid $nid2msgid($dragged_node)
+	set clicked_msgid $nid2msgid($clicked_node)
 	if {$type == {} } {
 	    set coords [screen-coords [ntw $clicked_node] $rstw]
+	    # determine which kind of relations may hold between the
+	    # edges
+	    set nucleus nucleus
+	    set satellite satellite
+	    # if parent of the dragged node is the clicked node, we
+	    # cannot make the clicked node a satellite
+	    set dragged_node_prnt_id [lindex $theForrest($dragged_msgid) 1]
+	    set clicked_node_prnt_id [lindex $theForrest($clicked_msgid) 1]
+
+	    if {$dragged_node_prnt_id == $clicked_msgid} {
+		set nucleus ""
+	    } elseif {$clicked_node_prnt_id == $dragged_msgid} {
+		set satellite ""
+	    }
 	    set type [popup-choose-from-list \
-			  {nucleus satelite nucleus-embedded satelite-embedded multinuclear schema}\
+			  [concat $nucleus $satellite \
+			       {nucleus-embedded satellite-embedded multinuclear schema}] \
 			  [expr int([lindex $coords 0])] [expr int([lindex $coords 1])]]
 	}
 	if {$type == {} } {
-	    #it was cancelled
+	    # it was cancelled
 	    set cancelled 0
 	    return
 	}
 	append this_step " $type"
 
-	#determine if ambiguous
-	if { $type == "satelite" || $type == "satelite-embedded" } {
+	# determine if ambiguous
+	if { $type == "satellite" || $type == "satellite-embedded" } {
 	    if { $ambiguity == {} } {
 		foreach child $node($clicked_node,children) {
-		    if { [relation-type $node($child,relname)] == "rst" || [relation-type $node($child,relname)] == "embedded"} {
-			#1)ambiguous
+		    if { [relation-type $node($child,relname)] == "rst" || \
+			     [relation-type $node($child,relname)] == "embedded"} {
+			# 1) ambiguous
 			set ambiguity "unknown"
 		    }
 		}
 	    }
 	} elseif { $type == "multinuclear" } {
 	    if {"$node($clicked_node,type)" == "multinuc"} {
-		#1)ambiguous
+		# 1) ambiguous
 		if { "$ambiguity" == {} } {
 		    set ambiguity "unknown"
 		}
@@ -1914,7 +1940,7 @@ proc expand {nid {really {}} } {
 	}
 
 	if { $type == "multinuclear" && $ambiguity == "below" } {
-	    #exception #1
+	    # exception #1
 	    set i 0
 	    set child 0
 	    while { $child != {} } {
@@ -1927,7 +1953,8 @@ proc expand {nid {really {}} } {
 	    }
 	    if {$clicked_node == $dragged_node} {return}
 	    link-par-to-child $clicked_node $dragged_node $relation
-	} elseif { ($type == "satelite" || $type == "satelite-embedded") && $ambiguity == "above" } {
+	} elseif { ($type == "satellite" || $type == "satellite-embedded") && \
+		       $ambiguity == "above" } {
 	    #exception #2
 	    set relation [choose-label $clicked_node $type]
 	    if {$relation != {} && $clicked_node != $dragged_node} {
@@ -1936,7 +1963,7 @@ proc expand {nid {really {}} } {
 		return
 	    }
 	} elseif { $type == "schema" } {
-	    #exception #3
+	    # exception #3
 	    set relation [choose-label $clicked_node $type]
 	    if {$relation != {}} {
 		set node($clicked_node,constit) $relation
@@ -1944,7 +1971,7 @@ proc expand {nid {really {}} } {
 		return
 	    }
 	} else {
-	    #standard algorithm
+	    # standard algorithm
 	    puts stderr "Choosing relation..."
 	    set relation [choose-label $clicked_node $type]
 	    puts stderr "Relation chosen..."
@@ -1955,6 +1982,14 @@ proc expand {nid {really {}} } {
 	    add-group-node $last_group_node_id
 	    clear-node $last_group_node_id
 	    put-in-place-of $clicked_node $last_group_node_id
+	    # remember to which messages the new given group node belongs
+	    lappend msgid2nid($clicked_msgid) $last_group_node_id
+	    if {$dragged_msgid == $clicked_msgid} {
+		set nid2msgid($last_group_node_id) [list $clicked_msgid]
+	    } else {
+		set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
+		lappend msgid2nid($dragged_msgid) $last_group_node_id
+	    }
 
 	    if {$type == "multinuclear"} {
 		set node($last_group_node_id,type) multinuc
@@ -1964,7 +1999,7 @@ proc expand {nid {really {}} } {
 	    } else {
 		# if {$clicked_node == $dragged_node} {return;}
 		set node($last_group_node_id,type) span
-		if {$type == "satelite" || $type == "satelite-embedded"} {
+		if {$type == "satellite" || $type == "satellite-embedded"} {
 		    link-par-to-child $last_group_node_id $clicked_node span
 		    link-par-to-child $clicked_node $dragged_node $relation
 		    fix-children $last_group_node_id $clicked_node $dragged_node
@@ -1981,7 +2016,7 @@ proc expand {nid {really {}} } {
 	append this_step " $last_group_node_id"
 	save-step "$this_step"
 	incr savenum
-	save-rst $savenum
+	# save-rst $savenum
 	if { $type == "schema" } {
 	    set-mode autolink
 	}
@@ -1990,7 +2025,7 @@ proc expand {nid {really {}} } {
 	# }
 	editor-message\
 	    "linked $dragged_node to $clicked_node as a $relation $type $ambiguity"
-	reestablish
+	# reestablish
 	xscrollto [max $node($dragged_node,xpos) $node($clicked_node,xpos)]
 	yscrollto [max $node($dragged_node,ypos) $node($clicked_node,ypos)]
 	if { $cancelled == 1 } {
@@ -2037,15 +2072,13 @@ proc expand {nid {really {}} } {
 	    set node($child,parent) $substitute
 	}
     }
-    
+
     proc add-group-node {nid} {
 	global node group_nodes
 
 	# Report error if repeated add
-	if [member $nid $group_nodes] {
-	    puts "add-group-node: error: $nid already defined"
-	}
-	
+	if [member $nid $group_nodes] {error "add-group-node: error: $nid already defined"}
+
 	# add the node
-	lappend group_nodes $nid 
+	lappend group_nodes $nid
     }

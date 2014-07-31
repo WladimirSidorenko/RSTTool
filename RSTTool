@@ -65,6 +65,7 @@ set msgPrevQueue {};	# queue of visited messages
 set theRoots {};	# id's of messages which start new discussions
 set theRootIdx -1;	# index of current discussion
 set erased_nodes {};	# list of erased nodes
+array set visible_nodes {};	# list of nodes which are visible in RST editor
 
 install-segmenter
 reset-rst
@@ -371,21 +372,19 @@ proc close-step-file {} {
 
 set collapsed_nodes {}
 
-proc reestablish {} {
-    global savenum collapsed_nodes node step_file
-
-    reset-rst
-    if { $savenum > 0 } {
-	load-rst $savenum
-	foreach coll_n $collapsed_nodes {
-	    foreach child $node($coll_n,children) {
-		hide-node $child
-	    }
-	}
-    }
-
-    redisplay-net
-}
+# proc reestablish {} {
+#     global savenum collapsed_nodes node step_file
+#     reset-rst
+#     if { $savenum > 0 } {
+# 	load-rst $savenum
+# 	foreach coll_n $collapsed_nodes {
+# 	    foreach child $node($coll_n,children) {
+# 		hide-node $child
+# 	    }
+# 	}
+#     }
+#     redisplay-net
+# }
 
 proc reload-it-all {filename} {
     global step_file currentfile savenum last_text_node_id
