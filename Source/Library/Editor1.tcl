@@ -203,13 +203,22 @@ proc load-file {filename {really {1}}} {
 proc showNodes {msg_id {show 1} } {
     # set the visibility status for all nodes belonging to the message
     # `$msg_id` to $show
-    global msgid2nid node
+    global msgid2nid node visible_nodes
     puts stderr "Changing visibility for message $msg_id to $show"
 
     if {[info exists msgid2nid($msg_id)]} {
-	foreach nid $msgid2nid($msg_id) {
-	    puts stderr "visibility state of node $nid set to $show"
-	    set node($nid,visible) $show
+	if {$show} {
+	    foreach nid $msgid2nid($msg_id) {
+		puts stderr "Showing node $nid"
+		set visible_nodes($nid) 1
+	    }
+	} else {
+	    foreach nid $msgid2nid($msg_id) {
+		puts stderr "Hiding node $nid"
+		puts stderr "visible_nodes = [array names visible_nodes]"
+		if {[info exists visible_nodes($nid)]} {unset visible_nodes($nid)}
+		puts stderr "visible_nodes = [array names visible_nodes]"
+	    }
 	}
     }
 }
@@ -306,6 +315,8 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     puts stderr "nextMessage() called"
     # remember current message id
     set prev_msg_id $crntMsgId
+    # remember the old parent
+    set prev_prnt_msg_id $prntMsgId;
     # check direction to which we should proceed
     if {$direction == {forward}} {
 	# if we have exhausted the queue of messages for current
@@ -330,8 +341,8 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	set children [lindex $crnt_msg end]; # obtain children of current message
 	set msgQueue [concat $msgQueue $children]; # append children to message queue
     } else {
-	# if we have exhausted the queue of messages for current
-	# discussion, we proceed to the next discussion in the forrest
+	# if we have exhausted the queue of processed messages, we
+	# give a message
 	if {[llength $msgPrevQueue] == 0} {
 	    tk_messageBox -message "Reached the beginning of the document.";
 	    return;
@@ -341,7 +352,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	    # remember popped message in `msgQueue`
 	    set msgQueue [linsert $msgQueue[set msgQueue {}] 0 $crntMsgId];
 	}
-	# assign the leftmost tweet on the Queue to crnt_msg and unshift the Queue
+	# assign the leftmost tweet on the queue to crnt_msg and unshift the Queue
 	set crntMsgId [lindex $msgPrevQueue end]
 	set crnt_msg $theForrest($crntMsgId)
 	set msgPrevQueue [lreplace $msgPrevQueue end end]; # pop message id from the queue
@@ -354,12 +365,12 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     if {$prntMsgId != $prev_prnt_msg_id} {
 	# hide all RST nodes in RST window which correspond to the
 	# previous parent
-	showNodes $prev_prnt_msg_id 0
-	# remember new parent
-	set prev_prnt_msg_id $prntMsgId;
+	if {$crntMsgId != $prev_prnt_msg_id} {showNodes $prev_prnt_msg_id 0}
 	# display all known RST nodes for the new parent
 	# hide previous current node, if it is not the parent of the next message
-	if {$prntMsgId != $prev_msg_id} {showNodes $prntMsgId 1;}
+	puts stderr "prntMsgId = $prntMsgId"
+	puts stderr "prev_msg_id = $prev_msg_id"
+	if {$prntMsgId != $prev_msg_id} {showNodes $prntMsgId 1}
 	# obtain text of the new parent
 	if {$prntMsgId == {}} {
 	    set prntMsgTxt "";
@@ -388,7 +399,9 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     nextSentence $do_it;
     # display any nodes and sentences that already were annotated for
     # current message
-    showNodes $crntMsgId 1
+    puts stderr "crntMsgId = $crntMsgId"
+    puts stderr "prev_prnt_msg_id = $prev_prnt_msg_id"
+    if {$crntMsgId != $prev_prnt_msg_id} {showNodes $crntMsgId 1}
     redisplay-net
 }
 

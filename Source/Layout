@@ -24,7 +24,7 @@ proc redisplay-net {} {
     #  a. X-layout
     #  b. Y-Layout (for each node with no parents, layout children)
     # 2. Draw the links
-    global rstw current_xpos node_width text_nodes group_nodes node
+    global rstw node_width visible_nodes node
 
     # 1. Clean up from earlier structures
     if [info exists wtn] {unset wtn}
@@ -37,11 +37,10 @@ proc redisplay-net {} {
     # constrain the scrollbars
     set ymax 0
     set xmax 0
-    foreach nid [concat $text_nodes $group_nodes] {
-	if { $node($nid,visible) == 1 } {
-	    set ymax [max $ymax $node($nid,ypos)]
-	    set xmax [max $xmax $node($nid,xpos)]
-	}
+    foreach nid [array names visible_nodes] {
+    	puts stderr "Displaying node $nid"
+    	set ymax [max $ymax $node($nid,ypos)]
+    	set xmax [max $xmax $node($nid,xpos)]
     }
     ###################scroll
     $rstw configure -scrollregion "0 1 [expr  $xmax + $node_width]\
@@ -54,33 +53,50 @@ proc redisplay-net {} {
 }
 
 proc x-layout {} {
-    global node group_nodes text_nodes node_width visited_group_nodes current_xpos
-
+    global node group_nodes text_nodes node_width current_xpos
+    global visible_nodes visited_group_nodes
 
     # set xpos of group-nodes to 0 (logically false)
-    foreach nid $group_nodes {
-	set node($nid,xpos) 0
-    }
+    foreach nid $group_nodes {set node($nid,xpos) 0}
 
     set xinc [expr $node_width + 10]
     set xpos [expr $node_width / 2 + 30]
     set visited_group_nodes {}
-    foreach nid $text_nodes {
-	if $node($nid,visible) {
+
+    foreach nid [lsort [array names visible_nodes]] {
+	if {[group-node-p $nid]} {
+	    # not sure about the conditional part below
+	    if {![visible-children-p $pid] } {
+		set node($pid,xpos) $xpos
+    		set xpos [expr $xpos+$xinc]
+	    }
+	} else {
 	    set node($nid,xpos) $xpos
 	    set xpos [expr $xpos+$xinc]
-	} else {
-	    if [parent-needs-space-p $nid $xpos] {
-		set xpos [expr $xpos+$xinc]
-	    }
 	}
     }
 
-    foreach nid $group_nodes {
-	if { $node($nid,visible) } {
+    foreach nid [array names visible_nodes] {
+	if {[group-node-p $nid]} {
 	    xlayout-group-node $nid
 	}
     }
+    # foreach nid $text_nodes {
+    # 	if $node($nid,visible) {
+    # 	    set node($nid,xpos) $xpos
+    # 	    set xpos [expr $xpos+$xinc]
+    # 	} else {
+    # 	    if [parent-needs-space-p $nid $xpos] {
+    # 		set xpos [expr $xpos+$xinc]
+    # 	    }
+    # 	}
+    # }
+
+    # foreach nid $group_nodes {
+    # 	if { $node($nid,visible) } {
+    # 	    xlayout-group-node $nid
+    # 	}
+    # }
     set current_xpos $xpos
 }
 
@@ -189,13 +205,16 @@ proc visible-children-p {nid} {
 }
 
 proc y-layout {} {
-    global node group_nodes text_nodes
+    global node visible_nodes
 
-    foreach nid [concat $text_nodes $group_nodes] {
-	if { $node($nid,visible) && $node($nid,parent) == {} } {
-	    y-layout-subtree $nid
-	}
+    foreach nid [array names visible_nodes] {
+	if {$node($nid,parent) == {}} {y-layout-subtree $nid}
     }
+    # foreach nid [concat $text_nodes $group_nodes] {
+    # 	if { $node($nid,visible) && $node($nid,parent) == {} } {
+    # 	    y-layout-subtree $nid
+    # 	}
+    # }
 }
 
 proc y-layout-subtree {nid} {
@@ -210,7 +229,7 @@ proc y-layout-subtree {nid} {
 
     # 2. Re-layout children
     foreach cid $node($nid,children) {
-	if $node($cid,visible) {
+	if [member $cid $visible_nodes] {
 	    # set visitedNodes($cid) 1;
 	    # puts "child: y-layout-subtree {$cid}"
 	    y-layout-subtree $cid
