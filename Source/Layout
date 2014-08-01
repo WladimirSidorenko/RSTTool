@@ -64,14 +64,14 @@ proc x-layout {} {
     set visited_group_nodes {}
 
     foreach nid [lsort -integer [array names visible_nodes]] {
-	puts stderr "group-node-p $nid returns [group-node-p $nid]."
+    	puts stderr "group-node-p $nid returns [group-node-p $nid]."
     	if [group-node-p $nid] {
-	    if {![visible-children-p $nid] } {
-	    	set node($pid,xpos) $xpos
-	    	set xpos [expr $xpos+$xinc]
-	    }
+    	    if {![visible-children-p $nid] } {
+    	    	set node($pid,xpos) $xpos
+    	    	set xpos [expr $xpos+$xinc]
+    	    }
     	} else {
-	    puts stderr "group-node-p returned false for node $nid"
+    	    puts stderr "group-node-p returned false for node $nid"
     	    set node($nid,xpos) $xpos
     	    set xpos [expr $xpos+$xinc]
     	}
@@ -103,8 +103,9 @@ proc x-layout {} {
 
 
 proc xlayout-group-node {nid} {
-    global node  node_width
+    global node  node_width visible_nodes
 
+    puts stderr "xlayout-group-node: node $nid"
     # only position nodes which are not yet positioned
     if $node($nid,xpos) {return}
     # don't position invalid nodes
@@ -115,16 +116,20 @@ proc xlayout-group-node {nid} {
 
     foreach dep $node($nid,children) {
 	#  [group-relation-p $node($dep,relname)]
-	if { $node($dep,visible) } {
+	if [info exists visible_nodes($dep)] {
+	    puts stderr "xlayout-group-node: analyzing child $dep"
 	    if { !$node($dep,xpos) } {
+		puts stderr "xlayout-group-node: recursive call on child $dep"
 		xlayout-group-node $dep
 	    }
 	    if { [group-relation-p $node($dep,relname)] } {
 		# we want to place the node over its members, not satelites
+		puts stderr "xlayout-group-node: child $dep is group-relation-p, appending to xpos"
 		lappend x_coords $node($dep,xpos)
 	    }
 	}
     }
+    puts stderr "xlayout-group-node: x_coords = $x_coords"
 
     if { $x_coords == {} } {
 	# group-node, but all children invisible
@@ -141,7 +146,9 @@ proc xlayout-group-node {nid} {
 	set min [eval min $x_coords] 
 	set max [eval max $x_coords]
 	set node($nid,xpos) [expr $min + ($max - $min) / 2]
+	# set node($nid,xpos) $min
     }
+    puts stderr "xlayout-group-node: node($nid,xpos) set to $node($nid,xpos)"
 }
 
 proc find-first-text-node {nid} {
@@ -208,7 +215,7 @@ proc visible-children-p {nid} {
 proc y-layout {} {
     global node visible_nodes
 
-    foreach nid [array names visible_nodes] {
+    foreach nid [lsort -integer [array names visible_nodes]] {
     	if {$node($nid,parent) == {}} {y-layout-subtree $nid}
     }
 
