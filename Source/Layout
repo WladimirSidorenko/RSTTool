@@ -209,7 +209,9 @@ proc y-layout {} {
     global node visible_nodes
 
     foreach nid [array names visible_nodes] {
-    	if {$node($nid,parent) == {}} {y-layout-subtree $nid}
+    	if {$node($nid,parent) == {}} {
+	    y-layout-subtree $nid
+	}
     }
 
     # foreach nid [concat $text_nodes $group_nodes] {
@@ -231,10 +233,10 @@ proc y-layout-subtree {nid} {
 
     # 2. Re-layout children
     foreach cid $node($nid,children) {
-	if [info exists visible_nodes($cid)] {
-	    # puts "child: y-layout-subtree {$cid}"
-	    y-layout-subtree $cid
-	}
+    	if [info exists visible_nodes($cid)] {
+    	    # puts "child: y-layout-subtree {$cid}"
+    	    y-layout-subtree $cid
+    	}
     }
 }
 

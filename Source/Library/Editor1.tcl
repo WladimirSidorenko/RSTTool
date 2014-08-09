@@ -239,7 +239,7 @@ proc showSentences {path_name msg_id {show_rest 0}} {
     # obtain text of the message to be displayed
     set msg $theForrest($msg_id);
     set txt [lindex $msg 0];
-    # for each node, obtain its serial number and span
+    # for each node, obtain its number and span
     set prev_nid -1
     set offsets {}
     set offset_shift 0
@@ -260,11 +260,11 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	if {$offsets == {}} {error "node $nid does not have valid offsets"}
 	set start [lindex $offsets 0]
 	set end [lindex $offsets end]
-
+	incr end -1
 	# obtain text span between offsets
 	puts stderr "start is $start"
 	puts stderr "end is $end"
-	puts stderr "txt is $txt"
+	puts stderr "txt is '[string range $txt $start $end]'"
 	set itext [string range $txt $start $end]
 	# insert text portion into the widget and add an EDU ending marker
 	$path_name insert end $itext
@@ -275,8 +275,9 @@ proc showSentences {path_name msg_id {show_rest 0}} {
     }
     $path_name tag add old 1.0 "[$path_name index end] -1 chars"
     # insert the rest of the text, if asked to do so
+    incr end
     if {$show_rest} {
-    	$path_name insert end [string range $txt $end end];
+	$path_name insert end [string range $txt $end end];
     	set end end
     }
     # return position of the last annotated character and the number
@@ -320,7 +321,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     # check direction to which we should proceed
     if {$direction == {forward}} {
 	# if we have exhausted the queue of messages for current
-	# discussion, we proceed to the next discussion in the forrest
+	# discussion, we proceed to the next discussion in forrest
 	if {[llength $msgQueue] == 0} {
 	    incr theRootIdx;
 	    # if no more discussions are present on the Queue, return
