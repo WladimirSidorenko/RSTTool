@@ -103,7 +103,7 @@ proc x-layout {} {
 
 
 proc xlayout-group-node {nid} {
-    global node  node_width
+    global node node_width visible_nodes
 
     # only position nodes which are not yet positioned
     if $node($nid,xpos) {return}
@@ -113,18 +113,21 @@ proc xlayout-group-node {nid} {
     # 1. Collect x coords of constituents
     set x_coords {}
 
+    puts stderr "xlayout-group-node: setting xlayout for node $nid (children: $node($nid,children))"
     foreach dep $node($nid,children) {
 	#  [group-relation-p $node($dep,relname)]
-	if { $node($dep,visible) } {
+	if { [info exists visible_nodes($dep)] } {
 	    if { !$node($dep,xpos) } {
 		xlayout-group-node $dep
 	    }
-	    if { [group-relation-p $node($dep,relname)] } {
+	    if [group-relation-p $node($dep,relname)] {
 		# we want to place the node over its members, not satelites
+		puts stderr "xlayout-group-node: dep node $dep considered as group relation (rel = $node($dep,relname)), adding xpos $node($dep,xpos)"
 		lappend x_coords $node($dep,xpos)
 	    }
 	}
     }
+    puts stderr "xlayout-group-node: x_coords after iteration over children: $x_coords"
 
     if { $x_coords == {} } {
 	# group-node, but all children invisible
@@ -138,10 +141,11 @@ proc xlayout-group-node {nid} {
 	}
 
     } else {
-	set min [eval min $x_coords] 
+	set min [eval min $x_coords]
 	set max [eval max $x_coords]
 	set node($nid,xpos) [expr $min + ($max - $min) / 2]
     }
+    puts stderr "xlayout-group-node: node($nid,xpos) = $node($nid,xpos)"
 }
 
 proc find-first-text-node {nid} {

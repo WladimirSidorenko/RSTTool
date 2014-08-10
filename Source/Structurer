@@ -436,7 +436,7 @@ proc destroy-node {nid {redraw 1}} {
 
 ##################################################
 # Graph Change Server
-proc adjust-after-change {nuc sat op {redraw 0}} {
+proc adjust-after-change {nuc sat {redraw 0}} {
     # Adjust nucleus
     restructure-upwards $nuc $redraw
 
@@ -1742,7 +1742,7 @@ proc expand {nid {really {}} } {
 	    #disconnect parent from node
 	    set index [lsearch $node($par,children) $clicked_node]
 	    set node($par,children) [lreplace $node($par,children) $index $index]
-	    adjust-after-change $par $par link 1
+	    adjust-after-change $par $par 1
 
 	    #clean up any extra spans or single multinuclear relations
 	    set sibling {}
@@ -1780,7 +1780,7 @@ proc expand {nid {really {}} } {
 		    clear-node $grandpar
 		    set node($grandpar,type) span
 		    lappend erased_nodes $grandpar
-		    adjust-after-change $par $par link 1
+		    adjust-after-change $par $par 1
 		}
 	    } elseif {[relation-type $relation] == "multinuc"} {
 		foreach child $node($par,children) {
@@ -1815,7 +1815,7 @@ proc expand {nid {really {}} } {
 		    clear-node $par
 		    set node($par,type) span
 		    lappend erased_nodes $par
-		    adjust-after-change $sibling $sibling link 1
+		    adjust-after-change $sibling $sibling 1
 		}
 	    }
 
@@ -1960,7 +1960,7 @@ proc expand {nid {really {}} } {
 	    puts "last_group_node_id: $last_group_node_id ..."
 	    add-group-node $last_group_node_id
 	    clear-node $last_group_node_id
-	    put-in-place-of $clicked_node $last_group_node_id
+	    # put-in-place-of $clicked_node $last_group_node_id
 	    # remember to which messages the new given group node belongs
 	    lappend msgid2nid($clicked_msgid) $last_group_node_id
 	    # show new group node
@@ -2036,7 +2036,7 @@ proc expand {nid {really {}} } {
 
     proc link-par-to-child {par child relation } {
 	global node
-	puts "link-par-to-child $par $child $relation"
+	puts "link-par-to-child $par $child $relation (already existing children: $node($par,children))"
 	if {$par == $child} {return;}
 
 	lappend node($par,children) $child
@@ -2045,7 +2045,7 @@ proc expand {nid {really {}} } {
 	set node($child,parent) $par
 	set node($child,relname) $relation
 
-	adjust-after-change $par $child link 1
+	adjust-after-change $par $child 1
     }
 
     proc put-in-place-of { original substitute } {

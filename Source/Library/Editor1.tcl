@@ -262,9 +262,9 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	set end [lindex $offsets end]
 	incr end -1
 	# obtain text span between offsets
-	puts stderr "start is $start"
-	puts stderr "end is $end"
-	puts stderr "txt is '[string range $txt $start $end]'"
+	# puts stderr "start is $start"
+	# puts stderr "end is $end"
+	# puts stderr "txt is '[string range $txt $start $end]'"
 	set itext [string range $txt $start $end]
 	# insert text portion into the widget and add an EDU ending marker
 	$path_name insert end $itext
