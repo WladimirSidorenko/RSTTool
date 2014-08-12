@@ -1845,7 +1845,7 @@ proc expand {nid {really {}} } {
 			     {ambiguity {}} {space_holder {}} } {
 	global newest_node rstw node savenum currentsat cancelled
 	global last_group_node_id disco_node
-	global msgid2nid nid2msgid theForrest
+	global msgid2nid msgs2extnid nid2msgid theForrest
 	global visible_nodes
 
 	if {$dragged_node == {} } {set dragged_node $newest_node}
@@ -1872,6 +1872,7 @@ proc expand {nid {really {}} } {
 	# obtain message id's of dragged and clicked nodes
 	set dragged_msgid $nid2msgid($dragged_node)
 	set clicked_msgid $nid2msgid($clicked_node)
+	set clicked_is_prnt 0
 	if {$type == {} } {
 	    set coords [screen-coords [ntw $clicked_node] $rstw]
 	    # determine which kind of relationship may hold between the edges
@@ -1884,6 +1885,7 @@ proc expand {nid {really {}} } {
 	    set clicked_node_prnt_id [lindex $theForrest($clicked_msgid) 1]
 	    if {$dragged_node_prnt_id == $clicked_msgid} {
 		set nucleus ""
+		set clicked_is_prnt 1
 	    } elseif {$clicked_node_prnt_id == $dragged_msgid} {
 		set satellite ""
 	    }
@@ -1966,20 +1968,27 @@ proc expand {nid {really {}} } {
 	    add-group-node $last_group_node_id
 	    clear-node $last_group_node_id
 	    # put-in-place-of $clicked_node $last_group_node_id
-	    # remember to which messages the new given group node belongs
-	    lappend msgid2nid($clicked_msgid) $last_group_node_id
 	    # show new group node
 	    set visible_nodes($last_group_node_id) 1
-	    puts "msgid2nid($clicked_msgid): $msgid2nid($clicked_msgid) ..."
+	    puts stderr "msgid2nid($clicked_msgid): $msgid2nid($clicked_msgid) ..."
 	    # if dragged and clicked nodes belong to one message, remember
 	    # that the new group node corresponds to that message id
 	    if {$dragged_msgid == $clicked_msgid} {
 		set nid2msgid($last_group_node_id) [list $clicked_msgid]
+		# remember to which message the new internal group node belongs
+		lappend msgid2nid($clicked_msgid) $last_group_node_id
 	    } else {
 		# if dragged and clicked nodes belong to different messages,
 		# remember both messages for the new group node
 		set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
-		lappend msgid2nid($dragged_msgid) $last_group_node_id
+		# remember ids of messages which the new external node connects
+		if {$clicked_is_prnt} {
+		    puts stderr "setting msgs2extnid($clicked_msgid,$dragged_msgid) to $last_group_node_id"
+		    set msgs2extnid($clicked_msgid,$dragged_msgid) $last_group_node_id
+		} else {
+		    puts stderr "setting msgs2extnid($dragged_msgid,$clicked_msgid) to $last_group_node_id"
+		    set msgs2extnid($dragged_msgid,$clicked_msgid) $last_group_node_id
+		}
 	    }
 
 	    if {$type == "multinuclear"} {

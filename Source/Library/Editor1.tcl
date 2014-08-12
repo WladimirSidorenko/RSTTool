@@ -1,3 +1,5 @@
+# -*- mode: tcl; -*-
+
 # Define Frame for a emacs-style editor
 # And Procedures to support it
 # This version supports single file at a time only
@@ -200,25 +202,22 @@ proc load-file {filename {really {1}}} {
     }
 }
 
-proc showNodes {msg_id {show 1} } {
-    # set the visibility status for all nodes belonging to the message
+proc showNodes {msg_id {show 1}} {
+    # set visibility status for all internal nodes belonging to the message
     # `$msg_id` to $show
-    global msgid2nid node visible_nodes
+    global msgid2nid visible_nodes
     puts stderr "Changing visibility for message $msg_id to $show"
 
-    if {[info exists msgid2nid($msg_id)]} {
-	if {$show} {
-	    foreach nid $msgid2nid($msg_id) {
-		puts stderr "Showing node $nid"
-		set visible_nodes($nid) 1
-	    }
-	} else {
-	    foreach nid $msgid2nid($msg_id) {
-		puts stderr "Hiding node $nid"
-		puts stderr "visible_nodes = [array names visible_nodes]"
-		if {[info exists visible_nodes($nid)]} {unset visible_nodes($nid)}
-		puts stderr "visible_nodes = [array names visible_nodes]"
-	    }
+    if {! [info exists msgid2nid($msg_id)]} {return}
+
+    # show/hide internal nodes pertaining to message `msg_id`
+    if {$show} {
+	foreach nid $msgid2nid($msg_id) {
+	    set visible_nodes($nid) 1
+	}
+    } else {
+	foreach nid $msgid2nid($msg_id) {
+	    if {[info exists visible_nodes($nid)]} {unset visible_nodes($nid)}
 	}
     }
 }
@@ -307,7 +306,8 @@ proc showText { {do_it {}} } {
 
 proc nextMessage { {do_it {}} {direction {forward}}} {
     global theRoots theRootIdx theForrest theText usedtext
-    global crntMsgId crntMsgTxt prntMsgId prntMsgTxt msgid2nid
+    global crntMsgId crntMsgTxt prntMsgId prntMsgTxt
+    global msgid2nid msgs2extnid visible_nodes
     global msgQueue msgPrevQueue
     global offsetShift
     puts stderr "nextMessage() called"
@@ -359,6 +359,21 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     set crntMsgTxt [lindex $crnt_msg 0]; # obtain text of current message
     set prntMsgId [lindex $crnt_msg 1];	# obtain id of the parent of current message
 
+    ############################################
+    ## Show/Hide nodes corresponding to messages
+
+    # hide group node connecting previous message with its parent
+    puts "checking external node msgs2extnid($prev_prnt_msg_id,$prev_msg_id)"
+    if [info exists msgs2extnid($prev_prnt_msg_id,$prev_msg_id)] {
+	puts "hiding node visible_nodes($msgs2extnid($prev_prnt_msg_id,$prev_msg_id))"
+	unset visible_nodes($msgs2extnid($prev_prnt_msg_id,$prev_msg_id))
+    }
+    # show group node connecting current message with its parent
+    puts "checking external node msgs2extnid($prntMsgId,$crntMsgId)"
+    if [info exists msgs2extnid($prntMsgId,$crntMsgId)] {
+	puts "showing node visible_nodes($msgs2extnid($prntMsgId,$crntMsgId))"
+	set visible_nodes($msgs2extnid($prntMsgId,$crntMsgId)) 1
+    }
     # if parent has changed, hide the old and show the new one
     if {$prntMsgId != $prev_prnt_msg_id} {
 	# display all known RST nodes for the new parent hide previous current
@@ -379,7 +394,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	.editor.textPrnt delete 0.0 end
 	showSentences .editor.textPrnt $prntMsgId 1
     }
-    if {$prntMsgId != $prev_msg_id} {showNodes $prev_msg_id 0;}
+    if {$prntMsgId != $prev_msg_id} {showNodes $prev_msg_id 0}
     # clear current message text area and place new text into it
     .editor.text delete 1.0 end
     .editor.text tag add new 1.0 end

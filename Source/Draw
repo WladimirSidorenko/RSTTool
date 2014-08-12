@@ -49,7 +49,9 @@ proc display-node {nid} {
     set node($nid,textwgt) $wgt
     set wtn($wgt) $nid
     display-span $nid
+    puts stderr "calling display-arc $nid"
     display-arc $nid
+    puts stderr "display-arc $nid finished"
 }
 
 proc display-span {nid} {
@@ -140,10 +142,10 @@ proc display-span {nid} {
 
 
 proc display-arc {sat} {
-    global rstw node text_nodes  relations
+    global rstw node text_nodes relations visible_nodes
     debug "display-arc: $sat"
     set nuc $node($sat,parent)
-    if {$nuc == {}} {return}
+    if {$nuc == {} || ! [info exists visible_nodes($nuc)]} {return}
 
     # set some variables
     set ypos $node($sat,ypos)

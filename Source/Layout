@@ -25,6 +25,7 @@ proc redisplay-net {} {
     #  b. Y-Layout (for each node with no parents, layout children)
     # 2. Draw the links
     global rstw node_width visible_nodes node
+    puts stderr "visible_nodes = [array names visible_nodes]"
 
     # 1. Clean up from earlier structures
     if [info exists wtn] {unset wtn}
@@ -53,28 +54,27 @@ proc redisplay-net {} {
 }
 
 proc x-layout {} {
-    global node group_nodes text_nodes node_width current_xpos
-    global visible_nodes visited_group_nodes
+    global node group_nodes node_width current_xpos
+    global visible_nodes
 
     # set xpos of group-nodes to 0 (logically false)
     foreach nid $group_nodes {set node($nid,xpos) 0}
 
     set xinc [expr $node_width + 10]
     set xpos [expr $node_width / 2 + 30]
-    set visited_group_nodes {}
 
     foreach nid [lsort -integer [array names visible_nodes]] {
-	# puts stderr "group-node-p $nid returns [group-node-p $nid]."
+	puts stderr "x-layout: group-node-p $nid returns [group-node-p $nid]."
     	if [group-node-p $nid] {
     	    if {![visible-children-p $nid] } {
-    	    	set node($pid,xpos) $xpos
+    	    	set node($nid,xpos) $xpos
     	    	set xpos [expr $xpos+$xinc]
     	    }
     	} else {
-	    # puts stderr "group-node-p returned false for node $nid"
     	    set node($nid,xpos) $xpos
     	    set xpos [expr $xpos+$xinc]
     	}
+	puts stderr "x-layout: node($nid,xpos) set to $xpos"
     }
 
     foreach nid [lsort -integer [array names visible_nodes]] {
@@ -149,7 +149,7 @@ proc xlayout-group-node {nid} {
 	set node($nid,xpos) [expr $min + ($max - $min) / 2]
 	# set node($nid,xpos) $min
     }
-    # puts stderr "xlayout-group-node: node($nid,xpos) = $node($nid,xpos)"
+    puts stderr "xlayout-group-node: node($nid,xpos) = $node($nid,xpos)"
 }
 
 proc find-first-text-node {nid} {
@@ -214,10 +214,13 @@ proc visible-children-p {nid} {
 }
 
 proc y-layout {} {
-    global node visible_nodes
+    global node visible_nodes nid2msgid
 
     foreach nid [array names visible_nodes] {
-    	if {$node($nid,parent) == {}} {
+	# display all subtrees with no further roots and whose roots are
+	# external nodes connecting two messages
+    	if {$node($nid,parent) == {} || [llength $nid2msgid($node($nid,parent))] == 2} {
+	    puts stderr "calling y-layout-subtree for node $nid"
 	    y-layout-subtree $nid
 	}
     }
@@ -263,5 +266,6 @@ proc y-layout-node {nid} {
     } else {
 	set node($nid,ypos) $node($nuc,ypos)
     }
+    puts "calling redisplay-node $nid"
     redisplay-node $nid
 }
