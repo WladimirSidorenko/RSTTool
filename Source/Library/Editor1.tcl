@@ -246,7 +246,7 @@ proc showSentences {path_name msg_id {show_rest 0}} {
     set start 0
     set end 0
     set bmarker ""
-    # we assume that node ids are topologically ordered
+    # we assume that node ids are ordered topologically
     foreach nid $nids {
 	if {$nid > $prev_nid } {
 	    set prev_nid $nid
@@ -254,7 +254,7 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	    error "Error while loading message $msg_id (EDU nodes for this message are\
  not ordered topologically; prev_nid = $prev_nid, nid = $nid)"
 	}
-	if {$node($nid,type) != "text"} {continue;}
+	if {$node($nid,type) != "text"} {break;}
 
 	set offsets $node($nid,offsets)
 	if {$offsets == {}} {error "node $nid does not have valid offsets"}
@@ -262,18 +262,15 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	set end [lindex $offsets end]
 	incr end -1
 	# obtain text span between offsets
-	# puts stderr "start is $start"
-	# puts stderr "end is $end"
-	# puts stderr "txt is '[string range $txt $start $end]'"
 	set itext [string range $txt $start $end]
-	# insert text portion into the widget and add an EDU ending marker
-	$path_name insert end $itext
+	# insert text portion into the widget, mark it as old text, and add an
+	# EDU ending marker
+	$path_name insert end $itext old
 	set bmarker [make-boundary-marker $nid]
 	$path_name insert end $bmarker
 	# update counter of artificial characters
 	set offset_shift [expr $offset_shift + [string length $bmarker]]
     }
-    $path_name tag add old 1.0 "[$path_name index end] -1 chars"
     # insert the rest of the text, if asked to do so
     incr end
     if {$show_rest} {
@@ -324,7 +321,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	# discussion, we proceed to the next discussion in forrest
 	if {[llength $msgQueue] == 0} {
 	    incr theRootIdx;
-	    # if no more discussions are present on the Queue, return
+	    # if no more discussions are present in Queue, return
 	    if {$theRootIdx >= [llength $theRoots]} {
 		tk_messageBox -message "Reached the end of the document."
 		return;
@@ -334,7 +331,8 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 
 	# remember current message in `msgPrevQueue`
 	if {$crntMsgId != {}} {lappend msgPrevQueue $crntMsgId;}
-	# assign the leftmost tweet on the Queue to crnt_msg and unshift the Queue
+	# assign the id of the leftmost tweet in the Queue to `crntMsgId`
+	# and unshift the Queue
 	set crntMsgId [lindex $msgQueue 0]
 	set crnt_msg $theForrest($crntMsgId)
 
@@ -359,19 +357,18 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	set msgPrevQueue [lreplace $msgPrevQueue end end]; # pop message id from the queue
     }
     set crntMsgTxt [lindex $crnt_msg 0]; # obtain text of current message
-    set prev_prnt_msg_id $prntMsgId; # remember id of previous parent
     set prntMsgId [lindex $crnt_msg 1];	# obtain id of the parent of current message
 
-    # if parent has changed, reload it
+    # if parent has changed, hide the old and show the new one
     if {$prntMsgId != $prev_prnt_msg_id} {
-	# hide all RST nodes in RST window which correspond to the
-	# previous parent
-	if {$crntMsgId != $prev_prnt_msg_id} {showNodes $prev_prnt_msg_id 0}
-	# display all known RST nodes for the new parent
-	# hide previous current node, if it is not the parent of the next message
+	# display all known RST nodes for the new parent hide previous current
+	# node, if it is not the parent of the next message
 	puts stderr "prntMsgId = $prntMsgId"
 	puts stderr "prev_msg_id = $prev_msg_id"
 	if {$prntMsgId != $prev_msg_id} {showNodes $prntMsgId 1}
+	# hide all RST nodes in RST window which correspond to the
+	# previous parent
+	if {$crntMsgId != $prev_prnt_msg_id} {showNodes $prev_prnt_msg_id 0}
 	# obtain text of the new parent
 	if {$prntMsgId == {}} {
 	    set prntMsgTxt "";

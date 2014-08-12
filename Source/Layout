@@ -38,7 +38,7 @@ proc redisplay-net {} {
     set ymax 0
     set xmax 0
     foreach nid [array names visible_nodes] {
-    	puts stderr "Displaying node $nid"
+    	# puts stderr "Displaying node $nid"
     	set ymax [max $ymax $node($nid,ypos)]
     	set xmax [max $xmax $node($nid,xpos)]
     }
@@ -64,14 +64,14 @@ proc x-layout {} {
     set visited_group_nodes {}
 
     foreach nid [lsort -integer [array names visible_nodes]] {
-	puts stderr "group-node-p $nid returns [group-node-p $nid]."
+	# puts stderr "group-node-p $nid returns [group-node-p $nid]."
     	if [group-node-p $nid] {
 	    if {![visible-children-p $nid] } {
 	    	set node($pid,xpos) $xpos
 	    	set xpos [expr $xpos+$xinc]
 	    }
     	} else {
-	    puts stderr "group-node-p returned false for node $nid"
+	    # puts stderr "group-node-p returned false for node $nid"
     	    set node($nid,xpos) $xpos
     	    set xpos [expr $xpos+$xinc]
     	}
@@ -113,7 +113,7 @@ proc xlayout-group-node {nid} {
     # 1. Collect x coords of constituents
     set x_coords {}
 
-    puts stderr "xlayout-group-node: setting xlayout for node $nid (children: $node($nid,children))"
+    # puts stderr "xlayout-group-node: setting xlayout for node $nid (children: $node($nid,children))"
     foreach dep $node($nid,children) {
 	#  [group-relation-p $node($dep,relname)]
 	if { [info exists visible_nodes($dep)] } {
@@ -122,12 +122,12 @@ proc xlayout-group-node {nid} {
 	    }
 	    if [group-relation-p $node($dep,relname)] {
 		# we want to place the node over its members, not satelites
-		puts stderr "xlayout-group-node: dep node $dep considered as group relation (rel = $node($dep,relname)), adding xpos $node($dep,xpos)"
+		# puts stderr "xlayout-group-node: dep node $dep considered as group relation (rel = $node($dep,relname)), adding xpos $node($dep,xpos)"
 		lappend x_coords $node($dep,xpos)
 	    }
 	}
     }
-    puts stderr "xlayout-group-node: x_coords after iteration over children: $x_coords"
+    # puts stderr "xlayout-group-node: x_coords after iteration over children: $x_coords"
 
     if { $x_coords == {} } {
 	# group-node, but all children invisible
@@ -145,7 +145,7 @@ proc xlayout-group-node {nid} {
 	set max [eval max $x_coords]
 	set node($nid,xpos) [expr $min + ($max - $min) / 2]
     }
-    puts stderr "xlayout-group-node: node($nid,xpos) = $node($nid,xpos)"
+    # puts stderr "xlayout-group-node: node($nid,xpos) = $node($nid,xpos)"
 }
 
 proc find-first-text-node {nid} {
