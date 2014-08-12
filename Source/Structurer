@@ -451,12 +451,14 @@ proc restructure-upwards {nid {redraw 0}} {
     # stop when no change in span nor in pos of node
     set adjust_needed 0
 
+    puts stderr "nid = $nid"
     #1. if the current node is a group node,
     #   its pos and span may need to be adjusted
     if { [group-node-p $nid] } {
 
 	# a) If a group node, adjust its x position
 	if { $redraw } {
+	    puts stderr "restructure-upwards: Redrawing group node $nid"
 	    set node($nid,xpos) 0
 	    xlayout-group-node $nid
 	    set adjust_needed 1
@@ -469,10 +471,11 @@ proc restructure-upwards {nid {redraw 0}} {
 	    # span has changed
 
 	    set node($nid,span) $span
+	    puts stderr "restructure-upwards: setting span for node $nid to $span"
 
 	    # change the displayed text
 	    set node($nid,text) [make-span-label $span]
-
+	    puts stderr "restructure-upwards: node-text set to $node($nid,text)"
 
 	    # mark a change has taken place
 	    set adjust_needed 1
@@ -595,16 +598,18 @@ proc make-span-label {span} {
 proc find-node-span {nid} {
     global node
 
-    # Span depends on node-type  
+    # Span depends on node-type
     switch -- $node($nid,type) {
 
 	span { # span is min/max of nuc and all satellites
+	    set min Inf
+	    set max -1
 	    foreach child $node($nid,children) {
-		if { $node($child,relname) == "span" 
+		if { $node($child,relname) == "span"
 		     || [constit-relation-p $node($child,relname)]} {
-		    set min [lindex $node($child,span) 0]
-		    set max [lindex $node($child,span) 1]
-		    foreach sat $node($child,children) {	
+		    set min [min [lindex $node($child,span) 0] $min]
+		    set max [max [lindex $node($child,span) 1] $max]
+		    foreach sat $node($child,children) {
 			set min [min [lindex $node($sat,span) 0] $min]
 			set max [max [lindex $node($sat,span) 1] $max]
 		    }
@@ -612,7 +617,7 @@ proc find-node-span {nid} {
 	    }
 	    # if no span node yet (not yet read in)
 	    # use the existingb rel (there must be an rst rel)
-	    if ![info exists min] {
+	    if {$min == Inf} {
 		set min [lindex $node($nid,children) 0]
 		set max $min
 	    }
@@ -626,7 +631,7 @@ proc find-node-span {nid} {
 		#               set min [min $child $min]
 		#	       if { $child <= 5000 } {
 		#                 set max [max $child $max]
-		#	       } 
+		#	       }
 		if [group-relation-p $node($child,relname)] {
 		    set min [min [lindex $node($child,span) 0] $min]
 		    if { [lindex $node($child,span) 1] <= 5000 } {
