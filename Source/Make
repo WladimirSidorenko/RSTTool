@@ -126,7 +126,7 @@ proc make-node {text type {start_pos {}} {end_pos {}}} {
     set node($nid,type) $type
     set node($nid,offsets) [list $start_pos $end_pos]
     set visible_nodes($nid) 1
-    puts stderr "Created node $nid with offsets $start_pos $end_pos"
+    # puts stderr "Created node $nid with offsets $start_pos $end_pos"
 
     if {$type ==  "text"} {
 	set node($nid,span) "$nid $nid"

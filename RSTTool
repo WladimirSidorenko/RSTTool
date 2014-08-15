@@ -51,6 +51,7 @@ load-module $SRC $SRC_FILES
 
 
 load-relations [file join $RELS Relations]
+load-relations [file join $RELS ExtRelations] 1
 load_abbreviations [file join $RELS abbreviations]
 
 proc Quit {} {exit}

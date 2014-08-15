@@ -437,6 +437,7 @@ proc destroy-node {nid {redraw 1}} {
 ##################################################
 # Graph Change Server
 proc adjust-after-change {nuc sat {redraw 0}} {
+    # puts stderr "adjust-after-change: nuc = $nuc; sat = $sat"
     # Adjust nucleus
     restructure-upwards $nuc $redraw
 
@@ -451,14 +452,14 @@ proc restructure-upwards {nid {redraw 0}} {
     # stop when no change in span nor in pos of node
     set adjust_needed 0
 
-    puts stderr "nid = $nid"
+    # puts stderr "restructure-upwards: nid = $nid"
     #1. if the current node is a group node,
     #   its pos and span may need to be adjusted
     if { [group-node-p $nid] } {
 
 	# a) If a group node, adjust its x position
 	if { $redraw } {
-	    puts stderr "restructure-upwards: Redrawing group node $nid"
+	    # puts stderr "restructure-upwards: Redrawing group node $nid"
 	    set node($nid,xpos) 0
 	    xlayout-group-node $nid
 	    set adjust_needed 1
@@ -471,11 +472,11 @@ proc restructure-upwards {nid {redraw 0}} {
 	    # span has changed
 
 	    set node($nid,span) $span
-	    puts stderr "restructure-upwards: setting span for node $nid to $span"
+	    # puts stderr "restructure-upwards: setting span for node $nid to $span"
 
 	    # change the displayed text
 	    set node($nid,text) [make-span-label $span]
-	    puts stderr "restructure-upwards: node-text set to $node($nid,text)"
+	    # puts stderr "restructure-upwards: node-text set to $node($nid,text)"
 
 	    # mark a change has taken place
 	    set adjust_needed 1
@@ -855,30 +856,43 @@ proc expand {nid {really {}} } {
 
 
     ##################################################
-    #  Relations Functions 
+    #  Relations Functions
 
-    proc load-relations {{file {}}} {
-	global relationfile relations schemas schema_elements
-	set relations(rst) {}
-	set relations(multinuc) {}
-	set relations(constit) {}
-	set relations(embedded) {}
-	set schemas {}
-	if [info exists schema_elements] {
-	    unset schema_elements 
-	}
-	if { $file == {} } {
+    proc load-relations {{file {}} {extrel 0}} {
+	global relationfile relations extRelations schemas schema_elements
+	if {$file == {}} {
 	    set file [fileselect "Specify Relations File" {}]
 	}
 
-	if { $file != {} } {
-	    set relationfile $file
-	    set relationstream [open $file]
+	if {$file == {}} {return}; # cancelled
+	set relationstream [open $file]
+
+	if {$extrel} {
 	    foreach rel [split [read $relationstream] \n] {
 		switch -- [lindex $rel 0] {
 		    {}      {}
-		    -       {}	
-		    default { set type [lindex $rel 1]
+		    -       {}
+		    default {
+			lappend extRelations [lindex $rel 0]
+		    }
+		}
+	    }
+	} else {
+	    set relationfile $file
+	    set relations(rst) {}
+	    set relations(multinuc) {}
+	    set relations(constit) {}
+	    set relations(embedded) {}
+	    set schemas {}
+	    if [info exists schema_elements] {
+		unset schema_elements
+	    }
+	    foreach rel [split [read $relationstream] \n] {
+		switch -- [lindex $rel 0] {
+		    {}      {}
+		    -       {}
+		    default {
+			set type [lindex $rel 1]
 			if { $type == {} } { set type rst }
 			lappend relations($type) [lindex $rel 0]
 
@@ -891,13 +905,11 @@ proc expand {nid {really {}} } {
 			    lappend schema_elements($schema)\
 				[lindex $rel 0]
 			}
-			
 		    }
-		    
 		}
 	    }
-	    close $relationstream
 	}
+	close $relationstream
     }
 
     proc add-relation {} {
@@ -1230,7 +1242,6 @@ proc expand {nid {really {}} } {
 
     proc group-node-p {nid} {
 	global node
-	puts stderr "group-node-p $nid: $node($nid,type)"
 	member $node($nid,type) {span multinuc constit embedded}
     }
 
@@ -1322,8 +1333,8 @@ proc expand {nid {really {}} } {
     ####################################################
     # THE relation popup Menu
 
-    proc choose-label {sat type} {
-	global relations rstw schemas schema_elements
+    proc choose-label {sat type {external 0}} {
+	global relations extRelations rstw schemas schema_elements
 	debug "choose-label: $sat $type"
 
 	set coords [screen-coords [ntw $sat] $rstw]
@@ -1339,10 +1350,13 @@ proc expand {nid {really {}} } {
 	set conv(embedded) embedded
 	set type $conv($type)
 
-	if [member $type {rst constit multinuc embedded}] {
+	if {$external} {
+	    # Choose connection type from a set of external relations
+	    set range $extRelations
+	} elseif [member $type {rst constit multinuc embedded}] {
 	    # Choose from the defined set
 	    set range $relations($type)
-	} else { 
+	} else {
 	    # this must be a schema type, choose from that set
 	    set range $schema_elements($type)
 	}
@@ -1385,7 +1399,7 @@ proc expand {nid {really {}} } {
 	# now make the popup
 	.tmpwin post $xpos $ypos
 	tkwait variable pcfl_selection
-	.tmpwin unpost 
+	.tmpwin unpost
 	if {$pcfl_selection == {} } {
 	    set cancelled 1
 	}
@@ -1873,6 +1887,9 @@ proc expand {nid {really {}} } {
 	set dragged_msgid $nid2msgid($dragged_node)
 	set clicked_msgid $nid2msgid($clicked_node)
 	set clicked_is_prnt 0
+	set ext_connection 0
+	if {$dragged_msgid != $clicked_msgid} { set ext_connection 1; }
+
 	if {$type == {} } {
 	    set coords [screen-coords [ntw $clicked_node] $rstw]
 	    # determine which kind of relationship may hold between the edges
@@ -1908,6 +1925,7 @@ proc expand {nid {really {}} } {
 		    if { [relation-type $node($child,relname)] == "rst" || \
 			     [relation-type $node($child,relname)] == "embedded"} {
 			# 1) ambiguous
+			# puts stderr "ambiguous (1) set to unknown relation-type = [relation-type $node($child,relname)]"
 			set ambiguity "unknown"
 		    }
 		}
@@ -1916,6 +1934,7 @@ proc expand {nid {really {}} } {
 	    if {"$node($clicked_node,type)" == "multinuc"} {
 		# 1) ambiguous
 		if { "$ambiguity" == {} } {
+		    # puts stderr "ambiguous (2) set to unknown"
 		    set ambiguity "unknown"
 		}
 	    }
@@ -1944,33 +1963,26 @@ proc expand {nid {really {}} } {
 	} elseif { ($type == "satellite" || $type == "satellite-embedded") && \
 		       $ambiguity == "above" } {
 	    #exception #2
-	    set relation [choose-label $clicked_node $type]
-	    if {$relation != {} && $clicked_node != $dragged_node} {
-		link-par-to-child $clicked_node $dragged_node $relation
-	    } else {
-		return
-	    }
+	    set relation [choose-label $clicked_node $type $ext_connection]
+	    if {$relation == {} || $clicked_node == $dragged_node} {return}
+	    link-par-to-child $clicked_node $dragged_node $relation
 	} elseif { $type == "schema" } {
 	    # exception #3
-	    set relation [choose-label $clicked_node $type]
-	    if {$relation != {}} {
-		set node($clicked_node,constit) $relation
-	    } else {
-		return
-	    }
+	    set relation [choose-label $clicked_node $type $ext_connection]
+	    if {$relation == {}} {return}
+	    set node($clicked_node,constit) $relation
 	} else {
 	    # standard algorithm
-	    set relation [choose-label $clicked_node $type]
+	    set relation [choose-label $clicked_node $type $ext_connection]
 	    if {$relation == {}} {return}
 
 	    incr last_group_node_id
-	    puts "last_group_node_id: $last_group_node_id ..."
+	    # puts stderr "last_group_node_id: $last_group_node_id ..."
 	    add-group-node $last_group_node_id
 	    clear-node $last_group_node_id
 	    # put-in-place-of $clicked_node $last_group_node_id
 	    # show new group node
 	    set visible_nodes($last_group_node_id) 1
-	    puts stderr "msgid2nid($clicked_msgid): $msgid2nid($clicked_msgid) ..."
 	    # if dragged and clicked nodes belong to one message, remember
 	    # that the new group node corresponds to that message id
 	    if {$dragged_msgid == $clicked_msgid} {
@@ -1983,10 +1995,8 @@ proc expand {nid {really {}} } {
 		set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
 		# remember ids of messages which the new external node connects
 		if {$clicked_is_prnt} {
-		    puts stderr "setting msgs2extnid($clicked_msgid,$dragged_msgid) to $last_group_node_id"
 		    set msgs2extnid($clicked_msgid,$dragged_msgid) $last_group_node_id
 		} else {
-		    puts stderr "setting msgs2extnid($dragged_msgid,$clicked_msgid) to $last_group_node_id"
 		    set msgs2extnid($dragged_msgid,$clicked_msgid) $last_group_node_id
 		}
 	    }
@@ -2023,16 +2033,15 @@ proc expand {nid {really {}} } {
 	#  else {
 	#     set-mode nothing
 	# }
-	editor-message\
+	editor-message \
 	    "linked $dragged_node to $clicked_node as a $relation $type $ambiguity"
 	# reestablish
 	xscrollto [max $node($dragged_node,xpos) $node($clicked_node,xpos)]
 	yscrollto [max $node($dragged_node,ypos) $node($clicked_node,ypos)]
 	if { $cancelled == 1 } {
 	    set cancelled 0
-	    undo_by_reload
+	    # undo_by_reload
 	}
-	puts stderr "autolink_nodes finished"
     }
 
     proc fix-children {new_node clicked_node dragged_node} {
@@ -2050,7 +2059,7 @@ proc expand {nid {really {}} } {
 
     proc link-par-to-child {par child relation } {
 	global node
-	puts "link-par-to-child $par $child $relation (already existing children: $node($par,children))"
+	# puts stderr "link-par-to-child $par $child $relation (already existing children: $node($par,children))"
 	if {$par == $child} {return;}
 
 	lappend node($par,children) $child

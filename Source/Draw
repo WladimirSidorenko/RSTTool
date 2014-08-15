@@ -49,9 +49,7 @@ proc display-node {nid} {
     set node($nid,textwgt) $wgt
     set wtn($wgt) $nid
     display-span $nid
-    puts stderr "calling display-arc $nid"
     display-arc $nid
-    puts stderr "display-arc $nid finished"
 }
 
 proc display-span {nid} {
@@ -163,7 +161,7 @@ proc display-arc {sat} {
 	    } else {
 		set nucpnt [add-points [$rstw coords [ntw $nuc]] {0 -2}]
 	    }
-	    set midpnt [subtract-points [mid-point $nucpnt $satpnt] "0 20"] 
+	    set midpnt [subtract-points [mid-point $nucpnt $satpnt] "0 20"]
 	    set labelpnt [subtract-points $midpnt {0 6}]
 	    set node($sat,arrowwgt)\
 		[draw-arc $rstw [concat $nucpnt $midpnt $satpnt]]
@@ -182,13 +180,13 @@ proc display-arc {sat} {
 	    set labelpnt [subtract-points $satpnt {0 15}]
 	    #NEW constit hack
 	}
-	rst {  #draw an rst linker (an arc from nuctop to sattop)
+	default {  #draw an rst linker (an arc from nuctop to sattop)
 	    if {$node($nuc,constit) != {}} {
 		set nucpnt [add-points [$rstw coords [ntw $nuc]] {0 -17}]
 	    } else {
 		set nucpnt [add-points [$rstw coords [ntw $nuc]] {0 -2}]
 	    }
-	    set midpnt [subtract-points [mid-point $nucpnt $satpnt] "0 20"] 
+	    set midpnt [subtract-points [mid-point $nucpnt $satpnt] "0 20"]
 	    set labelpnt [subtract-points $midpnt {0 6}]
 	    # temp hack
 	    # puts "XXX: $nuc [expr [find-first-text-node $sat] - 1]"
@@ -268,10 +266,10 @@ proc redisplay-node {nid} {
 
 proc redraw-child-arcs {nid} {
     # redraws the child-arcs pointing at this node
-    global node 
+    global visible_nodes node
     debug "redraw-child-arcs: $nid"
     foreach cid $node($nid,children) {
-	if $node($cid,visible) {
+	if [info exists visible_nodes($cid)] {
 	    erase-arc $cid
 	    display-arc $cid
 	}

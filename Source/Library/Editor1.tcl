@@ -206,7 +206,6 @@ proc showNodes {msg_id {show 1}} {
     # set visibility status for all internal nodes belonging to the message
     # `$msg_id` to $show
     global msgid2nid visible_nodes
-    puts stderr "Changing visibility for message $msg_id to $show"
 
     if {! [info exists msgid2nid($msg_id)]} {return}
 
@@ -307,10 +306,9 @@ proc showText { {do_it {}} } {
 proc nextMessage { {do_it {}} {direction {forward}}} {
     global theRoots theRootIdx theForrest theText usedtext
     global crntMsgId crntMsgTxt prntMsgId prntMsgTxt
-    global msgid2nid msgs2extnid visible_nodes
+    global msgid2nid msgs2extnid node visible_nodes
     global msgQueue msgPrevQueue
     global offsetShift
-    puts stderr "nextMessage() called"
     # remember current message id
     set prev_msg_id $crntMsgId
     # remember the old parent
@@ -341,7 +339,7 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	set msgQueue [concat $msgQueue $children]; # append children to message queue
     } else {
 	# if we have exhausted the queue of processed messages, we
-	# give a message
+	# give a warning
 	if {[llength $msgPrevQueue] == 0} {
 	    tk_messageBox -message "Reached the beginning of the document.";
 	    return;
@@ -363,23 +361,26 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     ## Show/Hide nodes corresponding to messages
 
     # hide group node connecting previous message with its parent
-    puts "checking external node msgs2extnid($prev_prnt_msg_id,$prev_msg_id)"
+    # puts stderr "checking external node msgs2extnid($prev_prnt_msg_id,$prev_msg_id)"
     if [info exists msgs2extnid($prev_prnt_msg_id,$prev_msg_id)] {
-	puts "hiding node visible_nodes($msgs2extnid($prev_prnt_msg_id,$prev_msg_id))"
+	# puts stderr "hiding node visible_nodes($msgs2extnid($prev_prnt_msg_id,$prev_msg_id))"
 	unset visible_nodes($msgs2extnid($prev_prnt_msg_id,$prev_msg_id))
     }
     # show group node connecting current message with its parent
-    puts "checking external node msgs2extnid($prntMsgId,$crntMsgId)"
+    # puts stderr "checking external node msgs2extnid($prntMsgId,$crntMsgId)"
     if [info exists msgs2extnid($prntMsgId,$crntMsgId)] {
-	puts "showing node visible_nodes($msgs2extnid($prntMsgId,$crntMsgId))"
-	set visible_nodes($msgs2extnid($prntMsgId,$crntMsgId)) 1
+	# puts stderr "showing node visible_nodes($msgs2extnid($prntMsgId,$crntMsgId))"
+	set extnid $msgs2extnid($prntMsgId,$crntMsgId)
+	set visible_nodes($extnid) 1
+	# restore children of this abstract group node
+	foreach cid $node($extnid,children) {
+	    set node($cid,parent) $extnid
+	}
     }
     # if parent has changed, hide the old and show the new one
     if {$prntMsgId != $prev_prnt_msg_id} {
 	# display all known RST nodes for the new parent hide previous current
 	# node, if it is not the parent of the next message
-	puts stderr "prntMsgId = $prntMsgId"
-	puts stderr "prev_msg_id = $prev_msg_id"
 	if {$prntMsgId != $prev_msg_id} {showNodes $prntMsgId 1}
 	# hide all RST nodes in RST window which correspond to the
 	# previous parent
@@ -394,7 +395,10 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
 	.editor.textPrnt delete 0.0 end
 	showSentences .editor.textPrnt $prntMsgId 1
     }
-    if {$prntMsgId != $prev_msg_id} {showNodes $prev_msg_id 0}
+    if {$prntMsgId != $prev_msg_id} {
+	# puts stderr "hiding nodes for message $prev_msg_id"
+	showNodes $prev_msg_id 0
+    }
     # clear current message text area and place new text into it
     .editor.text delete 1.0 end
     .editor.text tag add new 1.0 end
@@ -412,8 +416,6 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     nextSentence $do_it;
     # display any nodes and sentences that already were annotated for
     # current message
-    puts stderr "crntMsgId = $crntMsgId"
-    puts stderr "prev_prnt_msg_id = $prev_prnt_msg_id"
     if {$crntMsgId != $prev_prnt_msg_id} {showNodes $crntMsgId 1}
     redisplay-net
 }
