@@ -270,7 +270,7 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	set offset_shift [expr $offset_shift + [string length $bmarker]]
     }
     # insert the rest of the text, if asked to do so
-    incr end
+    if $end {incr end}
     if {$show_rest} {
 	$path_name insert end [string range $txt $end end];
     	set end end
@@ -363,18 +363,26 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     # hide group node connecting previous message with its parent
     # puts stderr "checking external node msgs2extnid($prev_prnt_msg_id,$prev_msg_id)"
     if [info exists msgs2extnid($prev_prnt_msg_id,$prev_msg_id)] {
-	# puts stderr "hiding node visible_nodes($msgs2extnid($prev_prnt_msg_id,$prev_msg_id))"
-	unset visible_nodes($msgs2extnid($prev_prnt_msg_id,$prev_msg_id))
+	set extnid [lindex $msgs2extnid($prev_prnt_msg_id,$prev_msg_id) 0]
+# 	puts stderr "hiding node extnid = $extnid; msgs2extnid($prev_prnt_msg_id,$prev_msg_id) \
+# = $msgs2extnid($prev_prnt_msg_id,$prev_msg_id)"
+	unset visible_nodes($extnid)
+	# unlink children from the abstract group node
+	# foreach cid $node($extnid,children) {
+	#     set node($cid,parent) {}
+	# }
     }
     # show group node connecting current message with its parent
     # puts stderr "checking external node msgs2extnid($prntMsgId,$crntMsgId)"
     if [info exists msgs2extnid($prntMsgId,$crntMsgId)] {
-	# puts stderr "showing node visible_nodes($msgs2extnid($prntMsgId,$crntMsgId))"
-	set extnid $msgs2extnid($prntMsgId,$crntMsgId)
+	# puts stderr "showing nodes $msgs2extnid($prntMsgId,$crntMsgId)"
+	set extnid [lindex $msgs2extnid($prntMsgId,$crntMsgId) 0]
 	set visible_nodes($extnid) 1
 	# restore children of this abstract group node
-	foreach cid $node($extnid,children) {
-	    set node($cid,parent) $extnid
+	foreach {prntid cid relname} $msgs2extnid($prntMsgId,$crntMsgId) {
+	    # puts stderr "setting parent of node $cid to $prntid"
+	    set node($cid,parent) $prntid
+	    set node($cid,relname) $relname
 	}
     }
     # if parent has changed, hide the old and show the new one

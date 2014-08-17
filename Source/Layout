@@ -26,6 +26,7 @@ proc redisplay-net {} {
     # 2. Draw the links
     global rstw node_width visible_nodes node
 
+    # puts stderr "redisplay-net: visible_nodes = [array names visible_nodes]"
     # 1. Clean up from earlier structures
     if [info exists wtn] {unset wtn}
     $rstw delete all
@@ -71,12 +72,14 @@ proc x-layout {} {
 	    }
     	} else {
     	    set node($nid,xpos) $xpos
+	    # puts stderr "x-layout: node($nid,xpos) set to $node($nid,xpos)"
     	    set xpos [expr $xpos+$xinc]
     	}
     }
 
     foreach nid [lsort -integer [array names visible_nodes]] {
     	if {[group-node-p $nid]} {
+	    # puts stderr "x-layout: call xlayout-group-node on node $nid"
     	    xlayout-group-node $nid
     	}
     }
@@ -103,7 +106,7 @@ proc x-layout {} {
 proc xlayout-group-node {nid} {
     global node node_width visible_nodes
 
-    # puts stderr "xlayout-group-node: nid = $nid"
+    # puts stderr "xlayout-group-node: node($nid,xpos) = $node($nid,xpos)"
     # only position nodes which are not yet positioned
     if $node($nid,xpos) {return}
     # don't position invalid nodes
@@ -116,10 +119,12 @@ proc xlayout-group-node {nid} {
 	#  [group-relation-p $node($dep,relname)]
 	if [info exists visible_nodes($dep)] {
 	    if { !$node($dep,xpos) } {
+		# puts stderr "xlayout-group-node: calling xlayout-group-node on child $dep"
 		xlayout-group-node $dep
 	    }
 	    if [group-relation-p $node($dep,relname)] {
 		# we want to place the node over its members, not satelites
+		# puts stderr "xlayout-group-node: apending $node($dep,xpos) to x_coords from child $dep (node($dep,relname) = $node($dep,relname))"
 		lappend x_coords $node($dep,xpos)
 	    }
 	}
@@ -131,16 +136,19 @@ proc xlayout-group-node {nid} {
 	set first_tn [find-first-text-node $nid]
 	set prev_node [previous-visible-node $first_tn]
 	if { $prev_node > 0 } {
+	    # puts stderr "xlayout-group-node: node($nid,xpos) branch 0"
 	    set node($nid,xpos) [expr $node($prev_node,xpos)+  $node_width + 10]
 	} else {
+	    # puts stderr "xlayout-group-node: node($nid,xpos) branch 1"
 	    set node($nid,xpos) [expr $node_width + 10]
 	}
-
     } else {
 	set min [eval min $x_coords]
 	set max [eval max $x_coords]
+	# puts stderr "xlayout-group-node: node($nid,xpos) branch 2: min = $min, max = $max"
 	set node($nid,xpos) [expr $min + ($max - $min) / 2]
     }
+    # puts stderr "xlayout-group-node: node($nid,xpos) set to $node($nid,xpos)"
 }
 
 proc find-first-text-node {nid} {
@@ -208,11 +216,14 @@ proc y-layout {} {
     global node visible_nodes nid2msgid
 
     foreach nid [array names visible_nodes] {
+	# puts stderr "y-layout: nid = $nid; node($nid,parent) = $node($nid,parent)"
+	# puts stderr "y-layout: nid = $nid; node($nid,type) = $node($nid,type)"
 	# display all subtrees with no further roots and whose roots are
 	# external nodes connecting two messages
-    	if {$node($nid,parent) == {} || [llength $nid2msgid($node($nid,parent))] == 2} {
+    	if {$node($nid,parent) == {} || ![info exists visible_nodes($node($nid,parent))]} {
 	    # puts stderr "y-layout: y-layout-subtree $nid"
 	    # puts stderr "y-layout: node($nid,parent) = $node($nid,parent)"
+	    # puts stderr "y-layout: call y-layout-subtree on node $nid"
 	    y-layout-subtree $nid
 	}
     }

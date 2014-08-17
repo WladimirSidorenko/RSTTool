@@ -1894,7 +1894,9 @@ proc expand {nid {really {}} } {
 	    set coords [screen-coords [ntw $clicked_node] $rstw]
 	    # determine which kind of relationship may hold between the edges
 	    set nucleus nucleus
+	    set nucleus_embedded nucleus-embedded
 	    set satellite satellite
+	    set satellite_embedded satellite-embedded
 	    # if parent message of the dragged node is the message
 	    # corresponding to the clicked node, we cannot make the clicked
 	    # node a satellite
@@ -1902,13 +1904,15 @@ proc expand {nid {really {}} } {
 	    set clicked_node_prnt_id [lindex $theForrest($clicked_msgid) 1]
 	    if {$dragged_node_prnt_id == $clicked_msgid} {
 		set nucleus ""
+		set nucleus_embedded ""
 		set clicked_is_prnt 1
 	    } elseif {$clicked_node_prnt_id == $dragged_msgid} {
 		set satellite ""
+		set satellite_embedded ""
 	    }
 	    set type [popup-choose-from-list \
-			  [concat $nucleus $satellite \
-			       {nucleus-embedded satellite-embedded multinuclear schema}] \
+			  [concat $nucleus $satellite $nucleus_embedded $satellite_embedded \
+			       {multinuclear schema}] \
 			  [expr int([lindex $coords 0])] [expr int([lindex $coords 1])]]
 	}
 	if {$type == {} } {
@@ -1983,22 +1987,35 @@ proc expand {nid {really {}} } {
 	    # put-in-place-of $clicked_node $last_group_node_id
 	    # show new group node
 	    set visible_nodes($last_group_node_id) 1
-	    # if dragged and clicked nodes belong to one message, remember
-	    # that the new group node corresponds to that message id
-	    if {$dragged_msgid == $clicked_msgid} {
-		set nid2msgid($last_group_node_id) [list $clicked_msgid]
-		# remember to which message the new internal group node belongs
-		lappend msgid2nid($clicked_msgid) $last_group_node_id
-	    } else {
+	    if {$ext_connection} {
 		# if dragged and clicked nodes belong to different messages,
 		# remember both messages for the new group node
 		set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
-		# remember ids of messages which the new external node connects
+		# remember ids of messages which the new external node
+		# connects.  Additionally, if external parent already has an
+		# ancestor, link the newly create common group node to that
+		# ancestor.
 		if {$clicked_is_prnt} {
-		    set msgs2extnid($clicked_msgid,$dragged_msgid) $last_group_node_id
+		    # if {[info exists node($clicked_node,parent)] && \
+		    # 	    $node($clicked_node,parent) != {}} {
+		    # 	set $node($last_group_node_id,parent) $node($clicked_node,parent)
+		    # }
+		    set msgs2extnid($clicked_msgid,$dragged_msgid) [list $last_group_node_id $clicked_node span \
+									$clicked_node $dragged_node $relation]
 		} else {
-		    set msgs2extnid($dragged_msgid,$clicked_msgid) $last_group_node_id
+		    # if {[info exists node($dragged_node,parent)] && \
+		    # 	    $node($dragged_node,parent) != {}} {
+		    # 	set $node($last_group_node_id,parent) $node($dragged_node,parent)
+		    # }
+		    set msgs2extnid($dragged_msgid,$clicked_msgid) [list $last_group_node_id $dragged_node span \
+									$dragged_node $clicked_node $relation]
 		}
+	    } else {
+		# if dragged and clicked nodes belong to one message, remember
+		# that the new group node corresponds to that message id
+		set nid2msgid($last_group_node_id) [list $clicked_msgid]
+		# remember to which message the new internal group node belongs
+		lappend msgid2nid($clicked_msgid) $last_group_node_id
 	    }
 
 	    if {$type == "multinuclear"} {
