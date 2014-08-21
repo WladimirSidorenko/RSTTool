@@ -198,18 +198,24 @@ $File add command -label "Quit" -command {
 }
 $Display add command -label "Clear Structure" -command {
     global theRoots theForrest
+    global msgid2nid nid2msgid msgs2extnid visible_nodes
 
     set sure [tk_dialog .d3 {Doublecheck}\
 		  "Are you sure you want to erase this?"\
 		  warning 0 {Yes} {No} "Cancel"]
 
-    # clear data structures holding information about discussions
-    set theRoots {}
-    array unset theForrest
-
     if { $sure == 0 } {
+	# clear text file inormation
 	set filename $currentfile
 	set $currentfile {}
+	set theRoots {}
+	# clear inormation about nodes
+	array unset theForrest
+	array unset msgid2nid
+	array unset nid2msgid
+	array unset msgs2extnid
+	array unset visible_nodes
+
 	load-file $filename
 	reset-rst
 	redisplay-net

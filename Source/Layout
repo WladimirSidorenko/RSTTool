@@ -53,11 +53,8 @@ proc redisplay-net {} {
 }
 
 proc x-layout {} {
-    global node group_nodes node_width current_xpos
+    global node node_width current_xpos
     global visible_nodes
-
-    # set xpos of group-nodes to 0 (logically false)
-    # foreach nid $group_nodes {set node($nid,xpos) 0}
 
     set xinc [expr $node_width + 10]
     set xpos [expr $node_width / 2 + 30]
