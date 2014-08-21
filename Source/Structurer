@@ -197,7 +197,7 @@ $File add command -label "Quit" -command {
     exit
 }
 $Display add command -label "Clear Structure" -command {
-    global theRoots theForrest
+    global theRoots theForrest prntMsgId
     global msgid2nid nid2msgid msgs2extnid visible_nodes
 
     set sure [tk_dialog .d3 {Doublecheck}\
@@ -215,16 +215,20 @@ $Display add command -label "Clear Structure" -command {
 	array unset nid2msgid
 	array unset msgs2extnid
 	array unset visible_nodes
-
+	# reload file
 	load-file $filename
 	reset-rst
 	redisplay-net
+	# redisplay parent
+	.editor.textPrnt delete 0.0 end
+	showSentences .editor.textPrnt $prntMsgId 1
     }
 }
+
 $Display add command -label "Redraw Structure" -command {redisplay-net}
 $Print add cascade -label "Dot Options" -menu $Print.options
 menu $Print.options
-$Print.options add radio -label "text" -variable mode -value text 
+$Print.options add radio -label "text" -variable mode -value text
 $Print.options add radio -label "no text" -variable mode -value no_text
 $Print.options add separator
 $Print.options add radio -label "one page" -variable pages -value one
