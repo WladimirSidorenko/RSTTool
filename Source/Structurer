@@ -75,27 +75,28 @@ $File add command -label "Load Text File" -command {
 	}
 	set a_different_file 0
     } elseif {$currentfile != {}} {
-	print_lisp
+	save_rst
 	set result 0
     }
+
     if {$a_different_file} {
 	# select file in which new annotation should be stored and
 	# which probably contains old annotation
-	set directory [file dirname $filename]
-	set default_anno_file $directory/rst/[file tail $filename]
+	set default_anno_file [set-file-name rst $filename 0]
 
 	set result0 [tk_dialog .d1 {Select Annotation File}\
-			 "Annotation will be loaded/stored in file \"$default_anno_file\".\n\
-Click \"New\" to create another file or \"Choose\" to select an existing one.\n" info 0 \
-			 "Use default" "New" "Choose" "Cancel"]
+			 "Annotation will be loaded/stored in file:\n\
+\"$default_anno_file\"\n\
+Click \"Choose\" to select another file or \"New\" to create a new one.\n" info 0 \
+			 "Use Default" "Choose" "New" "Cancel"]
 
 	# get the name of the file from which annotation should be loaded
 	if {$result0 == 0} {
-	    set anno_file $default_anno_file
+	    set anno_file [set-file-name rst $filename]
 	} elseif {$result0 == 1} {
-	    set anno_file [fileselect "Select Annotation File" $default_anno_file 0]
+	    set anno_file [fileselect "Select File" $default_anno_file 0]
 	} elseif {$result0 == 2} {
-	    set anno_file [fileselect "Select Annotation File" $default_anno_file 1]
+	    set anno_file [fileselect "Select File" $default_anno_file 1]
 	} else {
 	    return;
 	}
@@ -107,9 +108,6 @@ Click \"New\" to create another file or \"Choose\" to select an existing one.\n"
 			     "Annotation file \"$anno_file\" already exists. \
 Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 	} else {
-	    if {! [file exists [file dirname $anno_file]]} {
-		file mkdir $anno_file
-	    }
 	    export-time
 	    load-file $filename
 	    set savenum 0
@@ -123,7 +121,7 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 	set sure [tk_dialog .d2 {Doublecheck} "Are you sure?" warning 0 {Erase} "Cancel"]
 	if { $sure == 0 } {
 	    if {$a_different_file == 1} { export-time }
- 	    set mystepfile [file dirname $filename]/rst/[set-file-name step $filename]
+ 	    set mystepfile [set-file-name step $filename]
 	    if {[file readable $mystepfile]} {wincopy $mystepfile $mystepfile.bak}
             load-file $filename
 	    set savenum 0
@@ -143,13 +141,13 @@ $File add command -label "Peruse Text File" -command {
     export-time
 
     if {$currentfile != {}} {
-	print_lisp
+	save-lisp
 
 	set mode text
 	set fill fill
 	set orient landscape
 	set pages multi
-	print_dot 
+	print_dot
 	set my_dotfile [set-file-name dot]
 	if {$DOT_EXISTS == "YES"} {
 	    exec $DOT -Tps $currentfile.rst/$my_dotfile -o\
@@ -180,7 +178,7 @@ $File add command -label "Quit" -command {
     export-time
 
     if {$currentfile != {}} {
-	print_lisp
+	save-lisp
 
 	set mode text
 	set fill fill
@@ -272,17 +270,25 @@ $Print add command -label "Print Dot" -command {
         }
     }
 }
-$Save add command -label "lisp format" -command { 
+
+$Save add command -label "raw format" -command {
+    set rawfile [set-file-name raw]
+    set result [tk_dialog .d4 {AutoSave Raw}\
+		    "Saving structure in raw format as file \"$lispfile\"" \
+		    warning 0 {OK}]
+    save-raw
+}
+$Save add command -label "lisp format" -command {
     set lispfile [set-file-name lisp]
     set result [tk_dialog .d4 {AutoSave Lisp}\
 		    "Saving structure in lisp format as file \"$lispfile\"" \
 		    warning 0 {OK}]
-    print_lisp
+    save-lisp
 }
-$Save add command -label "sgml format" -command { 
+$Save add command -label "sgml format" -command {
     set sgmlfile [set-file-name sgml]
-    set result [tk_dialog .d4 {AutoSave Lisp}\
-		    "Saving structure in sgml format as file \"$sgmlfile\"" \
+    set result [tk_dialog .d4 {AutoSave SGML}\
+		    "Saving structure in SGML format as file \"$sgmlfile\"" \
 		    warning 0 {OK}]
     save-sgml
 }
@@ -1634,12 +1640,12 @@ proc expand {nid {really {}} } {
     }
 
 
-    proc print_lisp {} {
+    proc save-lisp {} {
 	global node last_text_node_id currentfile lispfile used_nodes
 
-	update_promotion 
+	update_promotion
 
-	set lispfilename $currentfile.rst/[set-file-name lisp]
+	set lispfilename [set-file-name lisp]
 	set lispfile [open $lispfilename w 0644]
 
 	set used_nodes {}
@@ -1650,13 +1656,13 @@ proc expand {nid {really {}} } {
 		while {$node($j,parent) != {} } {
 		    set j $node($j,parent)
 		}
-		print_lisp_recursion $j 0
+		save-lisp_recursion $j 0
 	    }
 	}
 	close $lispfile
     }
 
-    proc print_lisp_recursion {nid depth} {
+    proc save-lisp_recursion {nid depth} {
 	global node lispfile used_nodes
 
 	if {[group-relation-p $node($nid,relname)]} {
@@ -1676,19 +1682,19 @@ proc expand {nid {really {}} } {
 	if {$nid_parent == {}} {
 	    append to_print "Root"
 	} elseif {[group-relation-p $node($nid,relname)]} {
-	    append to_print "Nucleus" 
+	    append to_print "Nucleus"
 	} else {
-	    append to_print "Satellite" 
+	    append to_print "Satellite"
 	}
 	if {$node($nid,type) == "text"} {
 	    append to_print " (leaf $nid)"
 	} else {
-	    append to_print " (span $node($nid,span))" 
+	    append to_print " (span $node($nid,span))"
 	}
 	if {$nid_parent != {}} {
 	    append to_print " (rel2par $node($nid,relname))"
 	}
-	append to_print " (prom $node($nid,promotion))" 
+	append to_print " (prom $node($nid,promotion))"
 	if {$node($nid,constit) != {}} {
 	    append to_print " (schema $node($nid,constit))"
 	}
@@ -1713,7 +1719,7 @@ proc expand {nid {really {}} } {
 	set prom_list [lsort -integer $prom_list]
 	foreach prom $prom_list {
 	    if {$backreference($prom) != $nid} {
-		print_lisp_recursion $backreference($prom) $depth
+		save-lisp_recursion $backreference($prom) $depth
 	    }
 	}
 

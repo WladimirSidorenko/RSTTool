@@ -300,38 +300,32 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     .editor.text tag add notes my_sel.last new.first
 }
 
-proc set-file-name { file_type { other_file {} } } {
+proc set-file-name { file_type { other_file {} } {create_dir {1}}} {
     global currentfile
     global VERSION LOGIN
 
     if {$other_file == {}} {
 	set other_file $currentfile
     }
-    set shortfilename [file rootname [file tail $other_file]]
 
+    set dirname [file join [file dirname $other_file] $file_type]
+    if {$create_dir && ![file exists $dirname]} {file mkdir $dirname}
+
+    set basename [file rootname [file tail $other_file]]
     if {$VERSION == "UNIX"} {
-	set my_name [exec whoami]
-	return $shortfilename.$file_type.$my_name
+	set uname [exec whoami]
     } else {
-	#VERSION == PC
-	return $shortfilename.$file_type.$LOGIN
+	set uname $LOGIN
     }
+    return [file join $dirname "$basename.$uname"]
 }
 
 proc open-step-file {} {
     global step_file currentfile
 
     set mystepfile [set-file-name step]
-
-    set step_file [open [file dirname $currentfile]/rst/$mystepfile w 0644]
+    set step_file [open "$mystepfile" w 0644]
 }
-
-proc read-step-file {} {
-    global step_file currentfile
-
-    set mystepfile [set-file-name step]
-
-    set step_file [open [file dirname $currentfile]/rst/$mystepfile r] }
 
 proc peruse-step-file {} {
     global step_file currentfile
@@ -377,20 +371,6 @@ proc close-step-file {} {
 }
 
 set collapsed_nodes {}
-
-# proc reestablish {} {
-#     global savenum collapsed_nodes node step_file
-#     reset-rst
-#     if { $savenum > 0 } {
-# 	load-rst $savenum
-# 	foreach coll_n $collapsed_nodes {
-# 	    foreach child $node($coll_n,children) {
-# 		hide-node $child
-# 	    }
-# 	}
-#     }
-#     redisplay-net
-# }
 
 proc reload-it-all {filename} {
     global step_file currentfile savenum last_text_node_id
@@ -473,7 +453,7 @@ proc undo_by_reload { {really {1}} } {
     #3rd case - allows perusal of someone else's structure
     if {$really != 2} {
 	close-step-file
-	read-step-file
+	open-step-file
     } else {
 	peruse-step-file
     }
