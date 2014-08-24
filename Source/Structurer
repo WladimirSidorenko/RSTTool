@@ -59,82 +59,96 @@ proc reset-and-redisplay {} {
     redisplay-net
 }
 
+# TODO: to be checked thoroughly
 $File add command -label "Load Text File" -command {
     set filename [fileselect]
     if {$filename == {}} {return}
-    set a_different_file 1
-    set result 1
+    set result0 -1;		# replace or preserve annotation file
+
     if {$filename == $currentfile} {
-	set result [tk_dialog .d {File Already Open}\
-			"File $filename already open."\
-			warning 0 {Replace} "Cancel"]
-	if { $result == 1 } {
-	    set result 2
-	} else {
-	    set result 0
+	set result0 [tk_dialog .d {File Already Open} "File $filename already open."\
+			 warning 0 {Replace} "Cancel"]
+    } else {
+	# save annotation for current file
+	if {$currentfile != {}} {$save_func}
+	# load text from new file
+	export-time
+	load-file $filename
+	set savenum 0
+	# determine target directory in which new annotation should be stored
+	set trgdir [file join "[file dirname $filename]" rst]
+	set trgfname {}
+	# `raw` should be checked as the first option and also set as default
+	# type if no previous annotation was found
+	foreach atype {raw lisp sgml raw} {
+	    set trgfname [set-file-name $atype $filename 0]
+	    if {[file isfile $trgfname] && [file readable $trgfname]} {
+		break
+	    }
 	}
-	set a_different_file 0
-    } elseif {$currentfile != {}} {
-	save_rst
-	set result 0
-    }
 
-    if {$a_different_file} {
-	# select file in which new annotation should be stored and
-	# which probably contains old annotation
-	set default_anno_file [set-file-name rst $filename 0]
-
-	set result0 [tk_dialog .d1 {Select Annotation File}\
-			 "Annotation will be loaded/stored in file:\n\
-\"$default_anno_file\"\n\
-Click \"Choose\" to select another file or \"New\" to create a new one.\n" info 0 \
-			 "Use Default" "Choose" "New" "Cancel"]
+	set result1 [tk_dialog .d1 {Select Annotation File}\
+			 "Annotation will be stored in file:\n\
+\"$trgfname\"\n\
+Click \"Open\" to select another file or \"New\" to create a new one.\n" info 0 \
+			 "Use Default" "Open" "New" "Cancel"]
 
 	# get the name of the file from which annotation should be loaded
-	if {$result0 == 0} {
-	    set anno_file [set-file-name rst $filename]
-	} elseif {$result0 == 1} {
-	    set anno_file [fileselect "Select File" $default_anno_file 0]
-	} elseif {$result0 == 2} {
-	    set anno_file [fileselect "Select File" $default_anno_file 1]
-	} else {
+	if {$result1 == 1} {
+	    set trgfname [fileselect "Select File" [file tail $trgfname] 0]
+	} elseif {$result1 == 2} {
+	    set trgfname [fileselect "Select File" [file tail $trgfname] 1]
+	} elseif {$result0 != 0} {
 	    return;
 	}
+	# determine type of save function and save format
+	if {$trgfname == {}} {return}
+	set itype [file tail [file dirname $trgfname]]
+	switch -- $itype {
+	    raw -
+	    lisp -
+	    sgml {}
+	    default {
+		set fmt [tk_dialog .d1 {Format selection} \
+			     "Select format for saving annotation:" \
+			     "Raw" "Lisp" "SGML" "Cancel"]
+		switch -- $fmt {
+		    0 {set itype raw}
+		    1 {set itype lisp}
+		    2 {set itype sgml}
+		    default {return}
+		}
+	    }
+	}
+	set save_fmt $itype
+	set save_func "save-${save_fmt}"
 
-	# check if an already existing file should be erased
-	set result1 -1
-	if {[file readable $anno_file]} {
-	    set result1 [tk_dialog .d1 {File Already Structured}\
-			     "Annotation file \"$anno_file\" already exists. \
+	# check if an existing file should be erased
+	if {[file isfile $trgfname] && [file readable $trgfname]} {
+	    set result0 [tk_dialog .d1 {File Already Structured}\
+			     "File \"$trgfname\" already exists. \
 Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
-	} else {
-	    export-time
-	    load-file $filename
-	    set savenum 0
-	    reset-and-redisplay
-	    set result 2
-	    start-time
 	}
     }
 
-    if { $result1 == 0 } {
+    # check if current file should be erased or reloaded (the if-section below
+    # is subject to revision)
+    if { $result0 == 0 } {
 	set sure [tk_dialog .d2 {Doublecheck} "Are you sure?" warning 0 {Erase} "Cancel"]
-	if { $sure == 0 } {
-	    if {$a_different_file == 1} { export-time }
- 	    set mystepfile [set-file-name step $filename]
-	    if {[file readable $mystepfile]} {wincopy $mystepfile $mystepfile.bak}
-            load-file $filename
-	    set savenum 0
-	    reset-and-redisplay
-	    start-time reset
-	} else { return }
-    } elseif { $result1 == 1 } {
+	if { $sure == 1 } {return}
+
+	set mystepfile [set-file-name step $filename]
+	if {[file readable $mystepfile]} {wincopy $mystepfile $mystepfile.bak}
+	load-file $filename
+	set savenum 0
+	start-time reset
+    } elseif { $result0 == 1 } {
 	export-time
 	set currentfile $filename
-	set savenum 0
 	undo_by_reload 0
 	start-time
     }
+    reset-and-redisplay
 }
 
 $File add command -label "Peruse Text File" -command {
@@ -271,27 +285,9 @@ $Print add command -label "Print Dot" -command {
     }
 }
 
-$Save add command -label "raw format" -command {
-    set rawfile [set-file-name raw]
-    set result [tk_dialog .d4 {AutoSave Raw}\
-		    "Saving structure in raw format as file \"$lispfile\"" \
-		    warning 0 {OK}]
-    save-raw
-}
-$Save add command -label "lisp format" -command {
-    set lispfile [set-file-name lisp]
-    set result [tk_dialog .d4 {AutoSave Lisp}\
-		    "Saving structure in lisp format as file \"$lispfile\"" \
-		    warning 0 {OK}]
-    save-lisp
-}
-$Save add command -label "sgml format" -command {
-    set sgmlfile [set-file-name sgml]
-    set result [tk_dialog .d4 {AutoSave SGML}\
-		    "Saving structure in SGML format as file \"$sgmlfile\"" \
-		    warning 0 {OK}]
-    save-sgml
-}
+$Save add command -label "raw format" -command {save-raw}
+$Save add command -label "lisp format" -command {save-lisp}
+$Save add command -label "sgml format" -command {save-sgml}
 
 set p_width 1
 set p_height 1
@@ -1465,7 +1461,6 @@ proc expand {nid {really {}} } {
     }
 
     set dotfile {}
-    set lispfile {}
     set used_nodes {}
 
     proc print_dot { } {
@@ -1640,13 +1635,32 @@ proc expand {nid {really {}} } {
     }
 
 
+    proc save-raw {} {
+	global trgfname
+	global node nid2msgid msgs2extnid
+
+	set trgfile [open $trgfname w 0644]
+	# save information about nodes
+	foreach nid [array names nid2msgid] {
+	    puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] "$node($nid,type)"\
+				     "$node($nid,offsets)" "$node($nid,spans)"\
+				     "$node($nid,spans)" "$node($nid,text)"] "\t"]
+	}
+	# output child/parent pair mapping specific to particular messages
+ 	foreach {prnt_msg_id chld_msg_id} [array names msgs2extnid] {
+	    puts $trgfile [join [list "msgs2extnid" "prnt_msg_id" "chld_msg_id" \
+				     [join $msgs2extnid($prnt_msg_id,$chld_msg_id) "\034"]]
+	}
+	close $trgfile
+    }
+
     proc save-lisp {} {
-	global node last_text_node_id currentfile lispfile used_nodes
+	global trgfname
+	global node last_text_node_id currentfile used_nodes
 
 	update_promotion
 
-	set lispfilename [set-file-name lisp]
-	set lispfile [open $lispfilename w 0644]
+	set trgfile [open $trgfname w 0644]
 
 	set used_nodes {}
 
@@ -1659,7 +1673,7 @@ proc expand {nid {really {}} } {
 		save-lisp_recursion $j 0
 	    }
 	}
-	close $lispfile
+	close $trgfile
     }
 
     proc save-lisp_recursion {nid depth} {

@@ -1,3 +1,4 @@
+# -*- mode: tcl; -*-
 ### CODE to Manage PS file saving
 
 proc save-subtree-as-ps {nid} {

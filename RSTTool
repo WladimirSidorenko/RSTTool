@@ -57,6 +57,10 @@ load_abbreviations [file join $RELS abbreviations]
 proc Quit {} {exit}
 # set global variables
 set currentfile tmp
+set trgdir rst
+set trgfname /dev/null
+set save_fmt raw
+set save_func "save-${save_fmt}"
 set crntMsgId {};	# id of the current message
 set crntMsgTxt "";	# text of the current message
 set prntMsgId {};	# id of the parent message
@@ -167,7 +171,7 @@ proc add-this-to-a-node { do_it {my_current {}} {dummy_param {}} } {
 	regsub -all "\t" $the_selection {\t} the_selection
 	append my_save " \{$the_selection\}"
 	save-step $my_save
-	save-rst $savenum
+	# save-rst $savenum
     }
     editor-message "saved tmp.$savenum"
     set x [.editor.text index "end - 1 chars"]
@@ -286,7 +290,7 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
         regsub -all "\t" $the_selection {\t} the_selection
 	append myStep " \{$the_selection\}"
   	save-step "$myStep"
-  	save-rst $savenum
+  	# save-rst $savenum
     }
     set-mode autolink
     editor-message "saved tmp.$savenum"
@@ -301,14 +305,14 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
 }
 
 proc set-file-name { file_type { other_file {} } {create_dir {1}}} {
-    global currentfile
+    global currentfile trgdir
     global VERSION LOGIN
 
     if {$other_file == {}} {
 	set other_file $currentfile
     }
 
-    set dirname [file join [file dirname $other_file] $file_type]
+    set dirname [file join $trgdir $file_type]
     if {$create_dir && ![file exists $dirname]} {file mkdir $dirname}
 
     set basename [file rootname [file tail $other_file]]
