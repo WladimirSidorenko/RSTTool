@@ -1,4 +1,4 @@
-#!/usr/bin/wish -f
+#!/usr/bin/env wish
 
 wm title . "RST Interface"
 wm protocol . WM_DELETE_WINDOW Quit
