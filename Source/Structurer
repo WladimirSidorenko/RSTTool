@@ -86,7 +86,6 @@ $File add command -label "Load Text File" -command {
 		break
 	    }
 	}
-
 	set result1 [tk_dialog .d1 {Select Annotation File}\
 			 "Annotation will be stored in file:\n\
 \"$trgfname\"\n\
@@ -98,7 +97,7 @@ Click \"Open\" to select another file or \"New\" to create a new one.\n" info 0 
 	    set trgfname [fileselect "Select File" [file tail $trgfname] 0]
 	} elseif {$result1 == 2} {
 	    set trgfname [fileselect "Select File" [file tail $trgfname] 1]
-	} elseif {$result0 != 0} {
+	} elseif {$result1 != 0} {
 	    return;
 	}
 	# determine type of save function and save format
@@ -128,6 +127,8 @@ Click \"Open\" to select another file or \"New\" to create a new one.\n" info 0 
 	    set result0 [tk_dialog .d1 {File Already Structured}\
 			     "File \"$trgfname\" already exists. \
 Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
+	} elseif {! [file exists [file dirname $trgfname]]} {
+	    file mkdir [file dirname $trgfname]
 	}
     }
 
@@ -1642,9 +1643,26 @@ proc expand {nid {really {}} } {
 	set trgfile [open $trgfname w 0644]
 	# save information about nodes
 	foreach nid [array names nid2msgid] {
-	    puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] "$node($nid,type)"\
-				     "$node($nid,offsets)" "$node($nid,spans)"\
-				     "$node($nid,spans)" "$node($nid,text)"] "\t"]
+	    puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] \
+				     "$node($nid,text)" \
+				     "$node($nid,type)" \
+				     "$node($nid,textwgt)" \
+				     "$node($nid,labelwgt)" \
+				     "$node($nid,arrowwgt)" \
+				     "$node($nid,spanwgt)" \
+				     "$node($nid,relname)" \
+				     "$node($nid,children)" \
+				     "$node($nid,parent)" \
+				     "$node($nid,constituents)" \
+				     "$node($nid,visible)" \
+				     "$node($nid,span)" \
+				     "$node($nid,offsets)" \
+				     "$node($nid,xpos)" \
+				     "$node($nid,ypos)" \
+				     "$node($nid,oldindex)" \
+				     "$node($nid,newindex)" \
+				     "$node($nid,constit)" \
+				     "$node($nid,promotion)"] "\t"]
 	}
 	# output child/parent pair mapping specific to particular messages
  	foreach {prnt_msg_id chld_msg_id} [array names msgs2extnid] {

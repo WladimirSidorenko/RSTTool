@@ -210,17 +210,12 @@ proc visible-children-p {nid} {
 }
 
 proc y-layout {} {
-    global node visible_nodes nid2msgid
+    global node visible_nodes
 
     foreach nid [array names visible_nodes] {
-	# puts stderr "y-layout: nid = $nid; node($nid,parent) = $node($nid,parent)"
-	# puts stderr "y-layout: nid = $nid; node($nid,type) = $node($nid,type)"
-	# display all subtrees with no further roots and whose roots are
+	# display all subtrees with no further roots and those whose roots are
 	# external nodes connecting two messages
     	if {$node($nid,parent) == {} || ![info exists visible_nodes($node($nid,parent))]} {
-	    # puts stderr "y-layout: y-layout-subtree $nid"
-	    # puts stderr "y-layout: node($nid,parent) = $node($nid,parent)"
-	    # puts stderr "y-layout: call y-layout-subtree on node $nid"
 	    y-layout-subtree $nid
 	}
     }
