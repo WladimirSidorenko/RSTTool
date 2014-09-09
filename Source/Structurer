@@ -71,10 +71,6 @@ $File add command -label "Load Text File" -command {
     } else {
 	# save annotation for current file
 	if {$currentfile != {}} {$save_func}
-	# load text from new file
-	export-time
-	load-file $filename
-	set savenum 0
 	# determine target directory in which new annotation should be stored
 	set trgdir [file join "[file dirname $filename]" rst]
 	set trgfname {}
@@ -121,10 +117,11 @@ Click \"Open\" to select another file or \"New\" to create a new one.\n" info 0 
 	}
 	set save_fmt $itype
 	set save_func "save-${save_fmt}"
+	set load_func "load-${save_fmt}"
 
 	# check if an existing file should be erased
 	if {[file isfile $trgfname] && [file readable $trgfname]} {
-	    set result0 [tk_dialog .d1 {File Already Structured}\
+	    set result0 [tk_dialog .d1 {File exists}\
 			     "File \"$trgfname\" already exists. \
 Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 	} elseif {! [file exists [file dirname $trgfname]]} {
@@ -134,6 +131,7 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 
     # check if current file should be erased or reloaded (the if-section below
     # is subject to revision)
+    reset-and-redisplay
     if { $result0 == 0 } {
 	set sure [tk_dialog .d2 {Doublecheck} "Are you sure?" warning 0 {Erase} "Cancel"]
 	if { $sure == 1 } {return}
@@ -144,12 +142,16 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 	set savenum 0
 	start-time reset
     } elseif { $result0 == 1 } {
-	export-time
+	# export-time
 	set currentfile $filename
-	undo_by_reload 0
-	start-time
+	# undo_by_reload 0
+	# start-time
+	$load_func
     }
-    reset-and-redisplay
+    # load text from new file
+    # export-time
+    load-file $filename
+    set savenum 0
 }
 
 $File add command -label "Peruse Text File" -command {
@@ -1635,41 +1637,92 @@ proc expand {nid {really {}} } {
 	return $the_string
     }
 
-
     proc save-raw {} {
 	global trgfname
 	global node nid2msgid msgs2extnid
 
 	set trgfile [open $trgfname w 0644]
-	# save information about nodes
+	# output information about nodes
 	foreach nid [array names nid2msgid] {
 	    puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] \
-				     "$node($nid,text)" \
-				     "$node($nid,type)" \
-				     "$node($nid,textwgt)" \
-				     "$node($nid,labelwgt)" \
-				     "$node($nid,arrowwgt)" \
-				     "$node($nid,spanwgt)" \
-				     "$node($nid,relname)" \
-				     "$node($nid,children)" \
-				     "$node($nid,parent)" \
-				     "$node($nid,constituents)" \
-				     "$node($nid,visible)" \
-				     "$node($nid,span)" \
-				     "$node($nid,offsets)" \
-				     "$node($nid,xpos)" \
-				     "$node($nid,ypos)" \
-				     "$node($nid,oldindex)" \
-				     "$node($nid,newindex)" \
-				     "$node($nid,constit)" \
-				     "$node($nid,promotion)"] "\t"]
+				     "text\034$node($nid,text)" \
+				     "type\034$node($nid,type)" \
+				     "textwgt\034$node($nid,textwgt)" \
+				     "labelwgt\034$node($nid,labelwgt)" \
+				     "arrowwgt\034$node($nid,arrowwgt)" \
+				     "spanwgt\034$node($nid,spanwgt)" \
+				     "relname\034$node($nid,relname)" \
+				     "children\034[join $node($nid,children) \034]" \
+				     "parent\034$node($nid,parent)" \
+				     "constituents\034[join $node($nid,constituents) \034]" \
+				     "visible\034$node($nid,visible)" \
+				     "span\034[join $node($nid,span) \034]" \
+				     "offsets\034[join $node($nid,offsets) \034]" \
+				     "xpos\034$node($nid,xpos)" \
+				     "ypos\034$node($nid,ypos)" \
+				     "oldindex\034$node($nid,oldindex)" \
+				     "newindex\034$node($nid,newindex)" \
+				     "constit\034$node($nid,constit)" \
+				     "promotion\034$node($nid,promotion)"] "\t"]
 	}
 	# output child/parent pair mapping specific to particular messages
  	foreach {prnt_msg_id chld_msg_id} [array names msgs2extnid] {
-	    puts $trgfile [join [list "msgs2extnid" "prnt_msg_id" "chld_msg_id" \
-				     [join $msgs2extnid($prnt_msg_id,$chld_msg_id) "\034"]]
+	    puts $trgfile [join [list "msgs2extnid" "$prnt_msg_id" "$chld_msg_id" \
+				     [join $msgs2extnid($prnt_msg_id,$chld_msg_id) "\034"]]]
 	}
 	close $trgfile
+    }
+
+    proc load-raw {} {
+	global trgfname
+	global node msgid2nid nid2msgid msgs2extnid
+
+	# open annotation file for reading
+	set srcfile [open $trgfname r 0444]
+
+	set nid {}
+	set iline {}
+	set f {}
+	set field {}
+	set fields {}
+	# process annotation line by line
+	while {[gets $srcfile iline] >= 0} {
+	    # puts stderr "iline = '$iline'"
+	    set fields [split $iline "\t"]
+	    if {[lindex $fields 0] == "msgs2extnid"} {
+		# puts stderr "reading msgs2extnid"
+		set msgs2extnid([lindex $fields 1],[lindex $fields 2]) \
+		    [split [lindex $fields 3] "\034"]
+	    } elseif {[lindex $fields 0] == "nid"} {
+		set nid [lindex $fields 1]
+		# puts stderr "reading nid for node $nid"
+		set nid2msgid($nid) [split [lindex $fields 2] "\034"]
+		# puts stderr "nid2msgid($nid) = $nid2msgid($nid)"
+		# add reverse mapping from message id to its corresponding node ids
+		foreach msgid $nid2msgid($nid) {
+		    # puts stderr "adding nid $nid to msgid2nid($msgid)"
+		    if {! [info exists msgid2nid($msgid)] } {
+			set msgid2nid($msgid) {}
+		    }
+		    lappend msgid2nid($msgid) $nid
+		    # puts stderr "msgid2nid($msgid) = $msgid2nid($msgid)"
+		}
+		# puts stderr "nid2msgid($nid) set to $nid2msgid($nid)"
+		# populate nodes
+		foreach field [lrange $fields 3 end] {
+		    set f [split $field "\034"]
+		    if {[llength $f] > 2} {
+			set node($nid,[lindex $f 0]) [lrange $f 1 end]
+		    } else {
+			set node($nid,[lindex $f 0]) [lindex $f 1]
+		    }
+		    # puts stderr "node($nid,[lindex $f 0]) set to $node($nid,[lindex $f 0])"
+		}
+	    } elseif {[llength $fields] > 0} {
+		error "Unrecognized line format: '$iline'"
+	    }
+	}
+	close $srcfile
     }
 
     proc save-lisp {} {

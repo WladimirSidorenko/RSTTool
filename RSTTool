@@ -61,6 +61,7 @@ set trgdir rst
 set trgfname /dev/null
 set save_fmt raw
 set save_func "save-${save_fmt}"
+set load_func "load-${save_fmt}"
 set crntMsgId {};	# id of the current message
 set crntMsgTxt "";	# text of the current message
 set prntMsgId {};	# id of the parent message

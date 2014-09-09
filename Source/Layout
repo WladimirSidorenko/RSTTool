@@ -3,7 +3,6 @@
 ###########################################
 # Layout
 # Functions used by RST-Tool for laying-out RSt structures
-
 proc resize-display {change} {
     global size_factor rstw current_xpos node_width text_nodes group_nodes node
     set size_factor [expr $size_factor + $change]
@@ -32,6 +31,7 @@ proc redisplay-net {} {
     $rstw delete all
 
     # 2. layout and draw the new
+    # puts stderr "visible_nodes = [array names visible_nodes]"
     x-layout
     y-layout
 
@@ -59,6 +59,7 @@ proc x-layout {} {
     set xinc [expr $node_width + 10]
     set xpos [expr $node_width / 2 + 30]
 
+    # puts stderr "visible_nodes = [array names visible_nodes]"
     foreach nid [lsort -integer [array names visible_nodes]] {
     	if [group-node-p $nid] {
     	    if {![visible-children-p $nid] } {
@@ -203,7 +204,9 @@ proc parent-needs-space-p {cid current_xpos} {
 
 proc visible-children-p {nid} {
     global node
+    # puts stderr "nid = $nid"
     foreach cid $node($nid,children) {
+	# puts stderr "cid = $cid"
 	if $node($cid,visible) {return 1}
     }
     return 0
