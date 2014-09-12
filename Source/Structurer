@@ -131,7 +131,7 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 
     # check if current file should be erased or reloaded (the if-section below
     # is subject to revision)
-    reset-and-redisplay
+    reset-rst
     if { $result0 == 0 } {
 	set sure [tk_dialog .d2 {Doublecheck} "Are you sure?" warning 0 {Erase} "Cancel"]
 	if { $sure == 1 } {return}
@@ -142,14 +142,10 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 	set savenum 0
 	start-time reset
     } elseif { $result0 == 1 } {
-	# export-time
 	set currentfile $filename
-	# undo_by_reload 0
-	# start-time
 	$load_func
     }
     # load text from new file
-    # export-time
     load-file $filename
     set savenum 0
 }
@@ -954,7 +950,7 @@ proc expand {nid {really {}} } {
 	}
 
 	# add the node
-	lappend text_nodes $nid 
+	lappend text_nodes $nid
     }
 
     proc delete-text-node {nid} {
@@ -1644,6 +1640,11 @@ proc expand {nid {really {}} } {
 	global node nid2msgid msgs2extnid
 
 	set trgfile [open $trgfname w 0644]
+	# output child/parent pair mapping specific to particular messages
+ 	foreach ikey [array names msgs2extnid] {
+	    puts $trgfile [join [list "msgs2extnid" "$ikey" \
+				     [join $msgs2extnid($ikey) "\034"]] "\t"]
+	}
 	# output information about nodes
 	foreach nid [array names nid2msgid] {
 	    puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] \
@@ -1667,17 +1668,12 @@ proc expand {nid {really {}} } {
 				     "constit\034$node($nid,constit)" \
 				     "promotion\034$node($nid,promotion)"] "\t"]
 	}
-	# output child/parent pair mapping specific to particular messages
- 	foreach {prnt_msg_id chld_msg_id} [array names msgs2extnid] {
-	    puts $trgfile [join [list "msgs2extnid" "$prnt_msg_id" "$chld_msg_id" \
-				     [join $msgs2extnid($prnt_msg_id,$chld_msg_id) "\034"]]]
-	}
 	close $trgfile
     }
 
     proc load-raw {} {
 	global trgfname
-	global node msgid2nid nid2msgid msgs2extnid
+	global node msgid2nid nid2msgid msgs2extnid group_nodes
 
 	# open annotation file for reading
 	set srcfile [open $trgfname r 0444]
@@ -1693,29 +1689,29 @@ proc expand {nid {really {}} } {
 	    set fields [split $iline "\t"]
 	    if {[lindex $fields 0] == "msgs2extnid"} {
 		# puts stderr "reading msgs2extnid"
-		set msgs2extnid([lindex $fields 1],[lindex $fields 2]) \
-		    [split [lindex $fields 3] "\034"]
+		set msgs2extnid([lindex $fields 1]) [split [lindex $fields 2] "\034"]
 	    } elseif {[lindex $fields 0] == "nid"} {
 		set nid [lindex $fields 1]
 		# puts stderr "reading nid for node $nid"
 		set nid2msgid($nid) [split [lindex $fields 2] "\034"]
 		# puts stderr "nid2msgid($nid) = $nid2msgid($nid)"
 		# add reverse mapping from message id to its corresponding node ids
-		foreach msgid $nid2msgid($nid) {
-		    # puts stderr "adding nid $nid to msgid2nid($msgid)"
+		if {[llength $nid2msgid($nid)] == 1} {
+		    set msgid [lindex $nid2msgid($nid) 0]
 		    if {! [info exists msgid2nid($msgid)] } {
-			set msgid2nid($msgid) {}
+		    	set msgid2nid($msgid) {}
 		    }
 		    lappend msgid2nid($msgid) $nid
-		    # puts stderr "msgid2nid($msgid) = $msgid2nid($msgid)"
 		}
-		# puts stderr "nid2msgid($nid) set to $nid2msgid($nid)"
 		# populate nodes
 		foreach field [lrange $fields 3 end] {
 		    set f [split $field "\034"]
 		    if {[llength $f] > 2} {
 			set node($nid,[lindex $f 0]) [lrange $f 1 end]
 		    } else {
+			if {[lindex $f 0] == "type" && [lindex $f 1] == "span"} {
+			    lappend group_nodes $nid
+			}
 			set node($nid,[lindex $f 0]) [lindex $f 1]
 		    }
 		    # puts stderr "node($nid,[lindex $f 0]) set to $node($nid,[lindex $f 0])"
@@ -1723,6 +1719,10 @@ proc expand {nid {really {}} } {
 	    } elseif {[llength $fields] > 0} {
 		error "Unrecognized line format: '$iline'"
 	    }
+	}
+	# sort node ids stored in msgid2nid in topological order
+	foreach msgid [array names msgid2nid] {
+	    set msgid2nid($msgid) [lsort -integer $msgid2nid($msgid)]
 	}
 	close $srcfile
     }

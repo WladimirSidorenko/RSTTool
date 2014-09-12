@@ -7,7 +7,6 @@
 
 ####################################################
 # Draw the RST Tree
-
 proc show-rst {} {
     global node group_nodes text_nodes rstw visible_nodes
     # go through each text and seq node and display it.

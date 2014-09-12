@@ -306,9 +306,10 @@ proc showText { {do_it {}} } {
 proc nextMessage { {do_it {}} {direction {forward}}} {
     global theRoots theRootIdx theForrest theText usedtext
     global crntMsgId crntMsgTxt prntMsgId prntMsgTxt
-    global msgid2nid msgs2extnid node visible_nodes
+    global msgs2extnid node visible_nodes
     global msgQueue msgPrevQueue
     global offsetShift
+
     # remember current message id
     set prev_msg_id $crntMsgId
     # remember the old parent
@@ -425,7 +426,9 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     # display any nodes and sentences that already were annotated for
     # current message
     if {$crntMsgId != $prev_prnt_msg_id} {showNodes $crntMsgId 1}
+    # puts stderr "calling redisplay-net from NextMessage; visible_nodes == [array names visible_nodes]"
     redisplay-net
+    # puts stderr "redisplay-net finished"
 }
 
 # load next text chunk delimited by punctuation mark into the editor
