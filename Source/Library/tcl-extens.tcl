@@ -3,7 +3,6 @@
 ##################################
 # append-strings
 # - returns the input string-list as a single string
-
 proc append-strings {args} {
     set result ""
     foreach arg $args {
@@ -14,14 +13,12 @@ proc append-strings {args} {
 
 ##################################
 # delete-newlines
-
 proc delete-newlines {text} {
     eval concat [split $text \n]
 }
 
 ##################################
 # extending menuPackage
-
 proc MenuIndex { menuName label } {
     global Menu
     if [catch {set Menu(menu,$menuName)} menu] {

@@ -1413,7 +1413,9 @@ proc expand {nid {really {}} } {
 
 	# now make the popup
 	.tmpwin post $xpos $ypos
-	tkwait variable pcfl_selection
+	if {[tk windowingsystem] != "aqua"} {
+	    tkwait variable pcfl_selection
+	}
 	.tmpwin unpost
 	if {$pcfl_selection == {} } {
 	    set cancelled 1
