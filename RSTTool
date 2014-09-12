@@ -13,7 +13,7 @@ set MAX_CLICK_DELAY 120
 set VERSION UNIX
 # set VERSION PC
 if {$VERSION == "UNIX"} {
-    set DIR   [exec pwd]
+    set DIR [file dirname [info script]]
 } else {
     # bad hardcode
     set DIR     "c:/windows/Desktop/RSTTool/"
