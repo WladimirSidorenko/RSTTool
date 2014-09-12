@@ -285,8 +285,8 @@ $Print add command -label "Print Dot" -command {
 }
 
 $Save add command -label "raw format" -command {save-raw}
-$Save add command -label "lisp format" -command {save-lisp}
-$Save add command -label "sgml format" -command {save-sgml}
+# $Save add command -label "lisp format" -command {save-lisp}
+# $Save add command -label "sgml format" -command {save-sgml}
 
 set p_width 1
 set p_height 1
