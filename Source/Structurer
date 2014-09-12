@@ -188,22 +188,22 @@ $File add command -label "Peruse Text File" -command {
     set-mode nothing
 }
 $File add command -label "Quit" -command {
-    export-time
+    # export-time
 
     if {$currentfile != {}} {
-	save-lisp
+	$save_func
 
 	set mode text
 	set fill fill
 	set orient landscape
 	set pages multi
-	print_dot
-	set my_dotfile [set-file-name dot]
-	if {$DOT_EXISTS == "YES"} {
-	    exec $DOT -Tps $currentfile.rst/$my_dotfile -o\
-		$currentfile.rst/$my_dotfile.ps
-	}
-	save-sgml
+	# print_dot
+	# set my_dotfile [set-file-name dot]
+	# if {$DOT_EXISTS == "YES"} {
+	#     exec $DOT -Tps $currentfile.rst/$my_dotfile -o\
+	# 	$currentfile.rst/$my_dotfile.ps
+	# }
+	# save-sgml
     }
     exit
 }
@@ -1674,6 +1674,7 @@ proc expand {nid {really {}} } {
     proc load-raw {} {
 	global trgfname
 	global node msgid2nid nid2msgid msgs2extnid group_nodes
+	global last_text_node_id last_group_node_id
 
 	# open annotation file for reading
 	set srcfile [open $trgfname r 0444]
@@ -1692,6 +1693,13 @@ proc expand {nid {really {}} } {
 		set msgs2extnid([lindex $fields 1]) [split [lindex $fields 2] "\034"]
 	    } elseif {[lindex $fields 0] == "nid"} {
 		set nid [lindex $fields 1]
+		if {$nid > 5000} {
+		    if {$nid > $last_group_node_id} {
+			set last_group_node_id $nid
+		    }
+		} elseif {$nid > $last_text_node_id} {
+		    set last_text_node_id $nid;
+		}
 		# puts stderr "reading nid for node $nid"
 		set nid2msgid($nid) [split [lindex $fields 2] "\034"]
 		# puts stderr "nid2msgid($nid) = $nid2msgid($nid)"

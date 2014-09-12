@@ -212,7 +212,6 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     global last_text_node_id newest_node savenum new_node_text
     global offsetShift theText
     global x1 x2
-
     # if no index was specified, set index position to the position of
     # the cursor and move it to the left, if currently pointed
     # character is a space
