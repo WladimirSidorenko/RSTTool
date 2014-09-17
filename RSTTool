@@ -96,7 +96,8 @@ tk_setPalette background DarkSlateGray4 foreground black \
 catch {source $env(HOME)/.wishrc}
 
 set old_clr purple;
-# .editor.text configure background white
+.editor.text configure -background white
+.editor.textPrnt configure -background white
 .editor.text tag configure old -foreground $old_clr
 .editor.text tag configure next -foreground black
 .editor.text tag configure new -foreground DimGray
