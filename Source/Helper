@@ -1,0 +1,107 @@
+#!/usr/bin/env wish
+
+# Methods and commands for creating and showing help menu.
+
+###########
+# Methods #
+###########
+proc create_toplevel {name} {
+    global relations help list_of_toplevels
+
+    if {[lsearch $list_of_toplevels $name] != -1} {
+	destroy .$name
+	destroy .$name.text
+	destroy .$name.scroll
+	destroy .$name.menubar
+    } else {
+	append list_of_toplevels $name
+    }
+
+    toplevel .$name
+    text .$name.text -yscrollcommand ".$name.scroll set" -height 30 -width 70
+    scrollbar .$name.scroll -command ".$name.text yview"
+    pack .$name.text -side left
+    pack .$name.scroll -side right -fill y
+    menu .$name.menubar
+    if {$name == "relation_defs"} {
+	.$name config -menu .$name.menubar
+	set rel_items {mononuclear multinuclear embedded schema}
+	foreach item $rel_items {
+	    menu .$name.menubar.$item -tearoff 0
+	    .$name.menubar add cascade -label "$item" -menu \
+		.$name.menubar.$item
+	}
+	set types {rst multinuc embedded constit}
+	foreach type $types {
+	    if {$type == "rst"} { set my_label mononuclear
+	    } elseif {$type == "multinuc"} { set my_label multinuclear
+	    } elseif {$type == "embedded"} { set my_label embedded
+	    } else { set my_label schema }
+	    foreach item $relations($type) {
+		.$name.menubar.$my_label add command -label "$item" \
+		    -command ".$name.text delete 1.0 end; \
+		.$name.text insert end \{$help($item)\}"
+	    }
+	}
+    } else {
+	.$name.text delete 1.0 end
+	.$name.text insert end \{$help($name)\}
+    }
+}
+
+proc load_help {} {
+    global help RELS relations
+
+    set types {rst multinuc constit embedded}
+    foreach type $types {
+	foreach item $relations($type) {
+	    set help($item) {No Help Available}
+	}
+    }
+    set help(interface) {No Help Available}
+
+    set i 0
+    while { $i < 2 } {
+	if { $i == 0 } {
+	    set help_file [open [file join $RELS Help.screen] r]
+	} else {
+	    set help_file [open [file join $RELS Help] r]
+	}
+	while {![eof $help_file]} {
+	    set nextline {}
+	    set entry {}
+	    set last_char {}
+	    while {![eof $help_file] && $last_char != "\}"} {
+		gets $help_file nextline
+		if {$entry != {}} {
+		    append entry "\n"
+		}
+		append entry "$nextline"
+		set nextline [string trimright $nextline]
+		set last_char [string length $nextline]
+		incr last_char -1
+		set last_char [string index $nextline $last_char]
+	    }
+	    set relation [lindex $entry 0]
+	    set definition [lindex $entry 1]
+	    set help($relation) $definition
+	}
+	close $help_file
+	incr i
+    }
+}
+
+proc show_help { relation } {
+    global help
+
+    dialog .d$relation {$relation} "$help($relation)" {} -1 {done}
+}
+
+############
+# Commands #
+############
+global helpmenu
+foreach item $helpmenu {
+    .menubar.mHelp add command -label "$item" -command \
+	"create_toplevel $item"
+}
