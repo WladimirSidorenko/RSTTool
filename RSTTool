@@ -31,7 +31,6 @@ set RELS    [file join $DIR Relation-Sets]
 set HELP    [file join $DIR Help]
 
 
-
 set LIB_FILES {dialog1.tcl tcl-extens.tcl\
 		   delete.tcl toolbar.tcl draw.tcl}
 set SRC_FILES {Segmenter Structurer Make Layout Draw Print EditRelations}
@@ -81,10 +80,12 @@ array set msgid2nid {};	  # mapping from message ids to ids of internal nodes
 install-segmenter
 reset-rst
 
+# configure color and appearance of text in current message window
 set old_clr purple;
-.editor.text tag configure new -foreground black
-.editor.text tag configure next -foreground white
 .editor.text tag configure old -foreground $old_clr
+.editor.text tag configure next -foreground black
+.editor.text tag configure new -foreground DimGray
+.editor.text tag lower new
 .editor.text tag configure notes -foreground black
 .editor.text tag configure my_sel -background yellow
 
@@ -210,7 +211,7 @@ set x1 {}
 set x2 {}
 proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     global last_text_node_id newest_node savenum new_node_text
-    global offsetShift theText
+    global offsetShift
     global x1 x2
     # if no index was specified, set index position to the position of
     # the cursor and move it to the left, if currently pointed
@@ -236,11 +237,10 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     # put mark called `insert` before current position -- current is position
     # nearest to the mouse pointer
     .editor.text mark set insert $my_current
-    # if we pointed with the mouse in an already analyzed area, then do nothing
-    if {[.editor.text compare new.first > $my_current]} {return};
+    # if we pointed with the mouse to an already analyzed area, then do nothing
+    if [.editor.text compare new.first > $my_current] {return}
     # remove tag `my_sel` from the whole text area
     .editor.text tag remove my_sel 1.0 end
-
     if { $do_it == "really" } {
 	.editor.text tag add sel new.first "insert wordend"
 	.editor.text tag add my_sel new.first "insert wordend"
@@ -275,8 +275,9 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
   	redisplay-net
     }
 
-    .editor.text tag add old my_sel.first last_sel
     .editor.text tag remove new my_sel.first last_sel
+    .editor.text tag remove next my_sel.first last_sel
+    .editor.text tag add old my_sel.first last_sel
 
     .editor.text mark set insert last_sel
     set boundary_marker [make-boundary-marker $last_text_node_id]

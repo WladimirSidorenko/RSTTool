@@ -135,12 +135,8 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
     if { $result0 == 0 } {
 	set sure [tk_dialog .d2 {Doublecheck} "Are you sure?" warning 0 {Erase} "Cancel"]
 	if { $sure == 1 } {return}
-
-	set mystepfile [set-file-name step $filename]
-	if {[file readable $mystepfile]} {wincopy $mystepfile $mystepfile.bak}
-	load-file $filename
-	set savenum 0
-	start-time reset
+	# erase annotation file
+	file delete -- $trgfname
     } elseif { $result0 == 1 } {
 	set currentfile $filename
 	$load_func

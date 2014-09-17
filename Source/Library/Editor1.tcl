@@ -195,11 +195,7 @@ proc load-file {filename {really {1}}} {
     .editor.text tag add old 1.0 1.0
     .editor.text tag add new 1.0 end
     #  save-step "load-file $filename"
-    if { $really == 1 } {
-	nextMessage really
-    } else {
-	nextMessage fake
-    }
+    nextMessage $really
 }
 
 proc showNodes {msg_id {show 1}} {
@@ -254,10 +250,8 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	}
 	if {$node($nid,type) != "text"} {break;}
 
-	set offsets $node($nid,offsets)
-	if {$offsets == {}} {error "node $nid does not have valid offsets"}
-	set start [lindex $offsets 0]
-	set end [lindex $offsets end]
+	lassign $node($nid,offsets) start end
+	if {$start == {}} {error "node $nid does not have valid offsets"}
 	incr end -1
 	# obtain text span between offsets
 	set itext [string range $txt $start $end]
@@ -267,44 +261,99 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	set bmarker [make-boundary-marker $nid]
 	$path_name insert end $bmarker
 	# update counter of artificial characters
-	set offset_shift [expr $offset_shift + [string length $bmarker]]
+	incr offset_shift [string length $bmarker]
     }
+    # put `old` tag for the case when no previos segments were
+    # annotated
+
     # insert the rest of the text, if asked to do so
     if $end {incr end}
     if {$show_rest} {
-	$path_name insert end [string range $txt $end end];
+	# insert the leftover text
+	$path_name insert end [string range $txt $end end] new
+	# add tag `new` to the newly inserted text
     	set end end
     }
     # return position of the last annotated character and the number
     # of inserted artificial characters
-    return [list $end $offset_shift]
+    return $offset_shift
 }
 
-proc showText { {do_it {}} } {
-    global theText usedText currSentence abbreviations
-    set old_new_first [.editor.text index new.first]
-    set testText $theText
-    #search for the next end of sentence punctuation
-    set nextCutoff [string length $testText]
-    incr nextCutoff -1
+# mark next potential EDU by guessing its boundaries looking at
+# punctuation marks
+proc nextSentence {{do_it {}} {trgframe .editor.text}} {
+    global abbreviations
 
-    set currSentence [string range $theText 0 $nextCutoff]
-    incr nextCutoff
-    set textCutoff [string length "$theText"]
-    incr textCutoff -1
-    set theText [string range $theText $nextCutoff $textCutoff]
-    set usedText "$currSentence$usedText"
-    .editor.text insert end "$currSentence"
-    if { [.editor.text tag ranges old] == {} } {
-	.editor.text tag add new 1.0 end
-    } else {
-	.editor.text tag add new $old_new_first end
+    set flag 2
+    set periods {}
+    # obtain range covered by the `next` tag
+    set start [$trgframe index new.first]
+    set end [$trgframe index new.last]
+    # return, if tag was not found
+    if {$start == {}} {return}
+    # obtain text covered by the `new` tag
+    set text [$trgframe get $start $end]
+    while { $flag } {
+	#search for the next end of sentence punctuation
+	set nextCutoff [string first .  $text]
+	set exclamation [string first ! $text]
+	set question [string first ? $text]
+	if {$nextCutoff == -1} {
+	    set nextCutoff [incr [string length $text] -1]
+	}
+	if {$exclamation != -1 && $exclamation < $nextCutoff} {
+	    set nextCutoff $exclamation
+	}
+	if {$question != -1 && $question < $nextCutoff} {
+	    set nextCutoff $question
+	}
+	set last [incr [llength periods] -1]
+	if {$flag == 1 && $nextCutoff == "[lindex $periods $last]"} {
+	    set flag 0
+	}
+	set wordStart $nextCutoff
+	while {$wordStart >= 0} {
+	    incr wordStart -1
+	    set character [string index $text $wordStart]
+	    if {"$character" == " " ||
+		"$character" == "\n" ||
+		"$character" == "\t"} {
+		incr wordStart
+		break
+	    }
+	}
+	set test [string range $text $wordStart $nextCutoff]
+	if { [lsearch $abbreviations $test] == -1 } {
+	    set flag 0
+	} else {
+	    set flag 1
+	    incr nextCutoff
+	    set text [string range $text $nextCutoff end]
+	    lappend periods $nextCutoff
+	}
     }
-    if {"$do_it" == "really"} {save-step "showText really"}
+    foreach period $periods {
+	set nextCutoff [expr $nextCutoff + $period]
+    }
+    set max_len [string length $text]
+    while {$nextCutoff < $max_len} {
+	set quotetest [expr $nextCutoff + 1]
+	set ichar [string index $text $quotetest]
+	if {[string is punct -strict $ichar] || \
+		[string is space -strict $ichar]} {
+	    incr nextCutoff
+	} else {
+	    break
+	}
+    }
+    incr nextCutoff
+    # remove `next` tag from the area of presumable new segment
+    # $trgframe tag remove new new.first "new.first + $nextCutoff chars"
+    $trgframe tag add next new.first "new.first + $nextCutoff chars"
 }
 
 proc nextMessage { {do_it {}} {direction {forward}}} {
-    global theRoots theRootIdx theForrest theText usedtext
+    global theRoots theRootIdx theForrest theText usedText
     global crntMsgId crntMsgTxt prntMsgId prntMsgTxt
     global msgs2extnid node visible_nodes
     global msgQueue msgPrevQueue
@@ -411,106 +460,15 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     # clear current message text area and place new text into it
     .editor.text delete 1.0 end
     .editor.text tag add new 1.0 end
-    # show already annotated segments for current message and remember
-    # position of the last annotated character
-    set rvalues [showSentences .editor.text $crntMsgId]
-    # show next segment if possible
-    set boundary [lindex $rvalues 0]
-    set offsetShift [lindex $rvalues end]
-    # update what parts of the text have already been annotated and
-    # which haven't
-    set usedtext [string range $crntMsgTxt 0 $boundary];
-    set theText [string range $crntMsgTxt $boundary end];
-    # display next potential EDU chunk, if possible
-    nextSentence $do_it;
+    # show already annotated segments for current message and make the
+    # rest of the text appear in grayscale
+    set offsetShift [showSentences .editor.text $crntMsgId 1]
+    # make suggestion for the boundary of the next segment
+    nextSentence $do_it
     # display any nodes and sentences that already were annotated for
     # current message
     if {$crntMsgId != $prev_prnt_msg_id} {showNodes $crntMsgId 1}
-    # puts stderr "calling redisplay-net from NextMessage; visible_nodes == [array names visible_nodes]"
     redisplay-net
-    # puts stderr "redisplay-net finished"
-}
-
-# load next text chunk delimited by punctuation mark into the editor
-proc nextSentence {{do_it {}} {trgframe .editor.text}} {
-    global theText usedText currSentence abbreviations
-
-    set flag 2
-    set periods {}
-    set testText $theText
-    set old_new_first [$trgframe index new.first]
-    while { $flag } {
-	#search for the next end of sentence punctuation
-	set nextCutoff [string first .  $testText]
-	set exclamation [string first ! $testText]
-	set question [string first ? $testText]
-	if {$nextCutoff == -1} {
-	    set nextCutoff [string length $testText]
-	    incr nextCutoff -1
-	}
-	if {$exclamation != -1 && $exclamation < $nextCutoff} {
-	    set nextCutoff $exclamation
-	}
-	if {$question != -1 && $question < $nextCutoff} {
-	    set nextCutoff $question
-	}
-	set last [llength periods]
-	incr last -1
-	if {$flag == 1 && $nextCutoff == "[lindex $periods $last]"} {
-	    set flag 0
-	}
-	set wordStart $nextCutoff
-	while {$wordStart >= 0} {
-	    incr wordStart -1
-	    set character [string index $testText $wordStart]
-	    if {"$character" == " " ||
-		"$character" == "\n" ||
-		"$character" == "\t"} {
-		incr wordStart
-		break
-	    }
-	}
-	set test [string range $testText $wordStart $nextCutoff]
-	if { [lsearch $abbreviations $test] == -1 } {
-	    set flag 0
-	} else {
-	    set flag 1
-	    incr nextCutoff
-	    set testText [string range $testText $nextCutoff end]
-	    lappend periods $nextCutoff
-	}
-    }
-    foreach period $periods {
-	set nextCutoff [expr $nextCutoff + $period]
-    }
-
-    set max_len [string length $theText]
-    while {$nextCutoff < $max_len} {
-	set quotetest [expr $nextCutoff + 1]
-	set ichar [string index $theText $quotetest]
-	if {[string is punct -strict $ichar] || \
-		[string is space -strict $ichar]} {
-	    incr nextCutoff
-	} else {
-	    break
-	}
-    }
-
-    set currSentence [string range $theText 0 $nextCutoff]
-    incr nextCutoff
-    set textCutoff [string length "$theText"]
-    incr textCutoff -1
-    set theText [string range $theText $nextCutoff $textCutoff]
-    set usedText "$currSentence$usedText"
-    $trgframe insert end "$currSentence"
-    if { [$trgframe tag ranges old] == {} } {
-	$trgframe tag add new 1.0 end
-    } else {
-	$trgframe tag add new $old_new_first end
-    }
-    if {"$do_it" == "really"} {
-	save-step "nextSentence really"
-    }
 }
 
 set abbreviations {}
