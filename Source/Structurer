@@ -44,11 +44,12 @@ pack .rtbar -side top
 pack .rtbar.autolink .rtbar.link .rtbar.disconnect .rtbar.modify .rtbar.change_rel .rtbar.change_schema .rtbar.undo_by_reload .rtbar.reduce .rtbar.enlarge .rtbar.showtext -in .rtbar -side left
 
 bind .editor.text <Any-Key> {break}
+
 menu .menubar
 # attach it to the main window
 . config -menu .menubar
 # create more cascade menus
-foreach m {File Display Print Save Help} {
+foreach m {File View Print Help} {
     set $m [menu .menubar.m$m -tearoff 0]
     .menubar add cascade -label $m -menu .menubar.m$m
 }
@@ -60,7 +61,11 @@ proc reset-and-redisplay {} {
 }
 
 # TODO: to be checked thoroughly
-$File add command -label "Load Text File" -command {
+proc open-file {} {
+    global currentfile trgfname
+    global save_fmt save_func save_num load_func
+    global node msgs2extnid msgid2nid;
+
     set filename [fileselect]
     if {$filename == {}} {return}
     set result0 -1;		# replace or preserve annotation file
@@ -133,9 +138,12 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
     # is subject to revision)
     reset-rst
     if { $result0 == 0 } {
-	set sure [tk_dialog .d2 {Doublecheck} "Are you sure?" warning 0 {Erase} "Cancel"]
+	set sure [tk_dialog .d2 {Confirmation} "Are you sure?" warning 0 {Erase} "Cancel"]
 	if { $sure == 1 } {return}
 	# erase annotation file
+	array unset node
+	array unset msgs2extnid
+	array unset msgid2nid;
 	file delete -- $trgfname
     } elseif { $result0 == 1 } {
 	set currentfile $filename
@@ -145,68 +153,62 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
     load-file $filename
     set savenum 0
 }
+$File add command -label "Open" -command open-file
 
-$File add command -label "Peruse Text File" -command {
-    export-time
+# $File add command -label "Peruse" -command {
+#     export-time
 
-    if {$currentfile != {}} {
-	save-lisp
+#     if {$currentfile != {}} {
+# 	save-lisp
 
-	set mode text
-	set fill fill
-	set orient landscape
-	set pages multi
-	print_dot
-	set my_dotfile [set-file-name dot]
-	if {$DOT_EXISTS == "YES"} {
-	    exec $DOT -Tps $currentfile.rst/$my_dotfile -o\
-		$currentfile.rst/$my_dotfile.ps
-	}
-	save-sgml
-    }
-    set step_file {}
-    set currentfile {}
-    set filename [fileselect]
-    if {$filename == {}} {return}
-    load-file $filename 2
-    set directory [split $filename /]
-    set x [llength $directory]
-    incr x -1
-    set shortfilename [lindex $directory $x]
-    set directory [lreplace $directory $x $x]
-    set directory [join $directory /]
-    if {[file exists $filename.rst]} {
-	set currentfile $filename
-	set savenum 0
-	undo_by_reload 2;
-    }
-    set currentfile {}
-    set-mode nothing
-}
+# 	set mode text
+# 	set fill fill
+# 	set orient landscape
+# 	set pages multi
+# 	print_dot
+# 	set my_dotfile [set-file-name dot]
+# 	if {$DOT_EXISTS == "YES"} {
+# 	    exec $DOT -Tps $currentfile.rst/$my_dotfile -o\
+# 		$currentfile.rst/$my_dotfile.ps
+# 	}
+# 	save-sgml
+#     }
+#     set step_file {}
+#     set currentfile {}
+#     set filename [fileselect]
+#     if {$filename == {}} {return}
+#     load-file $filename 2
+#     set directory [split $filename /]
+#     set x [llength $directory]
+#     incr x -1
+#     set shortfilename [lindex $directory $x]
+#     set directory [lreplace $directory $x $x]
+#     set directory [join $directory /]
+#     if {[file exists $filename.rst]} {
+# 	set currentfile $filename
+# 	set savenum 0
+# 	undo_by_reload 2;
+#     }
+#     set currentfile {}
+#     set-mode nothing
+# }
+
+$File add command -label "Save" -command save-raw
+# $Save add command -label "lisp format" -command {save-lisp}
+# $Save add command -label "sgml format" -command {save-sgml}
+
 $File add command -label "Quit" -command {
-    # export-time
-
     if {$currentfile != {}} {
 	$save_func
-
-	set mode text
-	set fill fill
-	set orient landscape
-	set pages multi
-	# print_dot
-	# set my_dotfile [set-file-name dot]
-	# if {$DOT_EXISTS == "YES"} {
-	#     exec $DOT -Tps $currentfile.rst/$my_dotfile -o\
-	# 	$currentfile.rst/$my_dotfile.ps
-	# }
-	# save-sgml
     }
     exit
 }
-$Display add command -label "Clear Structure" -command {
-    global theRoots theForrest prntMsgId
+
+$View add command -label "Clear Structure" -command {
+    global currentfile theRoots theForrest prntMsgId
     global msgid2nid nid2msgid msgs2extnid visible_nodes
 
+    if {$currentfile == {}} {return;}
     set sure [tk_dialog .d3 {Doublecheck}\
 		  "Are you sure you want to erase this?"\
 		  warning 0 {Yes} {No} "Cancel"]
@@ -232,7 +234,7 @@ $Display add command -label "Clear Structure" -command {
     }
 }
 
-$Display add command -label "Redraw Structure" -command {redisplay-net}
+$View add command -label "Redraw Structure" -command {redisplay-net}
 $Print add cascade -label "Dot Options" -menu $Print.options
 menu $Print.options
 $Print.options add radio -label "text" -variable mode -value text
@@ -279,10 +281,6 @@ $Print add command -label "Print Dot" -command {
         }
     }
 }
-
-$Save add command -label "raw format" -command {save-raw}
-# $Save add command -label "lisp format" -command {save-lisp}
-# $Save add command -label "sgml format" -command {save-sgml}
 
 set p_width 1
 set p_height 1
@@ -864,7 +862,6 @@ proc expand {nid {really {}} } {
 
     ##################################################
     #  Relations Functions
-
     proc load-relations {{file {}} {extrel 0}} {
 	global relationfile relations extRelations schemas schema_elements
 	if {$file == {}} {

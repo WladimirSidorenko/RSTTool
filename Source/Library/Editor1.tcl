@@ -67,7 +67,8 @@ proc reload-current-file {} {
 }
 
 proc read-file {a_istream} {
-    global theRoots theForrest theText
+    global theRoots theRootIdx theForrest
+    global crntMsgId crntMsgTxt msgQueue msgPrevQueue visible_nodes
 
     set origlen 0; # length of complete line
     set modlen 0;  # length of modified line
@@ -81,18 +82,28 @@ proc read-file {a_istream} {
     # previous nestedness levels
     set prev_lvl 0;		# previous nestedness level
     set prev_id "";		# previous tweet id
-    set prnt_id "";		# id of parent tweet
+    set prnt_id "";		# id of parent tweets
     set parents {};		# stack of parents
 
     set chunk "";		# text chunk read from file
     set remainder "";		# incompletely read line part
     set line "";		# single line
     set lines [];		# array of split lines
+    # reset forrest
+    array unset theForrest
+    set theRoots {}
+    set theRootIdx -1
+    set crntMsgId {}
+    set prntMsgTxt ""
+
+    array unset visible_nodes
+    set msgQueue {}
+    set msgPrevQueue {}
+    set msgPrevQueue {}
 
     while {![eof $a_istream]} {
 	# obtain next 1k symbols from the input stream
 	set chunk [read $a_istream 1000]
-	append theText $chunk
 	# if there is string left from the previous run, append it to `TextPortion`
 	if {$remainder != ""} {
 	    set chunk "$remainder$chunk"
@@ -167,7 +178,7 @@ proc read-file {a_istream} {
 
 proc load-file {filename {really {1}}} {
     global currentfile undoer collapsed_nodes
-    global theText theRootIdx msgQueue
+    global theRootIdx msgQueue
     global step_file
 
     set last_element [llength $collapsed_nodes]
@@ -179,7 +190,6 @@ proc load-file {filename {really {1}}} {
     if {$filename == {}} {return}
 
     # 2. Load named file
-    set theText ""
     set f [open $filename]
     read-file $f
     close $f
@@ -299,7 +309,7 @@ proc nextSentence {{do_it {}} {trgframe .editor.text}} {
 	set exclamation [string first ! $text]
 	set question [string first ? $text]
 	if {$nextCutoff == -1} {
-	    set nextCutoff [incr [string length $text] -1]
+	    set nextCutoff [expr [string length "$text"] -1]
 	}
 	if {$exclamation != -1 && $exclamation < $nextCutoff} {
 	    set nextCutoff $exclamation
@@ -307,7 +317,7 @@ proc nextSentence {{do_it {}} {trgframe .editor.text}} {
 	if {$question != -1 && $question < $nextCutoff} {
 	    set nextCutoff $question
 	}
-	set last [incr [llength periods] -1]
+	set last [expr [llength periods] -1]
 	if {$flag == 1 && $nextCutoff == "[lindex $periods $last]"} {
 	    set flag 0
 	}
@@ -315,9 +325,7 @@ proc nextSentence {{do_it {}} {trgframe .editor.text}} {
 	while {$wordStart >= 0} {
 	    incr wordStart -1
 	    set character [string index $text $wordStart]
-	    if {"$character" == " " ||
-		"$character" == "\n" ||
-		"$character" == "\t"} {
+	    if [string is space -strict $character] {
 		incr wordStart
 		break
 	    }
@@ -353,7 +361,7 @@ proc nextSentence {{do_it {}} {trgframe .editor.text}} {
 }
 
 proc nextMessage { {do_it {}} {direction {forward}}} {
-    global theRoots theRootIdx theForrest theText usedText
+    global theRoots theRootIdx theForrest
     global crntMsgId crntMsgTxt prntMsgId prntMsgTxt
     global msgs2extnid node visible_nodes
     global msgQueue msgPrevQueue
