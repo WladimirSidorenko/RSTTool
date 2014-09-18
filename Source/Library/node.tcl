@@ -5,98 +5,67 @@
 ###########
 # Methods #
 ###########
-proc add-this-to-a-node { do_it {my_current {}} {dummy_param {}} } {
-    global last_text_node_id newest_node savenum new_node_text node
-    global editor_mode
-
-    if {$editor_mode == "normal"} {
-	.editor.text delete my_sel.last new.first
-	.editor.text insert my_sel.last "<p>"
-    }
-    if {$my_current == {} } {
-	return
-	set my_current current
-    }
-    .editor.text mark set insert $my_current
-    if {[.editor.text compare new.first > $my_current]} {return}
-    .editor.text tag remove my_sel 1.0 end
-
-    if { $do_it == "really" } {
-	.editor.text tag add sel new.first "insert wordend"
-	.editor.text tag add my_sel new.first "insert wordend"
-    } else {
-	.editor.text tag add sel new.first insert
-	.editor.text tag add my_sel new.first insert
-    }
-
-
-    set x [.editor.text index sel.last]
-    set y [.editor.text index end]
-    .editor.text mark set last_sel sel.last
-    if { $x == $y } {
-	.editor.text mark set last_sel "sel.last - 1 chars"
-  	.editor.text tag remove sel last_sel sel.last
-  	.editor.text tag remove my_sel last_sel my_sel.last
-    }
-
-    set new_node_text [selection get]
-    set the_selection $new_node_text
-    regsub -all "\n" $new_node_text " " new_node_text
-    regsub -all "\t" $new_node_text " " new_node_text
-    regsub -all " +" $new_node_text " " new_node_text
-    regsub -all "\"" $new_node_text "" new_node_text
-    if { "$do_it" == "really" } {
-  	incr savenum
-	set old_node_text $node($last_text_node_id,text)
-	if { "$editor_mode" == "normal" } {
-	    set node($last_text_node_id,text) "$old_node_text <p> $new_node_text"
-	} else {
-	    set node($last_text_node_id,text) "$old_node_text </p> $new_node_text"
-	}
-  	redisplay-net
-    }
-    .editor.text tag add old sel.first last_sel
-    .editor.text tag remove new sel.first last_sel
-
-    .editor.text mark set insert last_sel
-    if { "$editor_mode" == "normal" } {
-  	.editor.text insert my_sel.last "</p>"
-    } elseif { "$editor_mode" == "parenthetical" } {
-  	.editor.text insert my_sel.last "<$last_text_node_id>"
-    }
-    .editor.text tag remove sel 1.0 end
-    if { "$do_it" == "really" } {
-	set my_save "add-this-to-a-node really [.editor.text index my_sel.last]"
-	regsub -all "\n" $the_selection {\n} the_selection
-	regsub -all "\t" $the_selection {\t} the_selection
-	append my_save " \{$the_selection\}"
-	save-step $my_save
-	# save-rst $savenum
-    }
-    editor-message "saved tmp.$savenum"
-    set x [.editor.text index "end - 1 chars"]
-    set y [.editor.text index insert]
-    if { $x == $y } {
-	nextSentence $do_it
-    }
-    if { "$editor_mode" == "normal" } {
-	set editor_mode parenthetical
-	bind .editor.text <Control-ButtonRelease-1> {}
-	bind .editor.text <ButtonRelease-2> {}
-	bind .editor.text <ButtonRelease-1> {add-this-to-a-node really}
-    } elseif { "$editor_mode" == "parenthetical" } {
-	set editor_mode normal
-	bind .editor.text <Control-ButtonRelease-1> {add-this-to-a-node really}
-	bind .editor.text <ButtonRelease-2> {add-this-to-a-node really}
-	bind .editor.text <ButtonRelease-1> {create-a-node-here really}
-    }
-    set line_no [.editor.text index old.last]
-    .editor.text yview [expr int($line_no)]
-    .editor.text tag add notes my_sel.last new.first
-}
-
 proc make-boundary-marker {nid} {
     return "<$nid>"
+}
+
+proc move-node {a_path x y X Y} {
+    puts stderr "move-node: x = $x"
+    puts stderr "move-node: y = $y"
+    puts stderr "move-node: X = $X"
+    puts stderr "move-node: Y = $Y"
+}
+
+proc delete-node {a_path x y} {
+    global last_text_node_id
+    # obtain number of node located at coordinates (x, y)
+    set nid [get-node-number $a_path $x $y]
+    puts stderr "nnumber = $nid"
+    if {$nid == -1} {return}
+    # in easy case, this node has just been created, so we can delete
+    # its mark, the graphical node in rst window and decrement the
+    # node counter
+    if {$nid == $last_text_node_id} {
+	incr last_text_node_id -1
+    }
+    clear-node $nid
+}
+
+proc get-node-number {a_path x y} {
+    # obtain number of node located at coordinates (x, y)
+    set nnumber [$a_path get -- "@$x,$y wordstart" "@$x,$y wordend"]
+    set choffset 1
+    set prev_char ""
+    puts stderr "delete-node: entering while loop"
+    while {$nnumber == ">" || $nnumber == "<"} {
+	switch -- $nnumber {
+	    "<" {
+		if {$prev_char == ">"} {return}
+		set prev_char "<"
+		set nnumber [$a_path get -- "@$x,$y +$choffset chars wordstart" \
+				 "@$x,$y +$choffset chars wordend"]
+	    }
+	    ">" {
+		if {$prev_char == "<"} {return}
+		set prev_char ">"
+		set nnumber [$a_path get -- "@$x,$y -$choffset chars wordstart" \
+				 "@$x,$y -$choffset chars wordend"]
+	    }
+	    default {
+		if [string is digit $nnumber] {
+		    break
+		} else if {! [string is space $nnumber]} {
+		    return
+		}
+	    }
+	}
+	incr choffset
+    }
+    if [string is digit $nnumber] {
+	return $nnumber
+    } else {
+	return -1
+    }
 }
 
 proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
@@ -172,7 +141,7 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
 
     set boundary_marker [make-boundary-marker $last_text_node_id]
     set offsetShift [expr $offsetShift + [string length $boundary_marker]]
-    .editor.text insert my_sel.last "$boundary_marker"
+    .editor.text insert my_sel.last "$boundary_marker" bmarker
     # call nextSentence() if suggested EDU span was completely covered
     if {[.editor.text tag ranges next] == {} || \
 	    [.editor.text compare "next.last -1 chars" <= last_sel]} {

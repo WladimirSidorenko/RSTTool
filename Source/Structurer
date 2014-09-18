@@ -28,8 +28,8 @@ if {[winfo exists .rtbar]} {destroy .rtbar}
 #toplevel .rtbar
 frame .rtbar
 
-button .rtbar.autolink -text "Auto" -command {set-mode autolink}
 button .rtbar.link   -text "Link" -command {set-mode link}
+button .rtbar.autolink -text "Auto" -command {set-mode autolink}
 button .rtbar.disconnect   -text "Disconnect" -command {set-mode disconnect}
 button .rtbar.modify   -text "Modify" -command {set-mode modify}
 button .rtbar.change_rel -text "Change Relation" -command {set-mode change}
@@ -38,11 +38,12 @@ button .rtbar.change_schema -text "Change Schema" -command {set-mode change_sche
 button .rtbar.undo_by_reload -text "Undo" -command {undo_by_reload}
 button .rtbar.reduce -text "Reduce" -command {resize-display -50}
 button .rtbar.enlarge -text "Enlarge" -command {resize-display 50}
-button .rtbar.showtext -text "Show Text" -command {showText really}
+# button .rtbar.showtext -text "Show Text" -command {showText really}
 
 pack .rtbar -side top
-pack .rtbar.autolink .rtbar.link .rtbar.disconnect .rtbar.modify .rtbar.change_rel .rtbar.change_schema .rtbar.undo_by_reload .rtbar.reduce .rtbar.enlarge .rtbar.showtext -in .rtbar -side left
-
+pack .rtbar.link .rtbar.autolink .rtbar.disconnect .rtbar.modify .rtbar.change_rel \
+    .rtbar.change_schema .rtbar.undo_by_reload .rtbar.reduce .rtbar.enlarge -in .rtbar -side left
+# .rtbar.showtext
 bind .editor.text <Any-Key> {break}
 
 menu .menubar
@@ -73,6 +74,7 @@ proc open-file {} {
     if {$filename == $currentfile} {
 	set result0 [tk_dialog .d {File Already Open} "File $filename already open."\
 			 warning 0 {Replace} "Cancel"]
+	if {$result0 == 1} {return}
     } else {
 	# save annotation for current file
 	if {$currentfile != {}} {$save_func}
@@ -388,8 +390,8 @@ set currentsat {}
 
 
 proc unlink-node {sat {redraw 1}} {
-    global node group_nodes
-
+    global node group_nodes currentmode
+    set cmode $currentmode
     # 1. handle missed clicks
     if { $sat == {} || $node($sat,parent) == {}} {return}
 
@@ -412,7 +414,7 @@ proc unlink-node {sat {redraw 1}} {
     } else {
 	restructure-upwards $nuc $redraw
     }
-    set-mode autolink
+    set-mode $cmode
 }
 
 ##################################################
@@ -509,8 +511,9 @@ proc restructure-upwards {nid {redraw 0}} {
 # Change Relation
 
 proc change_constit {nid {relname {}} } {
-    global node relations rstw
+    global node relations rstw currentmode
 
+    set cmode $currentmode
     set choice {}
     set constit_name [choose-label $nid schema]
     if {$constit_name == {}} {
@@ -525,12 +528,13 @@ proc change_constit {nid {relname {}} } {
 	redisplay-node $nid
 	save-step "change_constit $nid $constit_name"
     }
-    set-mode autolink
+    set-mode $cmode
 }
 
 proc change_rel {nid {relname {}} } {
-    global node relations
+    global node relations currentmode
 
+    set cmode $currentmode
     set par $node($nid,parent)
     if {$par != {} && $node($nid,relname) != "span"} {
 	if {$relname == {}} {
@@ -557,10 +561,10 @@ proc change_rel {nid {relname {}} } {
 	    set node($nid,relname) $relname
 	}
 	save-step "change_rel $nid $relname"
-	#    redisplay-net 
+	#    redisplay-net
 	redisplay-node $nid
     }
-    set-mode autolink
+    set-mode $cmode
 }
 
 ##################################################
@@ -1003,7 +1007,7 @@ proc expand {nid {really {}} } {
     proc legal-node {the_node {prev_node {}} } {
 	global node newest_node
 
-	if {$the_node == $newest_node} {return $the_node}
+	if {![info exists newest_node] || $the_node == $newest_node} {return $the_node}
 
 	if { $prev_node == {} } {
 	    set prev_node $newest_node
@@ -1966,14 +1970,21 @@ proc expand {nid {really {}} } {
 	global msgid2nid msgs2extnid nid2msgid theForrest
 	global visible_nodes
 
-	if {$dragged_node == {} } {set dragged_node $newest_node}
+	if {$dragged_node == {}} {
+	    if {[info exists newest_node] && [info exists visible_nodes($newest_node)]} {
+		set dragged_node $newest_node
+	    } else {
+		return
+	    }
+	}
 
 	if {$disco_node != {}} {
 	    set dragged_node $disco_node
 	    set disco_node {}
 	}
 
-	if {$node($dragged_node,parent) != {}} {return}
+	if {$node($dragged_node,parent) != {} && \
+		[info exists visible_nodes($node($dragged_node,parent))]} {return}
 	if {$type == {} && $clicked_node == $dragged_node} {return}
 
 	set this_step "autolink_nodes $clicked_node $dragged_node"
@@ -1996,7 +2007,7 @@ proc expand {nid {really {}} } {
 
 	if {$type == {} } {
 	    set coords [screen-coords [ntw $clicked_node] $rstw]
-	    # determine which kind of relationship may hold between the edges
+	    # determine which kind of relationship may hold between two nodes
 	    set nucleus nucleus
 	    set nucleus_embedded nucleus-embedded
 	    set satellite satellite

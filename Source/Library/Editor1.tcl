@@ -269,7 +269,7 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 	# EDU ending marker
 	$path_name insert end $itext old
 	set bmarker [make-boundary-marker $nid]
-	$path_name insert end $bmarker
+	$path_name insert end $bmarker bmarker
 	# update counter of artificial characters
 	incr offset_shift [string length $bmarker]
     }

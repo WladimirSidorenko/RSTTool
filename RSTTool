@@ -3,7 +3,6 @@
 wm title . "RSTTool"
 proc Quit {} {exit}
 wm protocol . WM_DELETE_WINDOW Quit
-
 frame .segmentframe
 
 ######################################
@@ -22,7 +21,8 @@ set LIBRARY [file join $SRC Library]
 set RELS    [file join $DIR Relation-Sets]
 set HELP    [file join $DIR Help]
 
-set LIB_FILES {delete.tcl dialog1.tcl draw.tcl node.tcl tcl-extens.tcl time.tcl toolbar.tcl}
+set LIB_FILES {delete.tcl dialog1.tcl draw.tcl node.tcl tcl-extens.tcl tkfbox.tcl \
+		   time.tcl toolbar.tcl}
 set SRC_FILES {Segmenter Structurer Draw EditRelations Layout Make Print Helper}
 set EDITOR_FILES {new.tcl lifo.tcl textundo.tcl Editor1.tcl}
 
@@ -41,7 +41,6 @@ set cancelled 0
 set editor_mode normal
 set list_of_toplevels {}
 set peruse_or_edit {}
-set currentfile {}
 set trgdir rst
 set trgfname /dev/null
 set save_fmt raw
@@ -87,17 +86,20 @@ load_help
 
 install-segmenter
 reset-rst
+set-mode link
 
 ######################################
 # Set appearance
-tk_setPalette background DarkSlateGray4 foreground black \
-    highlightbackground DarkSlateGray \
-    activebackground white activeforeground red
+tk_setPalette background gray35 foreground white \
+    highlightbackground gray10 activebackground white activeforeground red
 catch {source $env(HOME)/.wishrc}
 
+.editor.text configure -bg white
+.editor.textPrnt configure -bg white
+.editor.text configure -fg black
+.editor.textPrnt configure -fg black
+
 set old_clr purple;
-.editor.text configure -background white
-.editor.textPrnt configure -background white
 .editor.text tag configure old -foreground $old_clr
 .editor.text tag configure next -foreground black
 .editor.text tag configure new -foreground DimGray
@@ -113,20 +115,19 @@ set old_clr purple;
 # load/save functions
 bind all <Control-o> {open-file}
 bind all <Control-s> {$save_func}
-bind .editor.text <Control-o> {continue}
-bind .editor.text <Control-s> {continue}
+bindtags .editor.text {all .editor.text Text . UndoBindings(1)}
 
 # node creation functions
-bind .editor.text <Shift-ButtonRelease-1> {
-    add-this-to-a-node really
-}
-bind .editor.text <ButtonRelease-2> {
-    add-this-to-a-node really
-}
 bind .editor.text <ButtonRelease-1> {
     create-a-node-here really
 }
 
+# operations on node
+.editor.text tag bind bmarker <Control-B1-Motion> {move-node .editor.text %x %y %X %Y}
+.editor.text tag bind bmarker <Control-Alt-ButtonPress-1> {delete-node .editor.text %x %y}
+
+######################################
+# Methods
 proc set-file-name { file_type { other_file {} } {create_dir {1}}} {
     global currentfile trgdir
     global PLATFORM LOGIN
@@ -355,14 +356,11 @@ proc undo_by_reload { {really {1}} } {
 
 proc reload_structure {} {
     global savenum newest_node last_text_node_id
-
     reset-rst
 
     if { $savenum > 0 } {
 	load-rst $savenum
 	set newest_node $last_text_node_id
-    } else {
     }
-
     reestablish
 }
