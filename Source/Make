@@ -106,61 +106,6 @@ proc reinstall-parent {nid} {
 }
 
 
-proc make-node {text type {start_pos {}} {end_pos {}}} {
-    global node crntMsgId msgid2nid nid2msgid visible_nodes
-    if { $type ==  "text"  } {
-	set nid [unique-text-node-id]
-	# save mapping from node id to message id
-	set nid2msgid($nid) [list $crntMsgId]
-	# save mapping from message id to node id
-	if {[info exists msgid2nid($crntMsgId)]} {
-	    lappend msgid2nid($crntMsgId) $nid
-	} else {
-	    set msgid2nid($crntMsgId) [list $nid]
-	}
-    } else {
-	set nid [unique-group-node-id]
-    }
-    clear-node $nid
-    set node($nid,text) $text
-    set node($nid,type) $type
-    set node($nid,offsets) [list $start_pos $end_pos]
-    set visible_nodes($nid) 1
-    # puts stderr "Created node $nid with offsets $start_pos $end_pos"
-
-    if {$type ==  "text"} {
-	set node($nid,span) "$nid $nid"
-	add-text-node $nid
-    } else {
-	add-group-node $nid
-    }
-    return $nid
-}
-
-proc clear-node {nid} {
-    global node
-    set node($nid,text) {}
-    set node($nid,type) {}
-    set node($nid,textwgt) {}
-    set node($nid,labelwgt) {}
-    set node($nid,arrowwgt) {}
-    set node($nid,spanwgt) {}
-    set node($nid,relname) {}
-    set node($nid,children) {}
-    set node($nid,parent) {}
-    set node($nid,constituents) {}
-    set node($nid,visible) 1
-    set node($nid,span)  {}
-    set node($nid,offsets)  {}
-    set node($nid,xpos) 0
-    set node($nid,ypos) 0
-    set node($nid,oldindex) {}
-    set node($nid,newindex) {}
-    set node($nid,constit) {}
-    set node($nid,promotion) {}
-}
-
-
 proc reset-rst {} {
     global rstw node text_nodes group_nodes \
 	last_text_node_id last_group_node_id wtn

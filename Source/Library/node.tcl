@@ -5,6 +5,60 @@
 ###########
 # Methods #
 ###########
+proc make-node {text type {start_pos {}} {end_pos {}}} {
+    global node crntMsgId msgid2nid nid2msgid visible_nodes
+    if { $type ==  "text"  } {
+	set nid [unique-text-node-id]
+	# save mapping from node id to message id
+	set nid2msgid($nid) [list $crntMsgId]
+	# save mapping from message id to node id
+	if {[info exists msgid2nid($crntMsgId)]} {
+	    lappend msgid2nid($crntMsgId) $nid
+	} else {
+	    set msgid2nid($crntMsgId) [list $nid]
+	}
+    } else {
+	set nid [unique-group-node-id]
+    }
+    clear-node $nid
+    set node($nid,text) $text
+    set node($nid,type) $type
+    set node($nid,offsets) [list $start_pos $end_pos]
+    set visible_nodes($nid) 1
+    # puts stderr "Created node $nid with offsets $start_pos $end_pos"
+
+    if {$type ==  "text"} {
+	set node($nid,span) "$nid $nid"
+	add-text-node $nid
+    } else {
+	add-group-node $nid
+    }
+    return $nid
+}
+
+proc clear-node {nid} {
+    global node
+    set node($nid,text) {}
+    set node($nid,type) {}
+    set node($nid,textwgt) {}
+    set node($nid,labelwgt) {}
+    set node($nid,arrowwgt) {}
+    set node($nid,spanwgt) {}
+    set node($nid,relname) {}
+    set node($nid,children) {}
+    set node($nid,parent) {}
+    set node($nid,constituents) {}
+    set node($nid,visible) 1
+    set node($nid,span)  {}
+    set node($nid,offsets)  {}
+    set node($nid,xpos) 0
+    set node($nid,ypos) 0
+    set node($nid,oldindex) {}
+    set node($nid,newindex) {}
+    set node($nid,constit) {}
+    set node($nid,promotion) {}
+}
+
 proc make-boundary-marker {nid} {
     return "<$nid>"
 }
@@ -17,55 +71,77 @@ proc move-node {a_path x y X Y} {
 }
 
 proc delete-node {a_path x y} {
-    global last_text_node_id
+    global node last_text_node_id
     # obtain number of node located at coordinates (x, y)
-    set nid [get-node-number $a_path $x $y]
-    puts stderr "nnumber = $nid"
-    if {$nid == -1} {return}
-    # in easy case, this node has just been created, so we can delete
-    # its mark, the graphical node in rst window and decrement the
-    # node counter
-    if {$nid == $last_text_node_id} {
+    lassign [get-node-number $a_path $x $y] nid istart iend
+    puts stderr "nid = $nid; istart = $istart; iend = $iend;"
+    if {$start == -1} {
+	return
+    } elseif {$nid == $last_text_node_id} {
 	incr last_text_node_id -1
     }
+    # find next node in text
+    set nstart [lindex [$a_path tag nextrange bmarker $iend] 0]
+    # if next node exists, append text from deleted node to this next node
+    if {$nstart != {}} {
+	set nnid [get-node-number $a_path {} {} $nstart]
+	set node($nnid,text) "$node($nid,text) $node($nnid,text)"
+    } else {
+	# obtain range of previous node, if any exists
+	set pend [lindex [$a_path tag prevrange bmarker "$istart -1 char"] end]
+	# remove tag `old` from the text span covered by the node which should
+	# be deleted
+	if {$pend == {}} {set pend 1.0}
+	$a_path tag remove old $pend $istart
+    }
+    # set nxtnid [get-node-number $a_path {} {} [$a_path tag bmarker nextrange $end]]
     clear-node $nid
 }
 
-proc get-node-number {a_path x y} {
-    # obtain number of node located at coordinates (x, y)
-    set nnumber [$a_path get -- "@$x,$y wordstart" "@$x,$y wordend"]
-    set choffset 1
-    set prev_char ""
-    puts stderr "delete-node: entering while loop"
+proc get-node-number {a_path x y {start {}}} {
+    # set default return values
+    set nnumber -1
+    # set auxiliary variables
+    set choffset 1; set prev_char ""
+    # obtain number of node located at coordinates (x, y) or next to `start`
+    # index
+    set spoint "@$x,$y"
+    if {$start != {}} {
+	set spoint $start
+    } elseif {$x == {}} {
+	return {-1 {} {}}
+    }
+    set nnumber [$a_path get -- "$spoint wordstart" "$spoint wordend"]
+    # obtain range of bmark tag around `spoint`
+    lassign [$a_path tag prevrange bmarker "$spoint wordend"] istart iend
+
     while {$nnumber == ">" || $nnumber == "<"} {
 	switch -- $nnumber {
 	    "<" {
-		if {$prev_char == ">"} {return}
+		if {$prev_char == ">"} {break}
 		set prev_char "<"
-		set nnumber [$a_path get -- "@$x,$y +$choffset chars wordstart" \
-				 "@$x,$y +$choffset chars wordend"]
+		set nnumber [$a_path get -- "$spoint +$choffset chars wordstart" \
+				 "$spoint +$choffset chars wordend"]
 	    }
 	    ">" {
-		if {$prev_char == "<"} {return}
+		if {$prev_char == "<"} {break}
 		set prev_char ">"
-		set nnumber [$a_path get -- "@$x,$y -$choffset chars wordstart" \
-				 "@$x,$y -$choffset chars wordend"]
+		set nnumber [$a_path get -- "$spoint -$choffset chars wordstart" \
+				 "$spoint -$choffset chars wordend"]
 	    }
 	    default {
-		if [string is digit $nnumber] {
+		if {! [string is space $nnumber]} {
 		    break
-		} else if {! [string is space $nnumber]} {
-		    return
 		}
 	    }
 	}
 	incr choffset
     }
-    if [string is digit $nnumber] {
-	return $nnumber
-    } else {
-	return -1
+
+    if {! [string is digit $nnumber]} {
+	set nnumber -1; set istart {}; set iend {}
     }
+    return [list $nnumber $istart $iend]
 }
 
 proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
