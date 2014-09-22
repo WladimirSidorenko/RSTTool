@@ -5,97 +5,8 @@
 ###########
 # Methods #
 ###########
-proc make-node {text type {start_pos {}} {end_pos {}}} {
-    global node crntMsgId msgid2nid nid2msgid visible_nodes
-    if { $type ==  "text"  } {
-	set nid [unique-text-node-id]
-	# save mapping from node id to message id
-	set nid2msgid($nid) [list $crntMsgId]
-	# save mapping from message id to node id
-	if {[info exists msgid2nid($crntMsgId)]} {
-	    lappend msgid2nid($crntMsgId) $nid
-	} else {
-	    set msgid2nid($crntMsgId) [list $nid]
-	}
-    } else {
-	set nid [unique-group-node-id]
-    }
-    clear-node $nid
-    set node($nid,text) $text
-    set node($nid,type) $type
-    set node($nid,offsets) [list $start_pos $end_pos]
-    set visible_nodes($nid) 1
-    # puts stderr "Created node $nid with offsets $start_pos $end_pos"
-
-    if {$type ==  "text"} {
-	set node($nid,span) "$nid $nid"
-	add-text-node $nid
-    } else {
-	add-group-node $nid
-    }
-    return $nid
-}
-
-proc clear-node {nid} {
-    global node
-    set node($nid,text) {}
-    set node($nid,type) {}
-    set node($nid,textwgt) {}
-    set node($nid,labelwgt) {}
-    set node($nid,arrowwgt) {}
-    set node($nid,spanwgt) {}
-    set node($nid,relname) {}
-    set node($nid,children) {}
-    set node($nid,parent) {}
-    set node($nid,constituents) {}
-    set node($nid,visible) 1
-    set node($nid,span)  {}
-    set node($nid,offsets)  {}
-    set node($nid,xpos) 0
-    set node($nid,ypos) 0
-    set node($nid,oldindex) {}
-    set node($nid,newindex) {}
-    set node($nid,constit) {}
-    set node($nid,promotion) {}
-}
-
 proc make-boundary-marker {nid} {
     return "<$nid>"
-}
-
-proc move-node {a_path x y X Y} {
-    puts stderr "move-node: x = $x"
-    puts stderr "move-node: y = $y"
-    puts stderr "move-node: X = $X"
-    puts stderr "move-node: Y = $Y"
-}
-
-proc delete-node {a_path x y} {
-    global node last_text_node_id
-    # obtain number of node located at coordinates (x, y)
-    lassign [get-node-number $a_path $x $y] nid istart iend
-    puts stderr "nid = $nid; istart = $istart; iend = $iend;"
-    if {$start == -1} {
-	return
-    } elseif {$nid == $last_text_node_id} {
-	incr last_text_node_id -1
-    }
-    # find next node in text
-    set nstart [lindex [$a_path tag nextrange bmarker $iend] 0]
-    # if next node exists, append text from deleted node to this next node
-    if {$nstart != {}} {
-	set nnid [get-node-number $a_path {} {} $nstart]
-	set node($nnid,text) "$node($nid,text) $node($nnid,text)"
-    } else {
-	# obtain range of previous node, if any exists
-	set pend [lindex [$a_path tag prevrange bmarker "$istart -1 char"] end]
-	# remove tag `old` from the text span covered by the node which should
-	# be deleted
-	if {$pend == {}} {set pend 1.0}
-	$a_path tag remove old $pend $istart
-    }
-    # set nxtnid [get-node-number $a_path {} {} [$a_path tag bmarker nextrange $end]]
-    clear-node $nid
 }
 
 proc get-node-number {a_path x y {start {}}} {
@@ -142,6 +53,125 @@ proc get-node-number {a_path x y {start {}}} {
 	set nnumber -1; set istart {}; set iend {}
     }
     return [list $nnumber $istart $iend]
+}
+
+proc clear-node {nid} {
+    global node visible_nodes nid2msgid msgid2nid msgs2extnid
+
+    set node($nid,text) {}
+    set node($nid,type) {}
+    set node($nid,textwgt) {}
+    set node($nid,labelwgt) {}
+    set node($nid,arrowwgt) {}
+    set node($nid,spanwgt) {}
+    set node($nid,relname) {}
+    set node($nid,children) {}
+    set node($nid,parent) {}
+    set node($nid,constituents) {}
+    set node($nid,visible) 1
+    set node($nid,span)  {}
+    set node($nid,offsets)  {}
+    set node($nid,xpos) 0
+    set node($nid,ypos) 0
+    set node($nid,oldindex) {}
+    set node($nid,newindex) {}
+    set node($nid,constit) {}
+    set node($nid,promotion) {}
+
+    if [info exists visible_nodes($nid)] {unset visible_nodes($nid)}
+    puts stderr "unsetting visible_nodes($nid)"
+    if {[info exists nid2msgid($nid)]} {
+	if {[llength $nid2msgid($nid)] > 1} {
+	    if [info exists msgs2extnid([join $nid2msgid($nid) ","])] {
+		unset msgs2extnid([join $nid2msgid($nid) ","])
+	    }
+	} else {
+	    set idx [lsearch $msgid2nid($nid2msgid($nid)) $nid]
+	    set msgid2nid($nid2msgid($nid)) [lreplace $msgid2nid($nid2msgid($nid)) $idx $idx]
+	    unset nid2msgid($nid)
+	}
+    }
+}
+
+proc make-node {text type {start_pos {}} {end_pos {}}} {
+    global node crntMsgId msgid2nid nid2msgid visible_nodes
+    if { $type ==  "text"  } {
+	set nid [unique-text-node-id]
+	# save mapping from node id to message id
+	set nid2msgid($nid) [list $crntMsgId]
+	# save mapping from message id to node id
+	if {[info exists msgid2nid($crntMsgId)]} {
+	    lappend msgid2nid($crntMsgId) $nid
+	} else {
+	    set msgid2nid($crntMsgId) [list $nid]
+	}
+    } else {
+	set nid [unique-group-node-id]
+    }
+    clear-node $nid
+    set node($nid,text) $text
+    set node($nid,type) $type
+    set node($nid,offsets) [list $start_pos $end_pos]
+    set visible_nodes($nid) 1
+    # puts stderr "Created node $nid with offsets $start_pos $end_pos"
+
+    if {$type ==  "text"} {
+	set node($nid,span) "$nid $nid"
+	add-text-node $nid
+    } else {
+	add-group-node $nid
+    }
+    return $nid
+}
+
+proc move-node {a_path x y X Y} {
+    puts stderr "move-node: x = $x"
+    puts stderr "move-node: y = $y"
+    puts stderr "move-node: X = $X"
+    puts stderr "move-node: Y = $Y"
+}
+
+proc delete-node {a_path x y} {
+    global node crntMsgId msgid2nid last_text_node_id offsetShift
+    # obtain number of node located at coordinates (x, y)
+    lassign [get-node-number $a_path $x $y] inid istart iend
+    puts stderr "inid = $inid; istart = $istart; iend = $iend;"
+    if {$istart == -1} {
+	return
+    } elseif {$inid == $last_text_node_id} {
+	incr last_text_node_id -1
+    }
+    # find next node in text
+    set nxtstart [lindex [$a_path tag nextrange bmarker $iend] 0]
+    # if next node exists, append text from deleted node to this next node
+    if {$nxtstart != {}} {
+	set nxtnid [lindex [get-node-number $a_path {} {} $nxtstart] 0]
+	set node($nxtnid,text) "$node($inid,text) $node($nxtnid,text)"
+    } else {
+	# obtain range of previous node, if any exists
+	set prevend [lindex [$a_path tag prevrange bmarker "$istart -1 char"] end]
+	# remove tag `old` from the text span covered by the node which should
+	# be deleted
+	if {$prevend == {}} {set prevend 1.0}
+	$a_path tag remove old $prevend $istart
+    }
+    # delete node marker
+    $a_path delete $istart $iend
+    # adjust offset shifts of offsets of all successive nodes
+    set delta [string length [$a_path get $istart $iend]]
+    set offsetShift [expr $offsetShift - $delta]
+    foreach nid $msgid2nid($crntMsgId) {
+	if {$nid > $inid} {
+	    set old_offsets $node($nid,offsets)
+	    set new_offsets {}
+	    foreach off $old_offsets {
+		lappend new_offsets [expr $off - $delta]
+	    }
+	    set node($nid,offsets) $new_offsets
+	}
+    }
+    destroy-node $inid
+    redisplay-net
 }
 
 proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {

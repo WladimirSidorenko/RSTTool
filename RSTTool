@@ -62,6 +62,7 @@ array set msgs2extnid {}; # array mapping pairs of message ids
 			  # connect two messages
 array set msgid2nid {};	  # mapping from message ids to ids of internal nodes
 			  # belonging to that message
+array set nid2msgid {};	  # mapping from node id to message id
 array set help {};
 set helpmenu {relation_defs interface}
 

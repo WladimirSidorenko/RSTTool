@@ -17,7 +17,6 @@ proc show-rst {} {
     }
 }
 
-
 proc display-node {nid} {
     global node rstw node_width group_nodes wtn
     debug "display-node: $nid"
@@ -219,9 +218,9 @@ proc erase-subtree {nid} {
 }
 
 proc erase-node {nid} {
-    global rstw node
+    global rstw node visible_nodes
     debug "erase-node: $nid $node($nid,spanwgt)"
-    if $node($nid,visible) {
+    if [info exists visible_nodes($nid)] {
 	$rstw delete [ntw $nid]
 	$rstw delete $node($nid,spanwgt)
 	set wtn([ntw $nid]) {}

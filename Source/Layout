@@ -38,6 +38,7 @@ proc redisplay-net {} {
     # constrain the scrollbars
     set ymax 0
     set xmax 0
+    puts stderr "visible_nodes = [array names visible_nodes]"
     foreach nid [array names visible_nodes] {
     	set ymax [max $ymax $node($nid,ypos)]
     	set xmax [max $xmax $node($nid,xpos)]

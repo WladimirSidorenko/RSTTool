@@ -171,7 +171,7 @@ $File add command -label "Open" -command open-file
 # 	set my_dotfile [set-file-name dot]
 # 	if {$DOT_EXISTS == "YES"} {
 # 	    exec $DOT -Tps $currentfile.rst/$my_dotfile -o\
-# 		$currentfile.rst/$my_dotfile.ps
+    # 		$currentfile.rst/$my_dotfile.ps
 # 	}
 # 	save-sgml
 #     }
@@ -359,7 +359,7 @@ pack .rstframe.canvas -fill both -expand 1 -side left
 #  node($wgt,labelwgt):  the id of the label widget
 
 #  Extra if the node has a parent or is a parent
-#  node($wgt,relname): the id of the relation to its parent 
+#  node($wgt,relname): the id of the relation to its parent
 #  node($wgt,parent): the node-id of the node's parent
 #  node($wgt,children): the node-id's of the node's children
 
@@ -380,64 +380,105 @@ set currentsat {}
 ##################################
 # LINK NODES
 
-# when we link two nodes, we need to redraw
-# the satellite, and each of the parents.
-# this also involves re-calculating the span
-# of each item.
+# when we link two nodes, we need to redraw the satellite, and each of
+# the parents.  this also involves re-calculating the span of each
+# item
 
 ##################################################
 # UNLINK NODES
-
-
 proc unlink-node {sat {redraw 1}} {
-    global node group_nodes currentmode
-    set cmode $currentmode
-    # 1. handle missed clicks
-    if { $sat == {} || $node($sat,parent) == {}} {return}
+    global node nid2msgid group_nodes currentmode
 
+    # 1. handle missed clicks
+    if {$sat == {} || $node($sat,parent) == {}} {return}
     debug "unlink-node1: $sat $node($sat,parent)"
 
-    # 1. Delete the stored data
+    # 1. Delete stored data
     set nuc $node($sat,parent)
     set node($nuc,children) [ldelete $node($nuc,children) $sat]
     set node($sat,parent) {}
     set node($sat,relname) {}
 
-    # 2. Redraw the satellite substructure
+    # 2. Redraw satellite substructure
     if {$redraw == 1} {y-layout-subtree $sat}
 
-    # 3. If the parent is a sequence, and has no more children,
-    #      delete it
-    if { [member $nuc $group_nodes] &&\
-	     $node($nuc,children) == {} } {
+    # 3. If parent is a sequence, and has no more children, delete it
+    set grnd_prnt {}
+    set delete_grnd_prnt 0
+    if {[info exists node($nuc,parent)]} {set grnd_prnt $node($nuc,parent)}
+    puts stderr "nuc = $nuc; nuc is group_node = [member $nuc $group_nodes];"
+    puts stderr "node($nuc,relname) = $node($nuc,relname)"
+    puts stderr "node($nuc,children) = $node($nuc,children)"
+    puts stderr "grnd_prnt = $grnd_prnt"
+    # remove grand parent node, if it is a group node covering the
+    # node being unlinked and its parent (since parent node may also
+    # be the top-most node for the given message, we might also need
+    # to re-link all external connections upon its deletion)
+    if {$grnd_prnt != {} && $node($nuc,relname) == "span"} {
+	# in case that `grnd_prnt` is an internal node pertaining to
+	# the current message and has no further children except
+	# `nuc`, we can delete it hassle-free
+	if {[llength nid2msgid($grnd_prnt)] == 1} {
+	    if {[llength node($grnd_prnt,children)] == 1} {set delete_grnd_prnt 1}
+	} else {
+	    # if `grnd_prnt` is an external node, we need to find-out
+	    # if any of its children except `nuc` also fall in current
+	    # message
+	    set delete_grnd_prnt 1
+	    set nuc_msgid [lindex $nid2msgid($nuc)]
+	    foreach chnid $node($grnd_prnt,children) {
+		if {$chnid != $nuc && [lindex nid2msgid($chnid) 0] == $nuc_msgid} {
+		    set delete_grnd_prnt 0
+		    break
+		}
+	    }
+	}
+    }
+    if {$delete_grnd_prnt} {
+	destroy-group-node $grnd_prnt $nuc $redraw
+    }
+
+    if {[member $nuc $group_nodes] && $node($nuc,children) == {}} {
 	destroy-node $nuc $redraw
     } else {
 	restructure-upwards $nuc $redraw
     }
-    set-mode $cmode
 }
 
 ##################################################
 # DESTROY NODE
-
 proc destroy-node {nid {redraw 1}} {
     global node rstw
     debug "destroy-node: $nid"
 
-    #1. Unlink the node if still connected
-    if {$node($nid,parent) != {} } {
-	unlink-node $nid
-    }
+    # 1. unlink node if still connected
+    if {$node($nid,parent) != {} } {unlink-node $nid}
 
-    #2. delete the graphic presentation
+    # 2. delete the graphic presentation
     erase-node $nid
 
-    #3. Remove from node list
-    if [text-node-p $nid] {
-	delete-text-node $nid
-    } else {
-	delete-group-node $nid
+    # 3. remove node from visible node list and drop all its
+    # structural information
+    clear-node $nid
+}
+
+# Delete node `nid` and re-link its possible child to the parent of node `nid`
+proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
+    global node
+    # re-link all children of `nid` except `replnid` to `replnid`
+    if [info exists node($gnid,children)] {
+	foreach chnid $node($gnid,children) {
+	    if {$chnid != $replnid} {
+		set node($chnid,parent) $replnid
+	    }
+	}
     }
+    # re-set parent of replacement to parent of `gnid`
+    if {$replnid != {}} {
+	set node($replnid,parent) $node($gnid,parent)
+    }
+    # finally, destroy the group node
+    destroy-node $gnid $redraw
 }
 
 
@@ -455,6 +496,7 @@ proc adjust-after-change {nuc sat {redraw 0}} {
 proc restructure-upwards {nid {redraw 0}} {
     global node
     debug "restructure-upwards: $nid $redraw"
+    puts stderr "restructure-upwards: $nid $redraw"
 
     # stop when no change in span nor in pos of node
     set adjust_needed 0
@@ -936,7 +978,7 @@ proc expand {nid {really {}} } {
 
 
     ##################################################
-    # General Functions 
+    # General Functions
 
     proc add-text-node {nid} {
 	global text_nodes
@@ -949,29 +991,6 @@ proc expand {nid {really {}} } {
 	# add the node
 	lappend text_nodes $nid
     }
-
-    proc delete-text-node {nid} {
-	global text_nodes
-
-	# Report error if repeated add
-	if ![member $nid $text_nodes] {
-	    puts "delete-text-node: warning: $nid not defined"
-	} else {
-	    set text_nodes [ldelete $text_nodes $nid]
-	}
-    }
-
-    proc delete-group-node {nid} {
-	global group_nodes
-
-	# Report error if repeated add
-	if ![member $nid $group_nodes] {
-	    puts "delete-group-node: warning: $nid not defined"
-	} else {
-	    set group_nodes [ldelete $group_nodes $nid]
-	}
-    }
-
 
     proc bottom-point {item} {
 	global rstw
@@ -1256,14 +1275,10 @@ proc expand {nid {really {}} } {
     proc text-node-p {nid} {
 	global node
 	#come back here
-	if { $nid == {} } {
+	if { $nid == {} || $node($nid,type) == "text"} {
 	    return 1
 	} else {
-	    if { $node($nid,type) == "text" } {
-		return 1
-	    } else {
-		return 0
-	    }
+	    return 0
 	}
     }
 
@@ -1598,7 +1613,7 @@ proc expand {nid {really {}} } {
 	flush $dotfile
 
 	foreach child $new_child_list {
-	    print_dot_recursion $backreference($child) 
+	    print_dot_recursion $backreference($child)
 	}
     }
 
@@ -2003,7 +2018,7 @@ proc expand {nid {really {}} } {
 	set clicked_msgid $nid2msgid($clicked_node)
 	set clicked_is_prnt 0
 	set ext_connection 0
-	if {$dragged_msgid != $clicked_msgid} { set ext_connection 1; }
+	if {$dragged_msgid != $clicked_msgid} { set ext_connection 1 }
 
 	if {$type == {} } {
 	    set coords [screen-coords [ntw $clicked_node] $rstw]
@@ -2112,14 +2127,14 @@ proc expand {nid {really {}} } {
 		# ancestor.
 		if {$clicked_is_prnt} {
 		    # if {[info exists node($clicked_node,parent)] && \
-		    # 	    $node($clicked_node,parent) != {}} {
+					   # 	    $node($clicked_node,parent) != {}} {
 		    # 	set $node($last_group_node_id,parent) $node($clicked_node,parent)
 		    # }
 		    set msgs2extnid($clicked_msgid,$dragged_msgid) [list $last_group_node_id $clicked_node span \
 									$clicked_node $dragged_node $relation]
 		} else {
 		    # if {[info exists node($dragged_node,parent)] && \
-		    # 	    $node($dragged_node,parent) != {}} {
+			    # 	    $node($dragged_node,parent) != {}} {
 		    # 	set $node($last_group_node_id,parent) $node($dragged_node,parent)
 		    # }
 		    set msgs2extnid($dragged_msgid,$clicked_msgid) [list $last_group_node_id $dragged_node span \
@@ -2144,12 +2159,11 @@ proc expand {nid {really {}} } {
 		if {$type == "satellite" || $type == "satellite-embedded"} {
 		    link-par-to-child $last_group_node_id $clicked_node span
 		    link-par-to-child $clicked_node $dragged_node $relation
-		    fix-children $last_group_node_id $clicked_node $dragged_node
 		} elseif {$type == "nucleus" || $type == "nucleus-embedded"} {
 		    link-par-to-child $last_group_node_id $dragged_node span
 		    link-par-to-child $dragged_node $clicked_node $relation
-		    fix-children $last_group_node_id $clicked_node $dragged_node
 		}
+		fix-children $last_group_node_id $clicked_node $dragged_node
 	    }
 	}
 
@@ -2176,6 +2190,19 @@ proc expand {nid {really {}} } {
 	}
     }
 
+    proc link-par-to-child {par child relation } {
+	global node
+	if {$par == $child} {return;}
+
+	lappend node($par,children) $child
+	set node($par,children) [lsort -integer $node($par,children)]
+
+	set node($child,parent) $par
+	set node($child,relname) $relation
+
+	adjust-after-change $par $child 1
+    }
+
     proc fix-children {new_node clicked_node dragged_node} {
 	global node
 	foreach child $node($new_node,children) {
@@ -2187,20 +2214,6 @@ proc expand {nid {really {}} } {
 		link-par-to-child $clicked_node $child $node($child,relname)
 	    }
 	}
-    }
-
-    proc link-par-to-child {par child relation } {
-	global node
-	# puts stderr "link-par-to-child $par $child $relation (already existing children: $node($par,children))"
-	if {$par == $child} {return;}
-
-	lappend node($par,children) $child
-	set node($par,children) [lsort -integer $node($par,children)]
-
-	set node($child,parent) $par
-	set node($child,relname) $relation
-
-	adjust-after-change $par $child 1
     }
 
     proc put-in-place-of { original substitute } {
