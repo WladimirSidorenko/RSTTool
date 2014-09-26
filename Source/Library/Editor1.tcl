@@ -198,14 +198,13 @@ proc load-file {filename {really {1}}} {
     textUndoer:reset $undoer
 
     set currentfile $filename
-    if { $really == 1 } {open-step-file}
 
     editor-message "opened file:  $filename"
     # .editor.text insert end "\n"
     .editor.text tag add old 1.0 1.0
     .editor.text tag add new 1.0 end
     #  save-step "load-file $filename"
-    nextMessage $really
+    next-message $really
 }
 
 proc showNodes {msg_id {show 1}} {
@@ -231,6 +230,7 @@ proc showSentences {path_name msg_id {show_rest 0}} {
     # display already EDU segements in widget `path_name`
     global theForrest msgid2nid node
     # obtain annotated EDUs for given message
+    puts stderr "showSentences: 0) ranges new = '[$path_name tag ranges new]'"
     if {! [info exists theForrest($msg_id)]} {
 	return {0 0};
     } elseif {[info exists msgid2nid($msg_id)]} {
@@ -281,6 +281,8 @@ proc showSentences {path_name msg_id {show_rest 0}} {
     if {$show_rest} {
 	# insert the leftover text
 	$path_name insert end [string range $txt $end end] new
+	puts stderr "showSentences: inserted text range = '[string range $txt $end end]'"
+	puts stderr "showSentences: ranges new = '[$path_name tag ranges new]'"
 	# add tag `new` to the newly inserted text
     	set end end
     }
@@ -360,7 +362,7 @@ proc nextSentence {{do_it {}} {trgframe .editor.text}} {
     $trgframe tag add next new.first "new.first + $nextCutoff chars"
 }
 
-proc nextMessage { {do_it {}} {direction {forward}}} {
+proc next-message { {do_it {}} {direction {forward}}} {
     global theRoots theRootIdx theForrest
     global crntMsgId crntMsgTxt prntMsgId prntMsgTxt
     global msgs2extnid node visible_nodes
@@ -422,8 +424,6 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     # puts stderr "checking external node msgs2extnid($prev_prnt_msg_id,$prev_msg_id)"
     if [info exists msgs2extnid($prev_prnt_msg_id,$prev_msg_id)] {
 	set extnid [lindex $msgs2extnid($prev_prnt_msg_id,$prev_msg_id) 0]
-# 	puts stderr "hiding node extnid = $extnid; msgs2extnid($prev_prnt_msg_id,$prev_msg_id) \
-# = $msgs2extnid($prev_prnt_msg_id,$prev_msg_id)"
 	unset visible_nodes($extnid)
 	# unlink children from the abstract group node
 	# foreach cid $node($extnid,children) {
@@ -435,10 +435,10 @@ proc nextMessage { {do_it {}} {direction {forward}}} {
     if [info exists msgs2extnid($prntMsgId,$crntMsgId)] {
 	# puts stderr "showing nodes $msgs2extnid($prntMsgId,$crntMsgId)"
 	set extnid [lindex $msgs2extnid($prntMsgId,$crntMsgId) 0]
+	# puts stderr "extnid = $extnid"
 	set visible_nodes($extnid) 1
 	# restore children of this abstract group node
 	foreach {prntid cid relname} $msgs2extnid($prntMsgId,$crntMsgId) {
-	    # puts stderr "setting parent of node $cid to $prntid"
 	    set node($cid,parent) $prntid
 	    set node($cid,relname) $relname
 	}

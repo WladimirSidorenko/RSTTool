@@ -2,8 +2,8 @@
 
 proc draw-text {window txt x y {options {}}} {
     eval {$window create text} $x $y\
-	{-text $txt -anchor n -justify center}\
-	$options
+    	{-text $txt -anchor n -justify center}\
+    	$options
 }
 
 proc draw-line {window x1 y1 x2 y2} {

@@ -4,17 +4,17 @@
 # Layout
 # Functions used by RST-Tool for laying-out RSt structures
 proc resize-display {change} {
-    global size_factor rstw current_xpos node_width text_nodes group_nodes node
-    set size_factor [expr $size_factor + $change]
+    global size_factor rstw current_xpos node_width text_nodes group_nodes visible_nodes node
     set ymax 0
     set xmax 0
-    foreach nid [concat $text_nodes $group_nodes] {
-	if { $node($nid,visible) == 1 } {
-	    set ymax [max $ymax $node($nid,ypos)]
-	    set xmax [max $xmax $node($nid,xpos)]
-	}
+    set size_factor [expr $size_factor + $change]
+    foreach nid [array names visible_nodes] {
+	set ymax [max $ymax $node($nid,ypos)]
+	set xmax [max $xmax $node($nid,xpos)]
     }
-    $rstw configure -scrollregion "0 1 [expr  $xmax + $node_width]\
+    puts stderr "resize-display: ymax = $ymax"
+    puts stderr "resize-display: xmax = $xmax"
+    $rstw configure -scrollregion "0 1 [expr $xmax + $node_width]\
 	     [expr $ymax + $size_factor]"
 }
 
@@ -25,20 +25,21 @@ proc redisplay-net {} {
     # 2. Draw the links
     global rstw node_width visible_nodes node
 
-    # puts stderr "redisplay-net: visible_nodes = [array names visible_nodes]"
     # 1. Clean up from earlier structures
     if [info exists wtn] {unset wtn}
+    if [info exists ntw] {unset ntw}
     $rstw delete all
 
     # 2. layout and draw the new
-    # puts stderr "visible_nodes = [array names visible_nodes]"
+    puts stderr "redisplay-net: calling x-layout"
     x-layout
+    puts stderr "redisplay-net: calling y-layout"
     y-layout
+    puts stderr "redisplay-net: y-layout done"
 
     # constrain the scrollbars
     set ymax 0
     set xmax 0
-    puts stderr "visible_nodes = [array names visible_nodes]"
     foreach nid [array names visible_nodes] {
     	set ymax [max $ymax $node($nid,ypos)]
     	set xmax [max $xmax $node($nid,xpos)]
@@ -57,29 +58,29 @@ proc x-layout {} {
     global node node_width current_xpos
     global visible_nodes
 
+    set vsorted [lsort -integer [array names visible_nodes]]
+    puts stderr "x-layout: vsorted = $vsorted"
     set xinc [expr $node_width + 10]
     set xpos [expr $node_width / 2 + 30]
-
-    # puts stderr "visible_nodes = [array names visible_nodes]"
-    foreach nid [lsort -integer [array names visible_nodes]] {
+    foreach nid $vsorted {
     	if [group-node-p $nid] {
     	    if {![visible-children-p $nid] } {
     	    	set node($nid,xpos) $xpos
     	    	set xpos [expr $xpos+$xinc]
     	    } else {
-	    set node($nid,xpos) 0
+		set node($nid,xpos) 0
 	    }
     	} else {
     	    set node($nid,xpos) $xpos
-	    # puts stderr "x-layout: node($nid,xpos) set to $node($nid,xpos)"
     	    set xpos [expr $xpos+$xinc]
     	}
     }
 
-    foreach nid [lsort -integer [array names visible_nodes]] {
-    	if {[group-node-p $nid]} {
-	    # puts stderr "x-layout: call xlayout-group-node on node $nid"
+    foreach nid $vsorted {
+    	if [group-node-p $nid] {
+	    puts stderr "x-layout: xlayout-group-node $nid"
     	    xlayout-group-node $nid
+	    puts stderr "x-layout: xlayout-group-node $nid done"
     	}
     }
     # foreach nid $text_nodes {
@@ -105,25 +106,20 @@ proc x-layout {} {
 proc xlayout-group-node {nid} {
     global node node_width visible_nodes
 
-    # puts stderr "xlayout-group-node: node($nid,xpos) = $node($nid,xpos)"
     # only position nodes which are not yet positioned
-    if $node($nid,xpos) {return}
-    # don't position invalid nodes
-    if { $nid == 0 } {return}
+    if {$nid == 0 || $node($nid,xpos)} {return}
 
     # 1. Collect x coords of constituents
     set x_coords {}
-
+    puts stderr "xlayout-group-node: nid = $nid; node($nid,children) = $node($nid,children)"
     foreach dep $node($nid,children) {
 	#  [group-relation-p $node($dep,relname)]
 	if [info exists visible_nodes($dep)] {
 	    if { !$node($dep,xpos) } {
-		# puts stderr "xlayout-group-node: calling xlayout-group-node on child $dep"
 		xlayout-group-node $dep
 	    }
 	    if [group-relation-p $node($dep,relname)] {
 		# we want to place the node over its members, not satelites
-		# puts stderr "xlayout-group-node: apending $node($dep,xpos) to x_coords from child $dep (node($dep,relname) = $node($dep,relname))"
 		lappend x_coords $node($dep,xpos)
 	    }
 	}
@@ -135,19 +131,15 @@ proc xlayout-group-node {nid} {
 	set first_tn [find-first-text-node $nid]
 	set prev_node [previous-visible-node $first_tn]
 	if { $prev_node > 0 } {
-	    # puts stderr "xlayout-group-node: node($nid,xpos) branch 0"
-	    set node($nid,xpos) [expr $node($prev_node,xpos)+  $node_width + 10]
+	    set node($nid,xpos) [expr $node($prev_node,xpos) + $node_width + 10]
 	} else {
-	    # puts stderr "xlayout-group-node: node($nid,xpos) branch 1"
 	    set node($nid,xpos) [expr $node_width + 10]
 	}
     } else {
 	set min [eval min $x_coords]
 	set max [eval max $x_coords]
-	# puts stderr "xlayout-group-node: node($nid,xpos) branch 2: min = $min, max = $max"
 	set node($nid,xpos) [expr $min + ($max - $min) / 2]
     }
-    # puts stderr "xlayout-group-node: node($nid,xpos) set to $node($nid,xpos)"
 }
 
 proc find-first-text-node {nid} {
@@ -157,14 +149,13 @@ proc find-first-text-node {nid} {
     if [text-node-p $nid] {return $nid}
     # this just returns A child -- we can work back from any
     # child since all children are invis.
-    set cid [lindex $node($nid,children) 0]
+    set cid [lindex [lsort -integer $node($nid,children)] 0]
     if [text-node-p $cid] {
 	return $cid
     } else {
 	return [find-first-text-node $cid]
     }
 }
-
 
 proc previous-visible-node {nid} {
     global node text_nodes
@@ -204,11 +195,9 @@ proc parent-needs-space-p {cid current_xpos} {
 
 
 proc visible-children-p {nid} {
-    global node
-    # puts stderr "nid = $nid"
+    global node visible_nodes
     foreach cid $node($nid,children) {
-	# puts stderr "cid = $cid"
-	if $node($cid,visible) {return 1}
+	if [info exists visible_nodes($nid)] {return 1}
     }
     return 0
 }
@@ -244,7 +233,6 @@ proc y-layout-subtree {nid} {
     # 2. Re-layout children
     foreach cid $node($nid,children) {
     	if [info exists visible_nodes($cid)] {
-    	    # puts "child: y-layout-subtree {$cid}"
     	    y-layout-subtree $cid
     	}
     }

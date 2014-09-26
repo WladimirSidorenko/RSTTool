@@ -28,22 +28,21 @@ if {[winfo exists .rtbar]} {destroy .rtbar}
 #toplevel .rtbar
 frame .rtbar
 
-button .rtbar.link   -text "Link" -command {set-mode link}
+button .rtbar.link -text "Link" -command {set-mode link}
 button .rtbar.autolink -text "Auto" -command {set-mode autolink}
-button .rtbar.disconnect   -text "Disconnect" -command {set-mode disconnect}
-button .rtbar.modify   -text "Modify" -command {set-mode modify}
+button .rtbar.disconnect -text "Disconnect" -command {set-mode disconnect}
+button .rtbar.modify -text "Modify" -command {set-mode modify}
 button .rtbar.change_rel -text "Change Relation" -command {set-mode change}
 button .rtbar.change_schema -text "Change Schema" -command {set-mode change_schema}
-# button .rtbar.undo_by_redo -text "Don't Touch" -command {undo_by_redo}
-button .rtbar.undo_by_reload -text "Undo" -command {undo_by_reload}
 button .rtbar.reduce -text "Reduce" -command {resize-display -50}
 button .rtbar.enlarge -text "Enlarge" -command {resize-display 50}
+# button .rtbar.undo_by_reload -text "Undo" -command {undo_by_reload}
+# button .rtbar.undo_by_redo -text "Don't Touch" -command {undo_by_redo}
 # button .rtbar.showtext -text "Show Text" -command {showText really}
 
 pack .rtbar -side top
 pack .rtbar.link .rtbar.autolink .rtbar.disconnect .rtbar.modify .rtbar.change_rel \
-    .rtbar.change_schema .rtbar.undo_by_reload .rtbar.reduce .rtbar.enlarge -in .rtbar -side left
-# .rtbar.showtext
+    .rtbar.change_schema .rtbar.reduce .rtbar.enlarge -in .rtbar -side left
 bind .editor.text <Any-Key> {break}
 
 menu .menubar
@@ -375,8 +374,6 @@ set currentsat {}
 # set last_text_node_id 0 ;# the last assigned node id
 # set last_group_node_id 5000 ;# the last assigned node id
 
-
-
 ##################################
 # LINK NODES
 
@@ -389,95 +386,120 @@ set currentsat {}
 proc unlink-node {sat {redraw 1}} {
     global node nid2msgid group_nodes currentmode
 
+    puts stderr "unlink-node: sat = $sat; node($sat,parent) == $node($sat,parent)"
     # 1. handle missed clicks
     if {$sat == {} || $node($sat,parent) == {}} {return}
-    debug "unlink-node1: $sat $node($sat,parent)"
 
-    # 1. Delete stored data
+    # 1. Delete connection between `sat` and its parent
     set nuc $node($sat,parent)
     set node($nuc,children) [ldelete $node($nuc,children) $sat]
     set node($sat,parent) {}
     set node($sat,relname) {}
-
+    set spannid {}
+    if {[info exists node($nuc,parent)] && $node($nuc,relname) == "span"} {
+	set spannid $node($nuc,parent)
+    }
     # 2. Redraw satellite substructure
-    if {$redraw == 1} {y-layout-subtree $sat}
+    if {$redraw == 1} {
+	puts stderr "unlink-node: y-layout-subtree $sat"
+	y-layout-subtree $sat
+    }
 
-    # 3. If parent is a sequence, and has no more children, delete it
-    set grnd_prnt {}
-    set delete_grnd_prnt 0
-    if {[info exists node($nuc,parent)]} {set grnd_prnt $node($nuc,parent)}
-    puts stderr "nuc = $nuc; nuc is group_node = [member $nuc $group_nodes];"
-    puts stderr "node($nuc,relname) = $node($nuc,relname)"
-    puts stderr "node($nuc,children) = $node($nuc,children)"
-    puts stderr "grnd_prnt = $grnd_prnt"
-    # remove grand parent node, if it is a group node covering the
-    # node being unlinked and its parent (since parent node may also
-    # be the top-most node for the given message, we might also need
-    # to re-link all external connections upon its deletion)
-    if {$grnd_prnt != {} && $node($nuc,relname) == "span"} {
-	# in case that `grnd_prnt` is an internal node pertaining to
-	# the current message and has no further children except
-	# `nuc`, we can delete it hassle-free
-	if {[llength nid2msgid($grnd_prnt)] == 1} {
-	    if {[llength node($grnd_prnt,children)] == 1} {set delete_grnd_prnt 1}
-	} else {
-	    # if `grnd_prnt` is an external node, we need to find-out
-	    # if any of its children except `nuc` also fall in current
-	    # message
-	    set delete_grnd_prnt 1
-	    set nuc_msgid [lindex $nid2msgid($nuc)]
-	    foreach chnid $node($grnd_prnt,children) {
-		if {$chnid != $nuc && [lindex nid2msgid($chnid) 0] == $nuc_msgid} {
-		    set delete_grnd_prnt 0
-		    break
-		}
+    # 3. If parent has no more children, delete span node and shift
+    # the parent up the structure
+    set dgn 0
+    if {$node($nuc,children) == {}} {
+	set dgn 1
+    } elseif [group-node-p $nuc] {
+	set dgn 1
+	foreach chnid $node($nuc,children) {
+	    if {$node($chnid,relname) != "span"} {
+		destroy-node $nuc
+		set dgn 0
+		break
 	    }
 	}
     }
-    if {$delete_grnd_prnt} {
-	destroy-group-node $grnd_prnt $nuc $redraw
+    puts stderr "unlink-node: dgn = $dgn"
+    if {$dgn} {
+	puts stderr "unlink-node: destroy-group-node $spannid $nuc $redraw"
+	destroy-group-node $spannid $nuc $redraw
     }
-
-    if {[member $nuc $group_nodes] && $node($nuc,children) == {}} {
-	destroy-node $nuc $redraw
-    } else {
-	restructure-upwards $nuc $redraw
-    }
+    puts stderr "unlink-node: restructure-upwards $nuc $redraw"
+    restructure-upwards $nuc $redraw
+    puts stderr "unlink-node: restructure-upwards done"
 }
 
 ##################################################
 # DESTROY NODE
 proc destroy-node {nid {redraw 1}} {
     global node rstw
-    debug "destroy-node: $nid"
 
     # 1. unlink node if still connected
-    if {$node($nid,parent) != {} } {unlink-node $nid}
+    unlink-node $nid 0
 
     # 2. delete the graphic presentation
+    puts stderr "destroy-node: erase-node $nid"
     erase-node $nid
 
     # 3. remove node from visible node list and drop all its
     # structural information
+    puts stderr "destroy-node: clear-node $nid"
     clear-node $nid
+    puts stderr "destroy-node: clear-node done"
 }
 
 # Delete node `nid` and re-link its possible child to the parent of node `nid`
 proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
-    global node
-    # re-link all children of `nid` except `replnid` to `replnid`
-    if [info exists node($gnid,children)] {
-	foreach chnid $node($gnid,children) {
-	    if {$chnid != $replnid} {
-		set node($chnid,parent) $replnid
+    global node nid2msgid msgs2extnid
+
+    if {$gnid == {}} {return}
+    set prnt_msg_id $nid2msgid($gnid)
+    set gprnt $node($gnid,parent)
+    set node($gnid,parent) {}
+    # delete `gnid` from the list of children of its parent
+    if {$gprnt != {}} {
+	set node($gprnt,children) [concat [ldelete $node($gprnt,children) $gnid] $replnid]
+    }
+
+    # append relacement node to the list of grand parent's
+    # children
+    # re-link all children of `gnid` to `replnid` except `replnid` itself
+    if {$replnid != {}} {
+	set node($replnid,parent) $gprnt
+	set node($gnid,children) [ldelete $node($gnid,children) $replnid]
+	set node($replnid,children) [lsort -integer [concat $node($replnid,children) \
+							 $node($gnid,children)]]
+    }
+
+    foreach chnid $node($gnid,children) {
+	set node($chnid,parent) $replnid
+	set chld_msg_id $nid2msgid($chnid)
+	# if `gnid` has children in other messages, then update
+	# information stored in msgs2extnid
+	if {$prnt_msg_id != $chld_msg_id} {
+	    set mkey "$prnt_msg_id,$chld_msg_id"
+	    if [info exists msgs2extnid($mkey)] {
+		while {[set idx [lsearch -exact $msgs2extnid($mkey) $gnid]] != -1} {
+		    set msgs2extnid($mkey) [lreplace $msgs2extnid($mkey) $idx $idx $replnid]
+		}
+		# update children in external nodes that connect
+		# multiple messages
+		foreach {prntid chldid relname} $msgs2extnid($mkey) {
+		    if {$chldid == $replnid} {
+			set idx [lsearch -exact $node($prntid,children) $gnid]
+			set node($prntid,children) [lreplace $node($prntid,children) \
+							 $idx $idx $replnid]
+			# update span information of the parent
+			restructure-upwards $prntid 0
+		    }
+		}
 	    }
 	}
     }
-    # re-set parent of replacement to parent of `gnid`
-    if {$replnid != {}} {
-	set node($replnid,parent) $node($gnid,parent)
-    }
-    # finally, destroy the group node
+    # remove all children from `gnid`
+    erase-subtree $gnid
+    set node($gnid,children) {}
     destroy-node $gnid $redraw
 }
 
@@ -485,7 +507,6 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
 ##################################################
 # Graph Change Server
 proc adjust-after-change {nuc sat {redraw 0}} {
-    # puts stderr "adjust-after-change: nuc = $nuc; sat = $sat"
     # Adjust nucleus
     restructure-upwards $nuc $redraw
 
@@ -494,51 +515,45 @@ proc adjust-after-change {nuc sat {redraw 0}} {
 }
 
 proc restructure-upwards {nid {redraw 0}} {
-    global node
+    global node visible_nodes
     debug "restructure-upwards: $nid $redraw"
-    puts stderr "restructure-upwards: $nid $redraw"
 
     # stop when no change in span nor in pos of node
     set adjust_needed 0
 
-    # puts stderr "restructure-upwards: nid = $nid"
-    #1. if the current node is a group node,
-    #   its pos and span may need to be adjusted
+    # 1. if the current node is a group node, its pos and span may
+    # need to be adjusted
     if { [group-node-p $nid] } {
 
 	# a) If a group node, adjust its x position
 	if { $redraw } {
-	    # puts stderr "restructure-upwards: Redrawing group node $nid"
 	    set node($nid,xpos) 0
 	    xlayout-group-node $nid
 	    set adjust_needed 1
 	}
 
-	# b) Adjust the span of this node
+	# b) Adjust span of this node
 	set span [find-node-span $nid]
 
 	if {$span != $node($nid,span)} {
 	    # span has changed
-
 	    set node($nid,span) $span
-	    # puts stderr "restructure-upwards: setting span for node $nid to $span"
-
 	    # change the displayed text
 	    set node($nid,text) [make-span-label $span]
-	    # puts stderr "restructure-upwards: node-text set to $node($nid,text)"
-
 	    # mark a change has taken place
 	    set adjust_needed 1
 	}
 
 	#  c) redraw this node if needed
-	if { $adjust_needed && $redraw != 0 && $node($nid,visible)} {
+	if { $adjust_needed && $redraw && [info exists visible_nodes($nid)]} {
 	    # check if the node has been drawn before
 	    redisplay-node $nid
 	    redraw-child-arcs $nid
 	}
 
-    } else {set adjust_needed 1}
+    } else {
+	set adjust_needed 1
+    }
 
     # 2. adjusts the span of parent nodes considering the expansion
     # of the current node.
@@ -648,7 +663,7 @@ proc make-span-label {span} {
 
 
 proc find-node-span {nid} {
-    global node
+    global node nid2msgid
 
     # Span depends on node-type
     switch -- $node($nid,type) {
@@ -656,9 +671,11 @@ proc find-node-span {nid} {
 	span { # span is min/max of nuc and all satellites
 	    set min Inf
 	    set max -1
+	    set msgids $nid2msgid($nid)
 	    foreach child $node($nid,children) {
-		if { $node($child,relname) == "span"
-		     || [constit-relation-p $node($child,relname)]} {
+		if { ($node($child,relname) == "span" \
+		    || [constit-relation-p $node($child,relname)]) && \
+			 [lsearch -exact $msgids $nid2msgid($child)] != -1} {
 		    set min [min [lindex $node($child,span) 0] $min]
 		    set max [max [lindex $node($child,span) 1] $max]
 		    foreach sat $node($child,children) {
@@ -985,7 +1002,7 @@ proc expand {nid {really {}} } {
 
 	# Report error if repeated add
 	if [member $nid $text_nodes] {
-	    puts "add-text-node: error: $nid already defined"
+	    puts stderr "add-text-node: error: $nid already defined"
 	}
 
 	# add the node
@@ -1701,7 +1718,6 @@ proc expand {nid {really {}} } {
 	    # puts stderr "iline = '$iline'"
 	    set fields [split $iline "\t"]
 	    if {[lindex $fields 0] == "msgs2extnid"} {
-		# puts stderr "reading msgs2extnid"
 		set msgs2extnid([lindex $fields 1]) [split [lindex $fields 2] "\034"]
 	    } elseif {[lindex $fields 0] == "nid"} {
 		set nid [lindex $fields 1]
@@ -1712,9 +1728,7 @@ proc expand {nid {really {}} } {
 		} elseif {$nid > $last_text_node_id} {
 		    set last_text_node_id $nid;
 		}
-		# puts stderr "reading nid for node $nid"
 		set nid2msgid($nid) [split [lindex $fields 2] "\034"]
-		# puts stderr "nid2msgid($nid) = $nid2msgid($nid)"
 		# add reverse mapping from message id to its corresponding node ids
 		if {[llength $nid2msgid($nid)] == 1} {
 		    set msgid [lindex $nid2msgid($nid) 0]
@@ -1734,7 +1748,6 @@ proc expand {nid {really {}} } {
 			}
 			set node($nid,[lindex $f 0]) [lindex $f 1]
 		    }
-		    # puts stderr "node($nid,[lindex $f 0]) set to $node($nid,[lindex $f 0])"
 		}
 	    } elseif {[llength $fields] > 0} {
 		error "Unrecognized line format: '$iline'"
@@ -2059,7 +2072,6 @@ proc expand {nid {really {}} } {
 		    if { [relation-type $node($child,relname)] == "rst" || \
 			     [relation-type $node($child,relname)] == "embedded"} {
 			# 1) ambiguous
-			# puts stderr "ambiguous (1) set to unknown relation-type = [relation-type $node($child,relname)]"
 			set ambiguity "unknown"
 		    }
 		}
@@ -2068,7 +2080,6 @@ proc expand {nid {really {}} } {
 	    if {"$node($clicked_node,type)" == "multinuc"} {
 		# 1) ambiguous
 		if { "$ambiguity" == {} } {
-		    # puts stderr "ambiguous (2) set to unknown"
 		    set ambiguity "unknown"
 		}
 	    }
@@ -2111,7 +2122,6 @@ proc expand {nid {really {}} } {
 	    if {$relation == {}} {return}
 
 	    incr last_group_node_id
-	    # puts stderr "last_group_node_id: $last_group_node_id ..."
 	    add-group-node $last_group_node_id
 	    clear-node $last_group_node_id
 	    # put-in-place-of $clicked_node $last_group_node_id

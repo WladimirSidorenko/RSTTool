@@ -20,31 +20,31 @@ ToolbarItem .tbar text "Edit" editmode
 ToolbarItem .tbar undo "Undo" {textUndoer:undo $undoer}
 ToolbarItem .tbar demo "Demo Text" demo-text
 ToolbarItem .tbar reload "ReLoad" \
-   {source $DIR/Segmenter}
+    {source $DIR/Segmenter}
 ToolbarItem .tbar show "RST" {
-#   uninstall-segmenter
-   install-structurer
-   show-text-nodes [segment-text]
+    #   uninstall-segmenter
+    install-structurer
+    show-text-nodes [segment-text]
 }
 ToolbarItem .tbar quit "Quit" exit
 
 
 
 proc install-segmenter {} {
-   wm title . "Text Segmentation Interface"
-#NEW-BEGIN
-  install-structurer
-#NEW-END
-#  pack .tbar -side left  -anchor sw -pady 1c
-  pack .editor  -side left  -pady 0.1c -padx 0.1c\
-    -anchor sw -expand 1 -fill both
-.editor.text config -height 20
-.rstframe.canvas config -height 400
-  editmode
+    wm title . "Text Segmentation Interface"
+    #NEW-BEGIN
+    install-structurer
+    #NEW-END
+    #  pack .tbar -side left  -anchor sw -pady 1c
+    pack .editor  -side left  -pady 0.1c -padx 0.1c\
+	-anchor sw -expand 1 -fill both
+    .editor.text config -height 20
+    .rstframe.canvas config -height 400
+    editmode
 }
 
 proc uninstall-segmenter {} {
-  pack forget .editor .tbar
+    pack forget .editor .tbar
 }
 
 
@@ -52,55 +52,57 @@ proc uninstall-segmenter {} {
 # Define Procedures
 
 proc segmentmode {} {
-  bind .editor.text <Button-1> {segment-at-current}
-  .editor.text config -cursor bottom_tee
-  .tbar.text configure -relief raised
-  .tbar.seg configure -relief sunken
+    bind .editor.text <Button-1> {segment-at-current}
+    .editor.text config -cursor bottom_tee
+    .tbar.text configure -relief raised
+    .tbar.seg configure -relief sunken
 }
 
 proc segment-at-current {} {
-# 1. remove the segment tag (if any) from the latter section
-  set segno [.editor.text tag names current]
-  if { $segno != {} } {
-    .editor.text tag remove $segno current end
-  }
-  .editor.text insert current "<br>"
+    # 1. remove the segment tag (if any) from the latter section
+    set segno [.editor.text tag names current]
+    if { $segno != {} } {
+	.editor.text tag remove $segno current end
+    }
+    .editor.text insert current "<br>"
 }
 
 proc editmode {} {
-  bind .editor.text <Button-1> {}
-  .editor.text config -cursor xterm
-  .tbar.text configure -relief sunken
-  .tbar.seg configure -relief raised
+    global txt_cursor
+
+    bind .editor.text <Button-1> {}
+    .editor.text config -cursor $txt_cursor
+    .tbar.text configure -relief sunken
+    .tbar.seg configure -relief raised
 }
 
 
 
 proc segment-text {} {
 
-  set segs {}
-# set index to 1.0, and chop into segmeent at each <br>
+    set segs {}
+    # set index to 1.0, and chop into segmeent at each <br>
 
-  .editor.text mark set segstart 1.0
-  set segend [.editor.text search  -nocase -forw "<br>" segstart end]
-  while {$segend != {} && [.editor.text compare segstart < $segend] } {
-    set segment [.editor.text tag names "segstart + 1 char"]
-    lappend segs [list [.editor.text get segstart $segend] $segment]
-   .editor.text mark set segstart "$segend + 4 chars"
-   set segend [.editor.text search -nocase -forw "<br>" segstart end]
-  }
-  lappend segs [list [.editor.text get segstart end] [.editor.text tag names segstart]]
-  return $segs
+    .editor.text mark set segstart 1.0
+    set segend [.editor.text search  -nocase -forw "<br>" segstart end]
+    while {$segend != {} && [.editor.text compare segstart < $segend] } {
+	set segment [.editor.text tag names "segstart + 1 char"]
+	lappend segs [list [.editor.text get segstart $segend] $segment]
+	.editor.text mark set segstart "$segend + 4 chars"
+	set segend [.editor.text search -nocase -forw "<br>" segstart end]
+    }
+    lappend segs [list [.editor.text get segstart end] [.editor.text tag names segstart]]
+    return $segs
 }
 
 proc segment-sentences {} {
- regsub -all "(\[\.!\?\])(\n| )" [.editor.text get 1.0 end] {\1<br>\2} result
- .editor.text delete 1.0 end
- .editor.text insert end $result
+    regsub -all "(\[\.!\?\])(\n| )" [.editor.text get 1.0 end] {\1<br>\2} result
+    .editor.text delete 1.0 end
+    .editor.text insert end $result
 }
 
 proc segment-paragraphs {} {
- regsub -all "(\n\n)" [.editor.text get 1.0 end] {<br>\1} result
- .editor.text delete 1.0 end
- .editor.text insert end $result
+    regsub -all "(\n\n)" [.editor.text get 1.0 end] {<br>\1} result
+    .editor.text delete 1.0 end
+    .editor.text insert end $result
 }

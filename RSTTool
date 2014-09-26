@@ -29,8 +29,11 @@ set EDITOR_FILES {new.tcl lifo.tcl textundo.tcl Editor1.tcl}
 # set global variables
 set x1 {}
 set x2 {}
+set seg_mrk_x {}
+set seg_mrk_y {}
 set disco_node {}
 set collapsed_nodes {}
+set txt_cursor xterm
 set step_file {}
 set currentfile {}
 set size_factor 130
@@ -111,7 +114,7 @@ set old_clr purple;
 .editor.textPrnt tag configure old -foreground $old_clr
 
 ######################################
-# Set bindings
+# Bindings
 
 # load/save functions
 bind all <Control-o> {open-file}
@@ -119,13 +122,31 @@ bind all <Control-s> {$save_func}
 bindtags .editor.text {all .editor.text Text . UndoBindings(1)}
 
 # node creation functions
-bind .editor.text <ButtonRelease-1> {
+.editor.text tag bind new <ButtonRelease-1> {
+    puts stderr "create-a-node-here really"
     create-a-node-here really
 }
 
-# operations on node
-.editor.text tag bind bmarker <Control-B1-Motion> {move-node .editor.text %x %y %X %Y}
-.editor.text tag bind bmarker <Control-Alt-ButtonPress-1> {delete-node .editor.text %x %y}
+# node modification operations
+.editor.text tag bind bmarker <Control-ButtonPress-1> {
+    set seg_mrk_x %x
+    set seg_mrk_y %y
+    set txt_cursor [lindex [.editor.text configure -cursor] end]
+    .editor.text configure -cursor question_arrow
+    break
+}
+
+.editor.text tag bind bmarker <Control-ButtonRelease-1> {
+    .editor.text configure -cursor $txt_cursor
+    move-node .editor.text %x %y
+    set seg_mrk_x {}
+    set seg_mrk_y {}
+    break
+}
+
+.editor.text tag bind bmarker <Control-Alt-ButtonRelease-3> {
+    delete-node .editor.text %x %y
+}
 
 ######################################
 # Methods
@@ -147,221 +168,4 @@ proc set-file-name { file_type { other_file {} } {create_dir {1}}} {
 	set uname $LOGIN
     }
     return [file join $dirname "$basename.$uname"]
-}
-
-proc open-step-file {} {
-    global step_file currentfile
-
-    set mystepfile [set-file-name step]
-    set step_file [open "$mystepfile" w 0644]
-}
-
-proc peruse-step-file {} {
-    global step_file currentfile
-    global PLATFORM
-
-    set mystepfile [set-file-name step]
-    set mystepfile [split $mystepfile .]
-    set mystepfile [lindex $mystepfile 0].[lindex $mystepfile 1]
-
-    if {$PLATFORM == "unix"} {
-	set dircontents [exec ls $currentfile.rst/]
-	set dircontents [split $dircontents "\n"]
-    } else {
-	set dircontents [exec command.com /c dir $currentfile.rst]
-    }
-    set stepfile_list {}
-    set index [lsearch $dircontents $mystepfile.*]
-    while {$index != -1} {
-	lappend stepfile_list [lindex $dircontents $index]
-	set dircontents [lreplace $dircontents $index $index]
-	set index [lsearch $dircontents $mystepfile.*]
-    }
-    if {[lindex $stepfile_list 1] != {}} {
-	set mystepfile [popup-choose-from-list "$stepfile_list" 0 0 NOcancel]
-    } else {
-	set mystepfile [lindex $stepfile_list 0]
-    }
-
-    set step_file [open $currentfile.rst/$mystepfile r]
-}
-
-proc save-step {the_step} {
-    global step_file currentfile
-    puts $step_file "$the_step"
-    flush $step_file
-}
-
-proc close-step-file {} {
-    global step_file
-    if {"$step_file" != {} } {
-	close $step_file
-    }
-}
-
-proc reload-it-all {filename} {
-    global step_file currentfile savenum last_text_node_id
-    global new_node_text newest_node theText usedText
-
-    set new_node_text {}
-    set theText {}
-    set usedText {}
-    reset-rst
-
-    load-file $filename
-    close-step-file
-
-    set step_file [open $currentfile.step r]
-
-    set my_list {}
-    set i 0
-    while {[gets $step_file my_command] >= 0} {
-	lappend my_list $my_command
-    }
-    close-step-file
-    open-step-file
-    set savenum 0
-    set last_text_node_id 0
-    foreach my_command $my_list {
-	save-step "$my_command"
-	if {[regexp {^autolink_nodes} $my_command]} {
-	    incr savenum
-	} elseif {[regexp {^create-a-node-here} $my_command]} {
-	    incr savenum
-	    incr last_text_node_id
-	    regsub really $my_command fake my_command
-	    eval $my_command
-	} elseif {[regexp {^add-this-to-a-node} $my_command]} {
-	    incr savenum
-	    regsub really $my_command fake my_command
-	    eval $my_command
-	} elseif {[regexp {^nextSentence} $my_command]} {
-	    regsub really $my_command fake my_command
-	    eval $my_command
-	}
-    }
-    reset-rst
-    if { $savenum > 0 } {
-	load-rst $savenum
-	set newest_node $last_text_node_id
-    } else {
-	reset-rst
-	redisplay-net
-    }
-    editor-message "loaded $currentfile.$savenum"
-}
-
-proc undo_by_reload { {really {1}} } {
-    global step_file currentfile savenum last_text_node_id
-    global new_node_text newest_node theText usedText collapsed_nodes
-    global editor_mode disco_node erased_nodes
-
-    set new_node_text {}
-    set theText {}
-    set usedText {}
-    set collapsed_nodes {}
-    set editor_mode normal
-
-    bind .editor.text <Control-ButtonRelease-1> {add-this-to-a-node really}
-    bind .editor.text <ButtonRelease-2> {add-this-to-a-node really}
-    bind .editor.text <ButtonRelease-1> {create-a-node-here really}
-
-    if {$really == 1} {
-	save-step #undo
-	#load text
-    }
-
-    reload-current-file
-
-    #3rd case - allows perusal of someone else's structure
-    if {$really != 2} {
-	close-step-file
-	open-step-file
-    } else {
-	peruse-step-file
-    }
-
-    set my_list {}
-    set i 0
-    while {[gets $step_file my_command] >= 0} {
-	lappend my_list $my_command
-	if {[regexp {^#undo} $my_command]} {
-	    set j $i
-	    set my_list [lreplace $my_list $j $j "#UNDID"]
-	    while { $j > 0 } {
-		incr j -1
-		set my_test [lindex $my_list $j]
-		if {[regexp {^#} $my_test]} {
-		} else {
-		    set my_list [lreplace $my_list $j $j "#$my_test"]
-		    if {[regexp {^collapsed_nodes} $my_test]} {
-		    } else {
-			set j 0
-		    }
-		}
-	    }
-	}
-	incr i
-    }
-    if {$really != 2} {
-	close-step-file
-	open-step-file
-    }
-    set savenum 0
-    set erased_nodes {}
-    set last_text_node_id 0
-    foreach my_command $my_list {
-	if {$really != 2} {
-	    save-step "$my_command"
-	}
-	if {[regexp {^autolink_nodes} $my_command]} {
-	    incr savenum
-	    set disco_node {}
-	    set-mode nothing
-	} elseif {[regexp {^disconnect_node} $my_command]} {
-	    incr savenum
-	    set method [lindex $my_command 2]
-	    if {$method == "disconnect"} {
-		set disco_node {}
-		set-mode nothing
-	    } else {
-		#method == modify
-		set disco_node [lindex $my_command 1]
-		set-mode link
-	    }
-	    lappend erased_nodes $disco_node
-	} elseif {[regexp {^create-a-node-here} $my_command]} {
-	    incr savenum
-	    incr last_text_node_id
-	    regsub really $my_command fake my_command
-	    eval $my_command
-	} elseif {[regexp {^add-this-to-a-node} $my_command]} {
-	    incr savenum
-	    regsub really $my_command fake my_command
-	    eval $my_command
-	} elseif {[regexp {^nextSentence} $my_command]} {
-	    regsub really $my_command fake my_command
-	    eval $my_command
-	} elseif {[regexp {^showText} $my_command]} {
-	    regsub really $my_command fake my_command
-	    eval $my_command
-	} elseif {[regexp {^collapsed_nodes} $my_command]} {
-	    eval "set $my_command"
-	}
-    }
-
-    reload_structure
-
-    editor-message "loaded $currentfile.$savenum"
-}
-
-proc reload_structure {} {
-    global savenum newest_node last_text_node_id
-    reset-rst
-
-    if { $savenum > 0 } {
-	load-rst $savenum
-	set newest_node $last_text_node_id
-    }
-    reestablish
 }

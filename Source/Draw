@@ -19,7 +19,8 @@ proc show-rst {} {
 
 proc display-node {nid} {
     global node rstw node_width group_nodes wtn
-    debug "display-node: $nid"
+    # puts stderr "display-node: $nid"
+
     set text $node($nid,text)
     if { $nid > 5000 } {
 	set text "$text"
@@ -28,15 +29,19 @@ proc display-node {nid} {
     }
     set xpos $node($nid,xpos)
     set ypos [expr $node($nid,ypos) + 2]
+    # puts stderr "display-node: xpos = $xpos"
+    # puts stderr "display-node: ypos = $ypos"
 
+    # puts stderr "display-node: step 1 (nid = $nid; text = $text)"
     if { $node($nid,constit) != {} } {
 	set color "blue"
 	set wgt [draw-text $rstw $node($nid,constit) $xpos $ypos\
 		     "-width $node_width -fill $color"]
 	set ypos [expr $ypos + 15]
     }
+    # puts stderr "display-node: step 2"
 
-    if [member $nid $group_nodes] {
+    if [group-node-p $nid] {
 	set color "green"
     } else {
 	set color "black"
@@ -44,16 +49,20 @@ proc display-node {nid} {
     set wgt [draw-text $rstw $text $xpos $ypos\
 		 "-width $node_width -fill $color"]
 
+    # puts stderr "display-node: step 3"
     set node($nid,textwgt) $wgt
     set wtn($wgt) $nid
+    # puts stderr "display-node: calling display-span $nid"
     display-span $nid
+    # puts stderr "display-node: display-arc $nid"
     display-arc $nid
 }
 
 proc display-span {nid} {
-    global rstw node  half_node_width last_text_node_id
-    debug "display-span: $nid $node($nid,span)"
+    global rstw node visible_nodes half_node_width last_text_node_id
+    # puts stderr "display-span: $nid $node($nid,span)"
     # draw span line, from start of first node, to end of second
+    # puts stderr "display-span: nid = $nid"
 
     if { $nid == 0 } { return }
 
@@ -89,6 +98,8 @@ proc display-span {nid} {
 
     # find the positions of the left & rightmost visible nodes
     set primary_children {}
+    # puts stderr "display-span: node($nid,type) == $node($nid,type)"
+    # puts stderr "display-span: node($nid,children) == $node($nid,children)"
     if { $node($nid,type) == "text" } {
     } elseif { $node($nid,type) == "span" } {
 	foreach child $node($nid,children) {
@@ -109,13 +120,19 @@ proc display-span {nid} {
 	    }
 	}
     }
+    # puts stderr "display-span: iterating over primary children ($primary_children)"
+    set max_generations 15000
     while { $primary_children != {} } {
 	set next_generation {}
+	incr max_generations -1
+	if {$max_generations == 0} {error "Maximum number of generations exceeds limit."}
+
 	foreach child $primary_children {
+	    # puts stderr "display-span: child = $child; node($child,children) = $node($child,children); next_generation = $next_generation; "
 	    foreach grandchild $node($child,children) {
 		lappend next_generation $grandchild
 	    }
-	    if { $node($child,visible) == 1} {
+	    if [info exists visible_nodes($child)] {
 		set this_xpos $node($child,xpos)
 		if { $this_xpos < $min } {set min $this_xpos}
 		if { $this_xpos > $max } {set max $this_xpos}
@@ -123,6 +140,7 @@ proc display-span {nid} {
 	}
 	set primary_children $next_generation
     }
+    # puts stderr "display-span: iteration done"
 
     set this_xpos $node($nid,xpos)
     if { $min == 999999 } { set min $this_xpos }
@@ -139,10 +157,11 @@ proc display-span {nid} {
 
 proc display-arc {sat} {
     global rstw node text_nodes relations visible_nodes
-    debug "display-arc: $sat"
     set nuc $node($sat,parent)
+    # puts stderr "display-arc: sat = $sat; nuc = $nuc"
     if {$nuc == {} || ! [info exists visible_nodes($nuc)]} {return}
 
+    # erase-arc $sat
     # set some variables
     set ypos $node($sat,ypos)
     set reltype [relation-type $node($sat,relname)]
@@ -151,6 +170,7 @@ proc display-arc {sat} {
     set nucbot [bottom-point [ntw $nuc]]
     set label $node($sat,relname)
 
+    # puts stderr "display-arc: reltype = $reltype; label = $label"
     switch -- $reltype {
 	embedded { 	#draw an embedded linker (an arc from nuctop to sattop)
 	    set color "blue"
@@ -179,26 +199,31 @@ proc display-arc {sat} {
 	    #NEW constit hack
 	}
 	default {  #draw an rst linker (an arc from nuctop to sattop)
+	    # puts stderr "display-arc: node($nuc,constit) = $node($nuc,constit)"
 	    if {$node($nuc,constit) != {}} {
 		set nucpnt [add-points [$rstw coords [ntw $nuc]] {0 -17}]
 	    } else {
 		set nucpnt [add-points [$rstw coords [ntw $nuc]] {0 -2}]
 	    }
-	    set midpnt [subtract-points [mid-point $nucpnt $satpnt] "0 20"]
+	    set midpnt [subtract-points [mid-point $nucpnt $satpnt] {0 20}]
 	    set labelpnt [subtract-points $midpnt {0 6}]
 	    # temp hack
 	    # puts "XXX: $nuc [expr [find-first-text-node $sat] - 1]"
 	    #   if { $nuc == [expr [find-first-text-node $sat] - 2] } {
 	    #       set  labelpnt [add-points $labelpnt "40 0"]
 	    #   }
+	    # puts stderr "display-arc: node($sat,arrowwgt) = draw-arc $rstw concat $nucpnt $midpnt $satpnt"
 	    set node($sat,arrowwgt)\
 		[draw-arc $rstw [concat $nucpnt $midpnt $satpnt]]
+	    # puts stderr "display-arc: node($sat,arrowwgt) = $node($sat,arrowwgt)"
 	}
     }
 
     # Draw the Label
     if { $reltype != "span" } {
-	set node($sat,labelwgt) [draw-text $rstw $label $labelpnt "-fill $color"]
+	# puts stderr "label = $label; labelpnt = $labelpnt"
+	set node($sat,labelwgt) [draw-text $rstw $label [lindex $labelpnt 0] \
+				     [lindex $labelpnt 1] "-fill $color"]
 	#TESTING
 	#  } elseif { $reltype == "span" && $node($sat,constit) != {} } {
 	#    set label $node($sat,constit)
@@ -208,44 +233,43 @@ proc display-arc {sat} {
 }
 
 proc erase-subtree {nid} {
-    global node
-    if $node($nid,visible) {
-	erase-node $nid
-	foreach cid $node($nid,children) {
-	    erase-subtree $cid
-	}
+    global node visible_nodes
+    erase-node $nid
+    foreach cid $node($nid,children) {
+	erase-subtree $cid
     }
 }
 
 proc erase-node {nid} {
     global rstw node visible_nodes
-    debug "erase-node: $nid $node($nid,spanwgt)"
-    if [info exists visible_nodes($nid)] {
+    # puts stderr "erase-node:  erasing nid = $nid"
 	$rstw delete [ntw $nid]
 	$rstw delete $node($nid,spanwgt)
 	set wtn([ntw $nid]) {}
 	set node($nid,textwgt) {}
 	set node($nid,spanwgt) {}
 	erase-arc $nid
-    }
 }
 
 proc erase-arc {nid} {
     global rstw node
     debug "erase-arc: $nid"
     if { $node($nid,arrowwgt) != {} } {
+	# puts stderr "erase-arc: erasing arc for nid = $nid"
 	$rstw delete $node($nid,arrowwgt)
+    }
+    if { $node($nid,labelwgt) != {} } {
 	$rstw delete $node($nid,labelwgt)
     }
 }
 
 proc redraw-subtree {nid} {
-    global node
+    global node visible_nodes
 
     erase-node $nid
     display-node $nid
     foreach cid $node($nid,children) {
-	if $node($cid,visible) {
+	if [info exists visible_nodes($cid)] {
 	    redraw-subtree $cid
 	}
     }
@@ -255,11 +279,16 @@ proc redisplay-node {nid} {
     # wipes the old version before drawing
     global node
 
+    # puts stderr "redisplay-node: nid = $nid; node($nid,textwgt) = $node($nid,textwgt)"
     if { $node($nid,textwgt) != {} } {
+	# puts stderr "redisplay-node: calling erase-node $nid"
 	erase-node $nid
+	# puts stderr "redisplay-node: erase-node $nid done"
     }
-
+    # puts stderr "redisplay-node: calling display-node $nid"
+    # puts stderr "redisplay-node: display-node $nid"
     display-node $nid
+    # puts stderr "redisplay-node: display-node $nid done"
 }
 
 proc redraw-child-arcs {nid} {
