@@ -62,7 +62,7 @@ proc reset-and-redisplay {} {
 
 # TODO: to be checked thoroughly
 proc open-file {} {
-    global currentfile trgfname
+    global currentfile trgfname trgdir
     global save_fmt save_func save_num load_func
     global node msgs2extnid msgid2nid;
 
@@ -386,7 +386,6 @@ set currentsat {}
 proc unlink-node {sat {redraw 1}} {
     global node nid2msgid group_nodes currentmode
 
-    puts stderr "unlink-node: sat = $sat; node($sat,parent) == $node($sat,parent)"
     # 1. handle missed clicks
     if {$sat == {} || $node($sat,parent) == {}} {return}
 
@@ -401,7 +400,6 @@ proc unlink-node {sat {redraw 1}} {
     }
     # 2. Redraw satellite substructure
     if {$redraw == 1} {
-	puts stderr "unlink-node: y-layout-subtree $sat"
 	y-layout-subtree $sat
     }
 
@@ -420,14 +418,10 @@ proc unlink-node {sat {redraw 1}} {
 	    }
 	}
     }
-    puts stderr "unlink-node: dgn = $dgn"
     if {$dgn} {
-	puts stderr "unlink-node: destroy-group-node $spannid $nuc $redraw"
 	destroy-group-node $spannid $nuc $redraw
     }
-    puts stderr "unlink-node: restructure-upwards $nuc $redraw"
     restructure-upwards $nuc $redraw
-    puts stderr "unlink-node: restructure-upwards done"
 }
 
 ##################################################
@@ -439,14 +433,11 @@ proc destroy-node {nid {redraw 1}} {
     unlink-node $nid 0
 
     # 2. delete the graphic presentation
-    puts stderr "destroy-node: erase-node $nid"
     erase-node $nid
 
     # 3. remove node from visible node list and drop all its
     # structural information
-    puts stderr "destroy-node: clear-node $nid"
     clear-node $nid
-    puts stderr "destroy-node: clear-node done"
 }
 
 # Delete node `nid` and re-link its possible child to the parent of node `nid`

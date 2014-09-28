@@ -62,7 +62,7 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
 	set my_current current
 	if {[.editor.text compare $my_current > 1.0] && \
 		[string is space [.editor.text get $my_current]]} {
-	    set my_current "$my_current wordstart"
+	    set my_current "$my_current wordend"
 	}
     }
     # determine position of the last non-space character
@@ -148,6 +148,7 @@ proc make-node {text type {start_pos {}} {end_pos {}}} {
     global node crntMsgId msgid2nid nid2msgid visible_nodes
     if { $type ==  "text"  } {
 	set nid [unique-text-node-id]
+	clear-node $nid
 	# save mapping from node id to message id
 	set nid2msgid($nid) [list $crntMsgId]
 	# save mapping from message id to node id
@@ -158,8 +159,8 @@ proc make-node {text type {start_pos {}} {end_pos {}}} {
 	}
     } else {
 	set nid [unique-group-node-id]
+	clear-node $nid
     }
-    clear-node $nid
     set node($nid,text) $text
     set node($nid,type) $type
     set node($nid,offsets) [list $start_pos $end_pos]
@@ -181,15 +182,21 @@ proc move-node {a_path x y} {
     set old_idx "@$seg_mrk_x,$seg_mrk_y wordstart"
     set new_idx "@$x,$y"
     if [string is space [$a_path get $new_idx]] {
-	set new_idx "$new_idx wordstart"
+	while {[$a_path compare 1.0 < $new_idx] && \
+		   [string is space [$a_path get $new_idx]]} {
+	    set new_idx "$new_idx -1 chars"
+	}
     } else {
 	set new_idx "$new_idx wordend"
     }
+
     # obtain id of the node at initial coordinates
     lassign [get-node-number $a_path $seg_mrk_x $seg_mrk_y] inid istart iend
     # if no node id could be obtained or the node did not move, return
-    puts stderr "move-node: old_idx = $old_idx"
-    if {$istart == {} || [$a_path compare "$old_idx" == "$new_idx"]} {return}
+    if {$istart == {} || [$a_path compare "$old_idx" == "$new_idx"] || \
+	    ([$a_path compare "$new_idx" >= "$istart"] && \
+		 [$a_path compare "$new_idx" <= "$iend"])} {return}
+    set segmarker [$a_path get $istart $iend];    # obtain text of segment marker
 
     # obtain coordinates and id's of the next and previous nodes
     set nxt_start [lindex [$a_path tag nextrange bmarker $iend] 0]
@@ -197,11 +204,6 @@ proc move-node {a_path x y} {
 
     set prv_start [lindex [$a_path tag prevrange bmarker $istart] 0]
     lassign [get-node-number $a_path {} {} $prv_start] prv_nid prv_start prv_end
-
-    puts stderr "move-node: new_idx = $new_idx"
-    puts stderr "move-node: old_idx = $old_idx"
-    puts stderr "move-node: nxt_nid = $nxt_nid; nxt_start = $nxt_start; nxt_end = $nxt_end"
-    puts stderr "move-node: prv_nid = $prv_nid; prv_start = $prv_start; prv_end = $prv_end"
 
     # determine where the next location of the cursor is and find
     # adjacent node
@@ -213,51 +215,52 @@ proc move-node {a_path x y} {
     	if {$prv_nid != {} && [$a_path compare "$new_idx" <= "$prv_end"]} {
     	    set new_idx "$prv_end +1 chars wordend"
     	}
+
     	set delta_txt [$a_path get "$new_idx" "$old_idx -1 chars"]
-	puts stderr "move-node: delta_txt == '$delta_txt'"
+	set delta [string length "$delta_txt"]
     	# append delta text to adjacent node, if one exists, or simply
     	# remove `old` tags otherwise
-	puts stderr "move-node: a) node($inid,text) == $node($inid,text)"
     	set node($inid,text) [string range $node($inid,text) 0 \
 				  [expr [string length "$node($inid,text)"] - \
-				       [string length "$delta_txt"] - 1]]
-	puts stderr "move-node: b) node($inid,text) == $node($inid,text)"
+				       $delta - 1]]
+    	set node($inid,offsets) [subtract-points $node($inid,offsets) [list 0 $delta]]
     	if {$nxt_nid == {}} {
     	    $a_path tag remove old "$new_idx" "$old_idx"
     	    $a_path tag add new "$new_idx" "$old_idx"
     	} else {
     	    set node($nxt_nid,text) "$delta_txt$node($nxt_nid,text)"
+	    set node($nxt_nid,offsets) [subtract-points $node($nxt_nid,offsets) [list $delta 0]]
     	}
+	$a_path delete $istart $iend;		  # delete segment marker
+	$a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
     } else {
     	# if node has shrinked, set the minimum possible index of the
     	# new shrinked node to the end of the first word in the
     	# original span
     	if {$nxt_nid != {} && [$a_path compare "$new_idx" >= "$nxt_start"]} {
-    	    set new_idx "$prv_end -1 chars wordstart"
-    	}
-    	set delta_txt [$a_path get "$old_idx wordend" "$new_idx"]
-	puts stderr "move-node: delta_txt == '$delta_txt'"
-    	# append delta text to adjacent node, if one exists, or simply
-    	# remove `old` tags otherwise
-	puts stderr "move-node: a) node($inid,text) == $node($inid,text)"
-    	set node($inid,text) "$node($inid,text)$delta_txt"
-	puts stderr "move-node: b) node($inid,text) == $node($inid,text)"
-    	if {$nxt_nid == {}} {
-    	    $a_path tag remove new "$old_idx" "$new_idx"
-    	    $a_path tag add old "$old_idx" "$new_idx"
-    	} else {
-    	    set node($nxt_nid,text) [string range $node($nxt_nid,text) \
-					 [expr [string length $delta_txt] - 1] end]
-    	}
+	    set new_idx $nxt_start
+    	    while {[$a_path compare 1.0 < $new_idx] && ! [string is space [$a_path get $new_idx]]} {
+		set new_idx "$new_idx -1 chars"
+	    }
+		   set new_idx "$new_idx wordend"
+	}
+	set delta_txt [$a_path get "$iend" "$new_idx"]
+	set delta [string length "$delta_txt"]
+	# append delta text to adjacent node, if one exists, or simply
+	# remove `old` tags otherwise
+	set node($inid,text) "$node($inid,text)$delta_txt"
+	set node($inid,offsets) [add-points $node($inid,offsets) [list 0 $delta]]
+	if {$nxt_nid == {}} {
+	    $a_path tag remove new "$old_idx" "$new_idx"
+	    $a_path tag add old "$old_idx" "$new_idx"
+	} else {
+	    set node($nxt_nid,text) [string range $node($nxt_nid,text) $delta end]
+	    set node($nxt_nid,offsets) [add-points $node($nxt_nid,offsets) [list $delta 0]]
+	}
+	$a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
+	$a_path delete $istart $iend;		  # delete segment marker
     }
-    # delete segment marker at old position  and insert it at new one
-    set segmarker [$a_path get $istart $iend];    # obtain text of segment marker
-    $a_path delete $istart $iend;		  # delete segment marker
-    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
     redisplay-net
-    puts stderr "move-node: exiting"
-
-    # exit 66
 }
 
 proc delete-node {a_path x y} {
@@ -287,17 +290,15 @@ proc delete-node {a_path x y} {
 	# be deleted
 	if {$prevend == {}} {set prevend 1.0}
 	$a_path tag remove old $prevend $istart
+	$a_path tag add new $prevend $istart
     }
     # delete node marker
     $a_path delete $istart $iend
     # adjust offset shifts of offsets of all successive nodes
     set delta [string length [$a_path get $istart $iend]]
     set offsetShift [expr $offsetShift - $delta]
-    puts stderr "delete-node: destroy-node $inid"
     destroy-node $inid
-    puts stderr "delete-node: calling redisplay-net"
     redisplay-net
-    puts stderr "delete-node: redisplay-net done"
 }
 
 proc clear-node {nid} {
@@ -328,7 +329,6 @@ proc clear-node {nid} {
     set node($nid,parent) {}
 
     if [info exists visible_nodes($nid)] {unset visible_nodes($nid)}
-    puts stderr "clear-node: nid2msgid($nid) == $nid2msgid($nid) ([llength $nid2msgid($nid)])"
     if {[info exists nid2msgid($nid)]} {
 	# if we delete a span node that connects two messages, we drop
 	# all information about the connection between these two
@@ -344,16 +344,12 @@ proc clear-node {nid} {
 	    set imsgid $nid2msgid($nid)
 	    set msgid2nid($imsgid) [ldelete $msgid2nid($imsgid) $nid]
 	    set chmsgid {}
-	    puts stderr "clear-node: nid = $nid; node($nid,children) = $node($nid,children)"
 	    foreach chnid $node($nid,children) {
-		puts stderr "clear-node: chnid = $chnid"
 		set node($chnid,parent) {}
 		set chmsgid $nid2msgid($chnid)
-		puts stderr "clear-node: chmsgid = $chmsgid"
 		if {$imsgid != $chmsgid} {
 		    set mkey "$imsgid,$chmsgid"
 		    if [info exists msgs2extnid($mkey)] {
-			puts stderr "clear-node: nid = $nid; chnid = $chnid; mkey = $mkey; msgs2extnid($mkey) == $msgs2extnid($mkey)"
 			foreach {mpnid mchnid rel} $msgs2extnid($mkey) {
 			    if {$mchnid == $nid} {
 				if {$node($mpnid,type) == "span" && \

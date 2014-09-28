@@ -230,7 +230,6 @@ proc showSentences {path_name msg_id {show_rest 0}} {
     # display already EDU segements in widget `path_name`
     global theForrest msgid2nid node
     # obtain annotated EDUs for given message
-    puts stderr "showSentences: 0) ranges new = '[$path_name tag ranges new]'"
     if {! [info exists theForrest($msg_id)]} {
 	return {0 0};
     } elseif {[info exists msgid2nid($msg_id)]} {
@@ -281,8 +280,6 @@ proc showSentences {path_name msg_id {show_rest 0}} {
     if {$show_rest} {
 	# insert the leftover text
 	$path_name insert end [string range $txt $end end] new
-	puts stderr "showSentences: inserted text range = '[string range $txt $end end]'"
-	puts stderr "showSentences: ranges new = '[$path_name tag ranges new]'"
 	# add tag `new` to the newly inserted text
     	set end end
     }

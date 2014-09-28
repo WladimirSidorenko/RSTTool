@@ -12,8 +12,6 @@ proc resize-display {change} {
 	set ymax [max $ymax $node($nid,ypos)]
 	set xmax [max $xmax $node($nid,xpos)]
     }
-    puts stderr "resize-display: ymax = $ymax"
-    puts stderr "resize-display: xmax = $xmax"
     $rstw configure -scrollregion "0 1 [expr $xmax + $node_width]\
 	     [expr $ymax + $size_factor]"
 }
@@ -31,11 +29,8 @@ proc redisplay-net {} {
     $rstw delete all
 
     # 2. layout and draw the new
-    puts stderr "redisplay-net: calling x-layout"
     x-layout
-    puts stderr "redisplay-net: calling y-layout"
     y-layout
-    puts stderr "redisplay-net: y-layout done"
 
     # constrain the scrollbars
     set ymax 0
@@ -59,7 +54,6 @@ proc x-layout {} {
     global visible_nodes
 
     set vsorted [lsort -integer [array names visible_nodes]]
-    puts stderr "x-layout: vsorted = $vsorted"
     set xinc [expr $node_width + 10]
     set xpos [expr $node_width / 2 + 30]
     foreach nid $vsorted {
@@ -78,9 +72,7 @@ proc x-layout {} {
 
     foreach nid $vsorted {
     	if [group-node-p $nid] {
-	    puts stderr "x-layout: xlayout-group-node $nid"
     	    xlayout-group-node $nid
-	    puts stderr "x-layout: xlayout-group-node $nid done"
     	}
     }
     # foreach nid $text_nodes {
@@ -111,7 +103,6 @@ proc xlayout-group-node {nid} {
 
     # 1. Collect x coords of constituents
     set x_coords {}
-    puts stderr "xlayout-group-node: nid = $nid; node($nid,children) = $node($nid,children)"
     foreach dep $node($nid,children) {
 	#  [group-relation-p $node($dep,relname)]
 	if [info exists visible_nodes($dep)] {

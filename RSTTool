@@ -123,7 +123,6 @@ bindtags .editor.text {all .editor.text Text . UndoBindings(1)}
 
 # node creation functions
 .editor.text tag bind new <ButtonRelease-1> {
-    puts stderr "create-a-node-here really"
     create-a-node-here really
 }
 
