@@ -5,6 +5,21 @@
 ###########
 # Methods #
 ###########
+
+# return true, if prnt_nid is among ancestors of the `chld_nid`
+proc is-ancestor {chld_nid prnt_nid} {
+    global node
+
+    set pnid $node($chld_nid,parent)
+    if {$pnid == {}} {
+	return 0;
+    } elseif {$pnid == $prnt_nid} {
+	return 1;
+    } else {
+	return [is-ancestor $pnid $prnt_nid]
+    }
+}
+
 proc get-node-number {a_path x y {start {}}} {
     # set default return values
     set nnumber {}

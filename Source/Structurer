@@ -2032,9 +2032,16 @@ proc expand {nid {really {}} } {
 	if {$node($dragged_node,parent) != {} && \
 		[info exists visible_nodes($node($dragged_node,parent))]} {return}
 	if {$type == {} && $clicked_node == $dragged_node} {return}
+	# check that clicked and dragged node are not already
+	# ancestors of each other, since it would create an infinite
+	# loop, if we tried to connect them again
+	if {[is-ancestor $clicked_node $dragged_node] || [is-ancestor $dragged_node $clicked_node]} {
+	    return
+	}
+	# prevent non-projective edges, i.e. a given node can only be
+	# linked to its adjacent span
 
-	set this_step "autolink_nodes $clicked_node $dragged_node"
-	# set par $node($clicked_node,parent)
+	#set par $node($clicked_node,parent)
 	set children $node($clicked_node,children)
 	if { $children != {} && ! [info exists visible_nodes([lindex $children 0])]} {
 	    expand $clicked_node
@@ -2070,6 +2077,9 @@ proc expand {nid {really {}} } {
 	    } elseif {$clicked_node_prnt_id == $dragged_msgid} {
 		set satellite ""
 		set satellite_embedded ""
+	    } else {
+		# if both nodes belong to the same message, it can
+		# still be the case that
 	    }
 	    set type [popup-choose-from-list \
 			  [concat $nucleus $satellite $nucleus_embedded $satellite_embedded \
@@ -2136,6 +2146,15 @@ proc expand {nid {really {}} } {
 	    set node($clicked_node,constit) $relation
 	} else {
 	    # standard algorithm
+
+	    # check that node which we are going to connect to, is not
+	    # already someone else's satellite (subject to change, maybe
+	    # some type-checking should be applied here)
+	    if {($type == "nucleus" || $type == "nucleus-embedded") && \
+		    $node($clicked_node,parent) != {} && \
+		    [info exists visible_nodes($node($clicked_node,parent))]} {
+		return
+	    }
 	    set relation [choose-label $clicked_node $type $ext_connection]
 	    if {$relation == {}} {return}
 
