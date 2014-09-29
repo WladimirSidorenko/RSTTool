@@ -233,6 +233,7 @@ proc showSentences {path_name msg_id {show_rest 0}} {
     if {! [info exists theForrest($msg_id)]} {
 	return {0 0};
     } elseif {[info exists msgid2nid($msg_id)]} {
+	# puts stderr "showSentences: msgid2nid($msg_id) == $msgid2nid($msg_id)"
 	set nids $msgid2nid($msg_id);
     } elseif {$show_rest} {
 	set nids {};

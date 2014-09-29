@@ -119,6 +119,7 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
 
     if { "$do_it" == "really" } {
   	incr savenum
+	# puts stderr "create-a-node-here: offsetShift == $offsetShift"
 	set start_pos [expr [.editor.text count -chars 1.0 sel.first] - $offsetShift]
 	set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $offsetShift]
   	set newest_node [make-node $new_node_text "text" $start_pos $end_pos]
@@ -158,7 +159,9 @@ proc make-node {text type {start_pos {}} {end_pos {}}} {
 	set nid2msgid($nid) [list $crntMsgId]
 	# save mapping from message id to node id
 	if {[info exists msgid2nid($crntMsgId)]} {
-	    lappend msgid2nid($crntMsgId) $nid
+	    # since we might add node after some group nodes were
+	    # created, we need to re-sort the node list
+	    set msgid2nid($crntMsgId) [lsort -integer [concat $msgid2nid($crntMsgId) $nid]]
 	} else {
 	    set msgid2nid($crntMsgId) [list $nid]
 	}
@@ -169,6 +172,7 @@ proc make-node {text type {start_pos {}} {end_pos {}}} {
     set node($nid,text) $text
     set node($nid,type) $type
     set node($nid,offsets) [list $start_pos $end_pos]
+    # puts stderr "make-node: node($nid,offsets) == $node($nid,offsets)"
     set visible_nodes($nid) 1
 
     if {$type ==  "text"} {
@@ -298,11 +302,13 @@ proc delete-node {a_path x y} {
 	$a_path tag remove old $prevend $istart
 	$a_path tag add new $prevend $istart
     }
-    # delete node marker
-    $a_path delete $istart $iend
     # adjust offset shifts of offsets of all successive nodes
     set delta [string length [$a_path get $istart $iend]]
-    set offsetShift [expr $offsetShift - $delta]
+    if {[string length [$a_path get $iend end]] > 0} {
+	set offsetShift [expr $offsetShift - $delta]
+    }
+    # delete node marker
+    $a_path delete $istart $iend
     destroy-node $inid
     redisplay-net
 }
