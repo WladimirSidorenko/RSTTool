@@ -72,8 +72,8 @@ proc open-file {} {
 
     if {$filename == $currentfile} {
 	set result0 [tk_dialog .d {File Already Open} "File $filename already open."\
-			 warning 0 {Replace} "Cancel"]
-	if {$result0 == 1} {return}
+			 warning 1 "Replace" "Reload" "Cancel"]
+	if {$result0 == 2} {return}
     } else {
 	# save annotation for current file
 	if {$currentfile != {}} {$save_func}
@@ -148,6 +148,9 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
 	file delete -- $trgfname
     } elseif { $result0 == 1 } {
 	set currentfile $filename
+	array unset node
+	array unset msgs2extnid
+	array unset msgid2nid;
 	$load_func
     }
     # load text from new file
@@ -398,28 +401,44 @@ proc unlink-node {sat {redraw 1}} {
     if {[info exists node($nuc,parent)] && $node($nuc,relname) == "span"} {
 	set spannid $node($nuc,parent)
     }
+    # puts stderr "unlink-node: sat = $sat"
+    # puts stderr "unlink-node: nuc = $nuc"
+    # puts stderr "unlink-node: spannid = $spannid"
+
     # 2. Redraw satellite substructure
-    if {$redraw == 1} {
-	y-layout-subtree $sat
-    }
+    if {$redraw == 1} {y-layout-subtree $sat}
 
     # 3. If parent has no more children, delete span node and shift
     # the parent up the structure
     set dgn 0
     if {$node($nuc,children) == {}} {
 	set dgn 1
+	# puts stderr "unlink-node: node($nuc,children) = {}"
     } elseif [group-node-p $nuc] {
 	set dgn 1
-	foreach chnid $node($nuc,children) {
-	    if {$node($chnid,relname) != "span"} {
-		destroy-node $nuc
-		set dgn 0
-		break
+	# puts stderr "unlink-node: $nuc is group node"
+	# here, we have to differentiate between cases where `nuc` and
+	# `sat` belong to same or to different messages
+	if {$nid2msgid($nuc) == $nid2msgid($sat)} {
+	    foreach chnid $node($nuc,children) {
+		# puts stderr "unlink-node: chnid = $chnid"
+		# puts stderr "unlink-node: node($chnid,relname) = $node($chnid,relname)"
+		if {$node($chnid,relname) != "span"} {
+		    destroy-node $nuc
+		    set dgn 0
+		    break
+		}
 	    }
 	}
     }
     if {$dgn} {
-	destroy-group-node $spannid $nuc $redraw
+	if {$spannid != {}} {
+	    # puts stderr "destroy-group-node $spannid $nuc $redraw"
+	    destroy-group-node $spannid $nuc $redraw
+	} else {
+	    # TODO: check, if this function works appropriately in all contexts!!!
+	    destroy-node $nuc $redraw
+	}
     }
     restructure-upwards $nuc $redraw
 }
@@ -446,21 +465,32 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
 
     if {$gnid == {}} {return}
     set prnt_msg_id $nid2msgid($gnid)
+    # remove group node which connects two messages from msgs2extnid
+    if {[llength $prnt_msg_id] > 1} {
+	set mkey [join $prnt_msg_id ","]
+	# puts stderr "destroy-group-node: msgs2extnid($mkey)"
+	if [info exists msgs2extnid($mkey)] {
+	    # puts stderr "destroy-group-node: msgs2extnid($mkey) exists - deleting"
+	    unset msgs2extnid($mkey)
+	}
+    }
+    # delete `gnid` from the list of children of its parent
     set gprnt $node($gnid,parent)
     set node($gnid,parent) {}
-    # delete `gnid` from the list of children of its parent
     if {$gprnt != {}} {
 	set node($gprnt,children) [concat [ldelete $node($gprnt,children) $gnid] $replnid]
     }
-
-    # append relacement node to the list of grand parent's
-    # children
-    # re-link all children of `gnid` to `replnid` except `replnid` itself
+    # append relacement node to the list of grand parent's children;
+    # re-link all children of `gnid` to `replnid` except `replnid`
+    # itself
     if {$replnid != {}} {
 	set node($replnid,parent) $gprnt
 	set node($gnid,children) [ldelete $node($gnid,children) $replnid]
 	set node($replnid,children) [lsort -integer [concat $node($replnid,children) \
 							 $node($gnid,children)]]
+	if {$node($replnid,relname) == "span"} {
+	    set node($replnid,relname) $node($gnid,relname)
+	}
     }
 
     foreach chnid $node($gnid,children) {
@@ -468,9 +498,11 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
 	set chld_msg_id $nid2msgid($chnid)
 	# if `gnid` has children in other messages, then update
 	# information stored in msgs2extnid
-	if {$prnt_msg_id != $chld_msg_id} {
+	if {[llength $prnt_msg_id] == 1 && $prnt_msg_id != $chld_msg_id} {
 	    set mkey "$prnt_msg_id,$chld_msg_id"
+	    # puts stderr "destroy-group-node: mkey = $mkey"
 	    if [info exists msgs2extnid($mkey)] {
+		# puts stderr "destroy-group-node: msgs2extnid($mkey) exists"
 		while {[set idx [lsearch -exact $msgs2extnid($mkey) $gnid]] != -1} {
 		    set msgs2extnid($mkey) [lreplace $msgs2extnid($mkey) $idx $idx $replnid]
 		}
@@ -489,8 +521,10 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
 	}
     }
     # remove all children from `gnid`
+    # puts stderr "destroy-group-node: erase-subtree $gnid"
     erase-subtree $gnid
     set node($gnid,children) {}
+    # puts stderr "destroy-group-node: destroy-node $gnid $redraw"
     destroy-node $gnid $redraw
 }
 
@@ -574,7 +608,6 @@ proc change_constit {nid {relname {}} } {
 	set node($nid,constit) $constit_name
 	#    redisplay-net
 	redisplay-node $nid
-	save-step "change_constit $nid $constit_name"
     }
     set-mode $cmode
 }
@@ -608,7 +641,6 @@ proc change_rel {nid {relname {}} } {
 	} else {
 	    set node($nid,relname) $relname
 	}
-	save-step "change_rel $nid $relname"
 	#    redisplay-net
 	redisplay-node $nid
     }
@@ -1116,28 +1148,23 @@ proc expand {nid {really {}} } {
 	bind $rstw <Control-ButtonRelease-1> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
-		collapse [clicked-node %x %y]
-		# reestablish
-		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
+		collapse [clicked-node %x %y]}
+	}
 	bind $rstw <ButtonRelease-2> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
-		collapse [clicked-node %x %y]
-		# reestablish
-		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
+		collapse [clicked-node %x %y]}
+	}
 	bind $rstw <Shift-Control-ButtonRelease-1> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
-		expand [clicked-node %x %y]
-		# reestablish
-		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
+		expand [clicked-node %x %y]}
+	}
 	bind $rstw <ButtonRelease-3> {
 	    if {[clicked-node %x %y] != 0} {
 		compare-click-times
-		expand [clicked-node %x %y]
-		# reestablish
-		save-step "collapsed_nodes \{$collapsed_nodes\}" } }
-
+		expand [clicked-node %x %y]}
+	}
 	switch -- $mode {
 	    autolink { $rstw config -cursor hand2
 		bind $rstw <ButtonPress-1> {}
@@ -1967,7 +1994,7 @@ proc expand {nid {really {}} } {
 
 	    #bookkeeping
 	    set this_step "disconnect_node $clicked_node $method"
-	    save-step "$this_step"
+	    # save-step "$this_step"
 	    incr savenum
 	    # save-rst $savenum
 	    if {$method == "disconnect"} {
@@ -2119,14 +2146,14 @@ proc expand {nid {really {}} } {
 	    # show new group node
 	    set visible_nodes($last_group_node_id) 1
 	    if {$ext_connection} {
-		# if dragged and clicked nodes belong to different messages,
-		# remember both messages for the new group node
-		set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
 		# remember ids of messages which the new external node
 		# connects.  Additionally, if external parent already has an
 		# ancestor, link the newly create common group node to that
 		# ancestor.
 		if {$clicked_is_prnt} {
+		    # if dragged and clicked nodes belong to different messages,
+		    # remember both messages for the new group node
+		    set nid2msgid($last_group_node_id) [list $clicked_msgid $dragged_msgid]
 		    # if {[info exists node($clicked_node,parent)] && \
 					   # 	    $node($clicked_node,parent) != {}} {
 		    # 	set $node($last_group_node_id,parent) $node($clicked_node,parent)
@@ -2134,6 +2161,7 @@ proc expand {nid {really {}} } {
 		    set msgs2extnid($clicked_msgid,$dragged_msgid) [list $last_group_node_id $clicked_node span \
 									$clicked_node $dragged_node $relation]
 		} else {
+		    set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
 		    # if {[info exists node($dragged_node,parent)] && \
 			    # 	    $node($dragged_node,parent) != {}} {
 		    # 	set $node($last_group_node_id,parent) $node($dragged_node,parent)
@@ -2171,7 +2199,7 @@ proc expand {nid {really {}} } {
 	append this_step " $relation"
 	append this_step " $ambiguity"
 	append this_step " $last_group_node_id"
-	save-step "$this_step"
+	# save-step "$this_step"
 	incr savenum
 	# save-rst $savenum
 	if { $type == "schema" } {

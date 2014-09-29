@@ -11,7 +11,7 @@
 if {![winfo exists .editor]} {
   scrolled-text .editor -height 30 -titlevar currentfile\
      -font -*-Courier-Medium-R-Normal--16-140-*-*-*-*-*-*\
-     -messagebar t 
+     -messagebar t
   global undoer
   set undoer [new textUndoer .editor.text]
 }
@@ -96,8 +96,8 @@ proc load-file {filename {really {1}} } {
   set currentfile $filename
   if { $really == 1 } {
     open-step-file
-  } 
-    
+  }
+
   editor-message "opened file:  $filename"
   .editor.text insert end "\n"
   .editor.text tag add old 1.0 1.0
@@ -129,9 +129,6 @@ proc showText { {do_it {}} } {
     .editor.text tag add new 1.0 end
   } else {
     .editor.text tag add new $old_new_first end
-  }
-  if {"$do_it" == "really"} {
-    save-step "showText really"
   }
 }
 
@@ -201,9 +198,6 @@ proc nextSentence { {do_it {}} } {
     .editor.text tag add new 1.0 end
   } else {
     .editor.text tag add new $old_new_first end
-  }
-  if {"$do_it" == "really"} {
-    save-step "nextSentence really"
   }
 }
 

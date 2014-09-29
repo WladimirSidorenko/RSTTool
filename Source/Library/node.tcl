@@ -60,9 +60,13 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     # character is a space
     if {$my_current == {}} {
 	set my_current current
-	if {[.editor.text compare $my_current > 1.0] && \
-		[string is space [.editor.text get $my_current]]} {
-	    set my_current "$my_current wordend"
+	while {[.editor.text compare $my_current > 1.0]} {
+	    if {[string is space [.editor.text get $my_current]]} {
+		set my_current "$my_current -1 chars"
+	    } else {
+		# set my_current "$my_current wordend"
+		break
+	    }
 	}
     }
     # determine position of the last non-space character
@@ -75,7 +79,8 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
 	    break
 	}
     }
-
+    # puts stderr "create-a-node-here: my_current = $my_current"
+    # puts stderr "create-a-node-here: my_end = $my_end"
     # put mark called `insert` before current position -- current is position
     # nearest to the mouse pointer
     .editor.text mark set insert $my_current
@@ -269,6 +274,7 @@ proc delete-node {a_path x y} {
 
     # obtain number of node located at coordinates (x, y)
     lassign [get-node-number $a_path $x $y] inid istart iend
+    # puts stderr "delete-node: inid = $inid"
     if {$istart == {}} {
 	return
     } elseif {$inid == $last_text_node_id} {

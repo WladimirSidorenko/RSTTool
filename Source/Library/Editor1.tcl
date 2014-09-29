@@ -4,8 +4,8 @@
 # And Procedures to support it
 # This version supports single file at a time only
 
-# TO DO
-#5. ctl-x s should work
+# TO DO:
+# 5. ctl-x s should work
 
 ######################################
 # Define the Frame

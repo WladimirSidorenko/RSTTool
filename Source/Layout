@@ -234,7 +234,6 @@ proc y-layout-node {nid} {
     #  Position this node under its parent
     set nuc $node($nid,parent)
     # 1. Position this node
-
     if {$nuc == {}} {
 	# toplevel node - position at top
 	set node($nid,ypos) $y_top
