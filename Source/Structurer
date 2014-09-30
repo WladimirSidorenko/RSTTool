@@ -96,9 +96,11 @@ Click \"Open\" to select another file or \"New\" to create a new one.\n" info 0 
 
 	# get the name of the file from which annotation should be loaded
 	if {$result1 == 1} {
-	    set trgfname [fileselect "Select File" [file tail $trgfname] 0]
-	} elseif {$result1 == 2} {
+	    set currentfile $filename
 	    set trgfname [fileselect "Select File" [file tail $trgfname] 1]
+	} elseif {$result1 == 2} {
+	    set currentfile $filename
+	    set trgfname [fileselect "Select File" [file tail $trgfname] 0]
 	} elseif {$result1 != 0} {
 	    return;
 	}
