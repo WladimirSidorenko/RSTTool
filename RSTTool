@@ -69,6 +69,11 @@ array set nid2msgid {};	  # mapping from node id to message id
 array set help {};
 set helpmenu {relation_defs interface}
 
+# set default appearance
+tk_setPalette background gray35 foreground white \
+    activebackground white activeforeground red
+catch {source $env(HOME)/.wishrc}
+
 ######################################
 # Load modules
 proc load-module {Path Files} {
@@ -94,14 +99,12 @@ set-mode link
 
 ######################################
 # Set appearance
-tk_setPalette background gray35 foreground white \
-    highlightbackground gray10 activebackground white activeforeground red
-catch {source $env(HOME)/.wishrc}
-
 .editor.text configure -bg white
 .editor.textPrnt configure -bg white
 .editor.text configure -fg black
 .editor.textPrnt configure -fg black
+
+$rstw configure -bg white
 
 set old_clr purple;
 .editor.text tag configure old -foreground $old_clr

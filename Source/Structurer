@@ -52,6 +52,9 @@ menu .menubar
 foreach m {File View Print Help} {
     set $m [menu .menubar.m$m -tearoff 0]
     .menubar add cascade -label $m -menu .menubar.m$m
+    if {[tk windowingsystem]== "aqua"} {
+	.menubar.m$m configure -fg black
+    }
 }
 #menu items...
 
@@ -325,6 +328,7 @@ if {[winfo exists .rstframe]} {
 		  -yscrollcommand ".rstframe.yscroll set"\
 		  -xscrollcommand ".rstframe.xscroll set"\
 		  -height 600 -width 1000]
+
     scrollbar .rstframe.yscroll -orient vertical\
 	-command ".rstframe.canvas yview"
     scrollbar .rstframe.xscroll -orient horizontal\
