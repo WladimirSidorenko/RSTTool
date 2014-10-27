@@ -79,7 +79,7 @@ catch {source $env(HOME)/.wishrc}
 proc load-module {Path Files} {
 
     foreach ifile $Files {
-	puts stderr "Loading $ifile"
+	# puts stderr "Loading $ifile"
 	source [file join $Path $ifile]
     }
 }
