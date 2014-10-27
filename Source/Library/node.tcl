@@ -144,7 +144,9 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     .editor.text mark set insert last_sel
     .editor.text tag add old my_sel.first last_sel
     .editor.text tag remove sel sel.first last_sel
-    .editor.text tag remove next next.first last_sel
+    if {[.editor.text tag ranges next] != {}} {
+	.editor.text tag remove next next.first last_sel
+    }
     .editor.text tag remove new new.first last_sel
 
     set boundary_marker [make-boundary-marker $last_text_node_id]
@@ -205,7 +207,7 @@ proc move-node {a_path x y} {
     if {$seg_mrk_x == {} || $seg_mrk_y == {}} {return}
     set old_idx "@$seg_mrk_x,$seg_mrk_y wordstart"
     set new_idx "@$x,$y"
-    if [string is space [$a_path get $new_idx]] {
+    if {[string is space [$a_path get $new_idx]] &&  [$a_path compare $new_idx != "end -1 chars"]} {
 	while {[$a_path compare 1.0 < $new_idx] && \
 		   [string is space [$a_path get $new_idx]]} {
 	    set new_idx "$new_idx -1 chars"
@@ -216,10 +218,11 @@ proc move-node {a_path x y} {
 
     # obtain id of the node at initial coordinates
     lassign [get-node-number $a_path $seg_mrk_x $seg_mrk_y] inid istart iend
-    # if no node id could be obtained or the node did not move, return
+    # if no node id could not be obtained or the node did not move,
+    # then return
     if {$istart == {} || [$a_path compare "$old_idx" == "$new_idx"] || \
 	    ([$a_path compare "$new_idx" >= "$istart"] && \
-		 [$a_path compare "$new_idx" <= "$iend"])} {return}
+		 [$a_path compare "$new_idx" < "$iend"])} {return}
     set segmarker [$a_path get $istart $iend];    # obtain text of segment marker
 
     # obtain coordinates and id's of the next and previous nodes
@@ -240,6 +243,10 @@ proc move-node {a_path x y} {
     	    set new_idx "$prv_end +1 chars wordend"
     	}
 
+	if [$a_path compare $new_idx > "end -1 chars"] {
+	    set new_idx "end -1 chars"
+	}
+
     	set delta_txt [$a_path get "$new_idx" "$old_idx -1 chars"]
 	set delta [string length "$delta_txt"]
     	# append delta text to adjacent node, if one exists, or simply
@@ -249,14 +256,17 @@ proc move-node {a_path x y} {
 				       $delta - 1]]
     	set node($inid,offsets) [subtract-points $node($inid,offsets) [list 0 $delta]]
     	if {$nxt_nid == {}} {
-    	    $a_path tag remove old "$new_idx" "$old_idx"
-    	    $a_path tag add new "$new_idx" "$old_idx"
+    	    $a_path tag remove old "$new_idx" "$istart"
+    	    $a_path tag add new "$new_idx" "$istart"
+	    $a_path delete $istart $iend;		  # delete segment marker
+	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
+	    next-sentence
     	} else {
     	    set node($nxt_nid,text) "$delta_txt$node($nxt_nid,text)"
 	    set node($nxt_nid,offsets) [subtract-points $node($nxt_nid,offsets) [list $delta 0]]
+	    $a_path delete $istart $iend;		  # delete segment marker
+	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
     	}
-	$a_path delete $istart $iend;		  # delete segment marker
-	$a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
     } else {
     	# if node has shrinked, set the minimum possible index of the
     	# new shrinked node to the end of the first word in the
@@ -266,7 +276,7 @@ proc move-node {a_path x y} {
     	    while {[$a_path compare 1.0 < $new_idx] && ! [string is space [$a_path get $new_idx]]} {
 		set new_idx "$new_idx -1 chars"
 	    }
-		   set new_idx "$new_idx wordend"
+	    set new_idx "$new_idx wordend"
 	}
 	set delta_txt [$a_path get "$iend" "$new_idx"]
 	set delta [string length "$delta_txt"]
@@ -275,14 +285,16 @@ proc move-node {a_path x y} {
 	set node($inid,text) "$node($inid,text)$delta_txt"
 	set node($inid,offsets) [add-points $node($inid,offsets) [list 0 $delta]]
 	if {$nxt_nid == {}} {
-	    $a_path tag remove new "$old_idx" "$new_idx"
-	    $a_path tag add old "$old_idx" "$new_idx"
+	    $a_path tag add old "$iend" "$new_idx"
+	    $a_path tag remove new "$iend" "end"
+	    $a_path tag remove next "$iend" "end"
+	    $a_path tag remove bmarker "$iend" "end"
 	} else {
 	    set node($nxt_nid,text) [string range $node($nxt_nid,text) $delta end]
 	    set node($nxt_nid,offsets) [add-points $node($nxt_nid,offsets) [list $delta 0]]
 	}
+	$a_path delete $istart $iend; # delete segment marker
 	$a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
-	$a_path delete $istart $iend;		  # delete segment marker
     }
     redisplay-net
 }

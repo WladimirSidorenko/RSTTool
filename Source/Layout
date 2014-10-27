@@ -57,7 +57,7 @@ proc sort-vi-nodes {} {
     set ret {}
     array set vicopy [array get visible_nodes]
     # append node id's from parent message
-    if {$prntMsgId != ""} {
+    if [info exists msgid2nid($prntMsgId)] {
 	foreach inid [lsort -integer $msgid2nid($prntMsgId)] {
 	    if [info exists vicopy($inid)] {
 		lappend ret $inid
@@ -66,10 +66,12 @@ proc sort-vi-nodes {} {
 	}
     }
     # append node id's from child message
-    foreach inid [lsort -integer $msgid2nid($crntMsgId)] {
-	if [info exists visible_nodes($inid)] {
-	    lappend ret $inid
-	    unset vicopy($inid)
+    if [info exists msgid2nid($crntMsgId)] {
+	foreach inid [lsort -integer $msgid2nid($crntMsgId)] {
+	    if [info exists visible_nodes($inid)] {
+		lappend ret $inid
+		unset vicopy($inid)
+	    }
 	}
     }
     # append any other node id's present in visible nodes

@@ -1438,6 +1438,9 @@ proc expand {nid {really {}} } {
 	set num_items 0
 	set cancel_exists 0
 	set my_menu .tmpwin
+	if {[tk windowingsystem] == "aqua"} {
+	    $my_menu configure -fg black
+	}
 
 	foreach item $Items {
 	    incr num_items

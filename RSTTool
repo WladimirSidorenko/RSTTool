@@ -150,8 +150,14 @@ bindtags .editor.text {all .editor.text Text . UndoBindings(1)}
     break
 }
 
-.editor.text tag bind bmarker <Control-Alt-ButtonRelease-3> {
-    delete-node .editor.text %x %y
+if {[tk windowingsystem] == "aqua"} {
+    .editor.text tag bind bmarker <Control-Option-ButtonRelease-2> {
+	delete-node .editor.text %x %y
+    }
+} else {
+    .editor.text tag bind bmarker <Control-Alt-ButtonRelease-3> {
+	delete-node .editor.text %x %y
+    }
 }
 
 ######################################
