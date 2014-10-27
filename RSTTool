@@ -129,6 +129,10 @@ bindtags .editor.text {all .editor.text Text . UndoBindings(1)}
     create-a-node-here really
 }
 
+.editor.text tag bind next <ButtonRelease-1> {
+    create-a-node-here really
+}
+
 # node modification operations
 .editor.text tag bind bmarker <Control-ButtonPress-1> {
     set seg_mrk_x %x

@@ -239,7 +239,7 @@ $View add command -label "Clear Structure" -command {
 	redisplay-net
 	# redisplay parent
 	.editor.textPrnt delete 0.0 end
-	showSentences .editor.textPrnt $prntMsgId 1
+	show-sentences .editor.textPrnt $prntMsgId 1
     }
 }
 

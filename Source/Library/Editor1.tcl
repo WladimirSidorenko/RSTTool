@@ -207,7 +207,7 @@ proc load-file {filename {really {1}}} {
     next-message $really
 }
 
-proc showNodes {msg_id {show 1}} {
+proc show-nodes {msg_id {show 1}} {
     # set visibility status for all internal nodes belonging to the message
     # `$msg_id` to $show
     global msgid2nid visible_nodes
@@ -226,14 +226,14 @@ proc showNodes {msg_id {show 1}} {
     }
 }
 
-proc showSentences {path_name msg_id {show_rest 0}} {
+proc show-sentences {path_name msg_id {show_rest 0}} {
     # display already EDU segements in widget `path_name`
     global theForrest msgid2nid node
     # obtain annotated EDUs for given message
     if {! [info exists theForrest($msg_id)]} {
 	return {0 0};
     } elseif {[info exists msgid2nid($msg_id)]} {
-	# puts stderr "showSentences: msgid2nid($msg_id) == $msgid2nid($msg_id)"
+	# puts stderr "show-sentences: msgid2nid($msg_id) == $msgid2nid($msg_id)"
 	set nids $msgid2nid($msg_id);
     } elseif {$show_rest} {
 	set nids {};
@@ -291,7 +291,7 @@ proc showSentences {path_name msg_id {show_rest 0}} {
 
 # mark next potential EDU by guessing its boundaries looking at
 # punctuation marks
-proc nextSentence {{do_it {}} {trgframe .editor.text}} {
+proc next-sentence {{do_it {}} {trgframe .editor.text}} {
     global abbreviations
 
     set flag 2
@@ -357,7 +357,9 @@ proc nextSentence {{do_it {}} {trgframe .editor.text}} {
     incr nextCutoff
     # remove `next` tag from the area of presumable new segment
     # $trgframe tag remove new new.first "new.first + $nextCutoff chars"
-    $trgframe tag add next new.first "new.first + $nextCutoff chars"
+    if {[$trgframe compare new.first < "end -1 chars"]} {
+	$trgframe tag add next new.first "new.first + $nextCutoff chars"
+    }
 }
 
 proc next-message { {do_it {}} {direction {forward}}} {
@@ -445,10 +447,10 @@ proc next-message { {do_it {}} {direction {forward}}} {
     if {$prntMsgId != $prev_prnt_msg_id} {
 	# display all known RST nodes for the new parent hide previous current
 	# node, if it is not the parent of the next message
-	if {$prntMsgId != $prev_msg_id} {showNodes $prntMsgId 1}
+	if {$prntMsgId != $prev_msg_id} {show-nodes $prntMsgId 1}
 	# hide all RST nodes in RST window which correspond to the
 	# previous parent
-	if {$crntMsgId != $prev_prnt_msg_id} {showNodes $prev_prnt_msg_id 0}
+	if {$crntMsgId != $prev_prnt_msg_id} {show-nodes $prev_prnt_msg_id 0}
 	# obtain text of the new parent
 	if {$prntMsgId == {}} {
 	    set prntMsgTxt "";
@@ -457,23 +459,23 @@ proc next-message { {do_it {}} {direction {forward}}} {
 	}
 	# reload the text
 	.editor.textPrnt delete 0.0 end
-	showSentences .editor.textPrnt $prntMsgId 1
+	show-sentences .editor.textPrnt $prntMsgId 1
     }
     if {$prntMsgId != $prev_msg_id} {
 	# puts stderr "hiding nodes for message $prev_msg_id"
-	showNodes $prev_msg_id 0
+	show-nodes $prev_msg_id 0
     }
     # clear current message text area and place new text into it
     .editor.text delete 1.0 end
     .editor.text tag add new 1.0 end
     # show already annotated segments for current message and make the
     # rest of the text appear in grayscale
-    set offsetShift [showSentences .editor.text $crntMsgId 1]
+    set offsetShift [show-sentences .editor.text $crntMsgId 1]
     # make suggestion for the boundary of the next segment
-    nextSentence $do_it
+    next-sentence $do_it
     # display any nodes and sentences that already were annotated for
     # current message
-    if {$crntMsgId != $prev_prnt_msg_id} {showNodes $crntMsgId 1}
+    if {$crntMsgId != $prev_prnt_msg_id} {show-nodes $crntMsgId 1}
     redisplay-net
 }
 
@@ -583,7 +585,6 @@ proc get-new-file-name {} {
 
 
 proc current-selection {w} {
-
     if {[llength [$w tag ranges sel]] > 0} {
 
 	#1. Text is selected.
@@ -593,12 +594,12 @@ proc current-selection {w} {
     } elseif {[$w get "insert -1 char"] == ")"} {
 	puts stdout "Paren-match not supported"
 
-	#3. Cursor in the centre of a symbol
+	#3. Cursor in the center of a symbol
     } else {
 	puts stdout [$w get "insert wordstart" "insert wordend"]
 	$w get "insert wordstart" "insert wordend"
-    }}
-
+    }
+}
 
 ######################################
 # Define Key Bindings

@@ -49,11 +49,38 @@ proc redisplay-net {} {
     #  $rstw yview moveto 0
 }
 
+proc sort-vi-nodes {} {
+    # sort visible nodes so that nodes of the parent appear first to
+    # the nodes of the child but otherwise are sorted numerically
+    global crntMsgId prntMsgId msgid2nid visible_nodes
+
+    set ret {}
+    array set vicopy [array get visible_nodes]
+    # append node id's from parent message
+    if {$prntMsgId != ""} {
+	foreach inid [lsort -integer $msgid2nid($prntMsgId)] {
+	    if [info exists vicopy($inid)] {
+		lappend ret $inid
+		unset vicopy($inid)
+	    }
+	}
+    }
+    # append node id's from child message
+    foreach inid [lsort -integer $msgid2nid($crntMsgId)] {
+	if [info exists visible_nodes($inid)] {
+	    lappend ret $inid
+	    unset vicopy($inid)
+	}
+    }
+    # append any other node id's present in visible nodes
+    set ret [list {*}$ret {*}[array names vicopy]]
+    return $ret
+}
+
 proc x-layout {} {
     global node node_width current_xpos
-    global visible_nodes
 
-    set vsorted [lsort -integer [array names visible_nodes]]
+    set vsorted [sort-vi-nodes]
     set xinc [expr $node_width + 10]
     set xpos [expr $node_width / 2 + 30]
     foreach nid $vsorted {

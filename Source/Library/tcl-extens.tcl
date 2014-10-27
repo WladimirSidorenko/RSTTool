@@ -186,7 +186,7 @@ proc scrolled-text {name args} {
     grid $navibar -sticky "nsew" -row 1;
     set btnNext [button $name.btnNextMsg -text "Next Message" -command {next-message really}];
     set btnPrev [button $name.btnPrevMsg -text "Previous Message" -command {next-message really backward}];
-    # set btnNextSent [button $name.nextsent -text "Next Sentence" -command {nextSentence really}];
+    # set btnNextSent [button $name.nextsent -text "Next Sentence" -command {next-sentence really}];
     # grid $btnPrev $btnNext $btnNextSent -in $navibar;
     grid $btnPrev $btnNext -in $navibar;
 

@@ -70,9 +70,9 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     global offsetShift
     global last_text_node_id newest_node savenum new_node_text
 
-    # if no index was specified, set index position to the position of
-    # the cursor and move it to the left, if currently pointed
-    # character is a space
+    # if no index was specified, set the index position to the
+    # position of the cursor and move it to the left, if currently
+    # pointed character is a space
     if {$my_current == {}} {
 	set my_current current
 	while {[.editor.text compare $my_current > 1.0]} {
@@ -150,10 +150,10 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     set boundary_marker [make-boundary-marker $last_text_node_id]
     set offsetShift [expr $offsetShift + [string length $boundary_marker]]
     .editor.text insert my_sel.last "$boundary_marker" bmarker
-    # call nextSentence() if suggested EDU span was completely covered
+    # call next-sentence() if suggested EDU span was completely covered
     if {[.editor.text tag ranges next] == {} || \
 	    [.editor.text compare "next.last -1 chars" <= last_sel]} {
-	nextSentence $do_it
+	next-sentence $do_it
     }
 
     set line_no [.editor.text index old.last]
@@ -302,13 +302,7 @@ proc delete-node {a_path x y} {
     }
     # find next node in text
     set nxtstart [lindex [$a_path tag nextrange bmarker $iend] 0]
-    # if next node exists, append text from deleted node to this next node
-    if {$nxtstart != {}} {
-	set nxtnid [lindex [get-node-number $a_path {} {} $nxtstart] 0]
-	set node($nxtnid,text) "$node($inid,text)$node($nxtnid,text)"
-	set node($nxtnid,offsets) [lreplace $node($nxtnid,offsets) 0 0 \
-				       [lindex $node($inid,offsets) 0]]
-    } else {
+    if {$nxtstart == {}} {
 	# obtain range of previous node, if any exists
 	set prevend [lindex [$a_path tag prevrange bmarker "$istart -1 char"] end]
 	# remove tag `old` from the text span covered by the node which should
@@ -316,6 +310,13 @@ proc delete-node {a_path x y} {
 	if {$prevend == {}} {set prevend 1.0}
 	$a_path tag remove old $prevend $istart
 	$a_path tag add new $prevend $istart
+	next-sentence
+    } else {
+	# if next node exists, append text from deleted node to this next node
+	set nxtnid [lindex [get-node-number $a_path {} {} $nxtstart] 0]
+	set node($nxtnid,text) "$node($inid,text)$node($nxtnid,text)"
+	set node($nxtnid,offsets) [lreplace $node($nxtnid,offsets) 0 0 \
+				       [lindex $node($inid,offsets) 0]]
     }
     # adjust offset shifts of offsets of all successive nodes
     set delta [string length [$a_path get $istart $iend]]

@@ -104,9 +104,9 @@ proc load-file {filename {really {1}} } {
   .editor.text tag add new 1.0 end
 #  save-step "load-file $filename"
   if { $really == 1 } {
-    nextSentence really
+    next-sentence really
   } else {
-    nextSentence fake
+    next-sentence fake
   }
 }
 
@@ -132,7 +132,7 @@ proc showText { {do_it {}} } {
   }
 }
 
-proc nextSentence { {do_it {}} } {
+proc next-sentence { {do_it {}} } {
   global theText usedText currSentence abbreviations
   set old_new_first [.editor.text index new.first]
   set flag 2
