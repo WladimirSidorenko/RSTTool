@@ -44,6 +44,7 @@ pack .rtbar -side top
 pack .rtbar.link .rtbar.autolink .rtbar.disconnect .rtbar.modify .rtbar.change_rel \
     .rtbar.change_schema .rtbar.reduce .rtbar.enlarge -in .rtbar -side left
 bind .editor.text <Any-Key> {break}
+bind .editor.text <ButtonRelease-2> {break}
 
 menu .menubar
 # attach it to the main window
