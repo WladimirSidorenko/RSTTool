@@ -32,27 +32,6 @@ proc draw-arc {window points} {
     eval [concat $cmd $points $options]
 }
 
-proc add-points {p1 p2} {
-    list [expr [lindex $p1 0] + [lindex $p2 0]]\
-	[expr [lindex $p1 1] + [lindex $p2 1]]
-}
-
-proc subtract-points {p1 p2} {
-    list [expr [lindex $p1 0] - [lindex $p2 0]]\
-	[expr [lindex $p1 1] - [lindex $p2 1]]
-}
-
-proc mid-point {p1 p2} {
-    add-points $p1 [halve-point [subtract-points $p2 $p1]]
-}
-
-proc halve-point {p1} {
-    list [expr [lindex $p1 0] / 2]\
-	[expr [lindex $p1 1] / 2]
-}
-
-
-
 proc screen-coords {item canvas} {
     # Returns the screen coordes of a canvas item
     set screencorrect "[winfo rootx $canvas] [winfo rooty $canvas]"

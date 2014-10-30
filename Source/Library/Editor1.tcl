@@ -260,6 +260,7 @@ proc show-sentences {path_name msg_id {show_rest 0}} {
 	}
 	if {$node($nid,type) != "text"} {break;}
 
+	# puts stderr "show-sentences: node(nid = $nid,offsets) = $node($nid,offsets)"
 	lassign $node($nid,offsets) start end
 	if {$start == {}} {error "node $nid does not have valid offsets"}
 	incr end -1
@@ -604,18 +605,9 @@ proc current-selection {w} {
 ######################################
 # Define Key Bindings
 
-bind all <Meta-s> {
-    global currentfile
-    save-file $currentfile
-}
-
-bind all <Meta-o> {
-    load-file  [fileselect]
-}
-
-
 # hack to stop the calls to this failing
 # Each using app can define their own way to display messages
 proc editor-message {arg} {
     .editor.msg delete 1.0 end
-    .editor.msg insert end $arg}
+    .editor.msg insert end $arg
+}

@@ -249,12 +249,15 @@ proc move-node {a_path x y} {
 
     	set delta_txt [$a_path get "$new_idx" "$old_idx -1 chars"]
 	set delta [string length "$delta_txt"]
+	# puts stderr "move-node: 1.0) delta_txt = '$delta_txt'; delta = $delta"
     	# append delta text to adjacent node, if one exists, or simply
     	# remove `old` tags otherwise
     	set node($inid,text) [string range $node($inid,text) 0 \
 				  [expr [string length "$node($inid,text)"] - \
 				       $delta - 1]]
+	# puts stderr "move-node: 1.1) node(inid = $inid,offsets) = $node($inid,offsets)"
     	set node($inid,offsets) [subtract-points $node($inid,offsets) [list 0 $delta]]
+	# puts stderr "move-node: 1.2) node(inid = $inid,offsets) = $node($inid,offsets)"
     	if {$nxt_nid == {}} {
     	    $a_path tag remove old "$new_idx" "$istart"
     	    $a_path tag add new "$new_idx" "$istart"
@@ -263,7 +266,9 @@ proc move-node {a_path x y} {
 	    next-sentence
     	} else {
     	    set node($nxt_nid,text) "$delta_txt$node($nxt_nid,text)"
+	    # puts stderr "move-node: 1.3) node(nxt_nid = $nxt_nid,offsets) = $node($nxt_nid,offsets)"
 	    set node($nxt_nid,offsets) [subtract-points $node($nxt_nid,offsets) [list $delta 0]]
+	    # puts stderr "move-node: 1.4) node(nxt_nid = $nxt_nid,offsets) = $node($nxt_nid,offsets)"
 	    $a_path delete $istart $iend;		  # delete segment marker
 	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
     	}
@@ -280,10 +285,13 @@ proc move-node {a_path x y} {
 	}
 	set delta_txt [$a_path get "$iend" "$new_idx"]
 	set delta [string length "$delta_txt"]
+	# puts stderr "move-node: 2.0) delta_txt = '$delta_txt'; delta = $delta"
 	# append delta text to adjacent node, if one exists, or simply
 	# remove `old` tags otherwise
 	set node($inid,text) "$node($inid,text)$delta_txt"
+	# puts stderr "move-node: 2.1) node(inid = $inid,offsets) = $node($inid,offsets)"
 	set node($inid,offsets) [add-points $node($inid,offsets) [list 0 $delta]]
+	# puts stderr "move-node: 2.2) node(inid = $inid,offsets) = $node($inid,offsets)"
 	if {$nxt_nid == {}} {
 	    $a_path tag add old "$iend" "$new_idx"
 	    $a_path tag remove new "$iend" "end"
@@ -291,10 +299,12 @@ proc move-node {a_path x y} {
 	    $a_path tag remove bmarker "$iend" "end"
 	} else {
 	    set node($nxt_nid,text) [string range $node($nxt_nid,text) $delta end]
+	    # puts stderr "move-node: 2.3) node(nxt_nid = $nxt_nid,offsets) = $node($nxt_nid,offsets)"
 	    set node($nxt_nid,offsets) [add-points $node($nxt_nid,offsets) [list $delta 0]]
+	    # puts stderr "move-node: 2.4) node(nxt_nid = $nxt_nid,offsets) = $node($nxt_nid,offsets)"
 	}
-	$a_path delete $istart $iend; # delete segment marker
 	$a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
+	$a_path delete $istart $iend; # delete segment marker
     }
     redisplay-net
 }
