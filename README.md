@@ -1,4 +1,4 @@
-#### RSTTool for Annotation of Discussions
+# RSTTool for Annotation of Discussions
 
 This program is a forked version of Daniel Marcu's
 [modification](http://www.isi.edu/publications/licensed-sw/RSTTool/)
@@ -10,25 +10,25 @@ participants).  The user can view multilogues in a successive fashion
 among the replies.
 
 
-### Description
+## Description
 
 After starting ./RSTTool from your shell, you should see a graphical
 frame consisting of three sub-windows.  The upper sub-window is a
 graphical representation
 
 
-### Bindings
+## Bindings
 
-## All windows:
+### All windows:
 Ctrl-O -- open new file
 Ctrl-S -- save file
 
-## Segment editor:
+### Segment editor:
 LeftMouseClick on unannotated text area - set a segment boundary
 Control-RightMouseClick on segment boundary - move segment boundary
 Control-Alt-RightMouseClick on segment boundary - delete segment boundary
 
-### License
+## License
 
 This program is based on the RSTTool version developed by Daniel Marcu
 and is subject to the same [license agreement
