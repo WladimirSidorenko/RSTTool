@@ -53,7 +53,7 @@ menu .menubar
 foreach m {File View Print Help} {
     set $m [menu .menubar.m$m -tearoff 0]
     .menubar add cascade -label $m -menu .menubar.m$m
-    if {[tk windowingsystem]== "aqua"} {
+    if {[tk windowingsystem] == "aqua"} {
 	.menubar.m$m configure -fg black
     }
 }
@@ -1453,6 +1453,9 @@ proc expand {nid {really {}} } {
 		#set item $underscore
 		menu $my_menu.$item -tearoff 0
 		AddMenuCascade $my_menu NEXT $my_menu.$item
+		if {[tk windowingsystem] == "aqua"} {
+		    $my_menu.$item configure -fg black
+		}
 		AddMenuItem $my_menu CANCEL "set pcfl_selection {}"
 		set cancel_exists 1
 		set my_menu $my_menu.$item

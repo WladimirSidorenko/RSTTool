@@ -34,7 +34,6 @@ proc start-time { { option {} } } {
 
 proc compare-click-times { } {
     global currentfile actual_sec last_date
-    global MAX_CLICK_DELAY
 
     set current_date [clock format [clock seconds]\
 			  -format "%a %b %d %H:%M:%S %Z %Y" -gmt 0]
@@ -45,9 +44,6 @@ proc compare-click-times { } {
     set hours [lindex $time 0]
     set minutes [expr $hours * 60 + $minutes]
     set seconds [expr $minutes * 60 + $seconds]
-    if {$seconds <= [cast-as-number $MAX_CLICK_DELAY]} {
-	set actual_sec [expr $actual_sec + $seconds]
-    }
     set last_date $current_date
 }
 

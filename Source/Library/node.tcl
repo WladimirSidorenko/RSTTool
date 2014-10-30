@@ -303,6 +303,7 @@ proc move-node {a_path x y} {
 	    set node($nxt_nid,offsets) [add-points $node($nxt_nid,offsets) [list $delta 0]]
 	    # puts stderr "move-node: 2.4) node(nxt_nid = $nxt_nid,offsets) = $node($nxt_nid,offsets)"
 	}
+	# do not change the order of deletions and insertions below
 	$a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
 	$a_path delete $istart $iend; # delete segment marker
     }
