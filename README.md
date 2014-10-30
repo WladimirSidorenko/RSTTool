@@ -20,12 +20,17 @@ graphical representation
 ## Bindings
 
 ### All windows:
+
 Ctrl-O -- open new file
+
 Ctrl-S -- save file
 
 ### Segment editor:
+
 LeftMouseClick on unannotated text area - set a segment boundary
+
 Control-RightMouseClick on segment boundary - move segment boundary
+
 Control-Alt-RightMouseClick on segment boundary - delete segment boundary
 
 ## License
