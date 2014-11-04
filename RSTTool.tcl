@@ -1,32 +1,11 @@
 #!/usr/bin/env wish
 
-wm title . "RSTTool"
-proc Quit {} {exit}
-wm protocol . WM_DELETE_WINDOW Quit
-frame .segmentframe
-
 ######################################
-# Set variables
-set LOGIN marcu
-set PRINTER ps9b_s
-set MAX_CLICK_DELAY 120
+# Variables
+set LOGIN nobody
 set PLATFORM $tcl_platform(platform)
-set DIR [file dirname [info script]]
-set DOT_EXISTS NO
-# set DOT_EXISTS YES
-# set DOT    "/nfs/etg/mediadoc/graphviz/src/cmd/dot/dot"
-
-set SRC     [file join $DIR Source]
-set LIBRARY [file join $SRC Library]
-set RELS    [file join $DIR Relation-Sets]
-set HELP    [file join $DIR Help]
-
-set LIB_FILES {delete.tcl dialog1.tcl draw.tcl node.tcl tcl-extens.tcl tkfbox.tcl \
-		   time.tcl toolbar.tcl}
-set SRC_FILES {Segmenter Structurer Draw EditRelations Layout Make Print Helper}
-set EDITOR_FILES {new.tcl lifo.tcl textundo.tcl Editor1.tcl}
-
-# set global variables
+set CHANGED 0;			# flag indicating whether any
+				# modifications are not saved
 set x1 {}
 set x2 {}
 set seg_mrk_x {}
@@ -69,87 +48,6 @@ array set nid2msgid {};	  # mapping from node id to message id
 array set help {};
 set helpmenu {relation_defs interface}
 
-# set default appearance
-tk_setPalette background gray35 foreground white \
-    activebackground white activeforeground red
-catch {source $env(HOME)/.wishrc}
-
-######################################
-# Load modules
-proc load-module {Path Files} {
-
-    foreach ifile $Files {
-	# puts stderr "Loading $ifile"
-	source [file join $Path $ifile]
-    }
-}
-
-load-module $LIBRARY $LIB_FILES
-load-module $LIBRARY $EDITOR_FILES
-load-module $SRC $SRC_FILES
-
-load-relations [file join $RELS Relations]
-load-relations [file join $RELS ExtRelations] 1
-load_abbreviations [file join $RELS abbreviations]
-load_help
-
-install-segmenter
-reset-rst
-set-mode link
-
-######################################
-# Set appearance
-.editor.text configure -bg white
-.editor.textPrnt configure -bg white
-.editor.text configure -fg black
-.editor.textPrnt configure -fg black
-
-$rstw configure -bg white
-
-set old_clr purple;
-.editor.text tag configure old -foreground $old_clr
-.editor.text tag configure next -foreground black
-.editor.text tag configure new -foreground DimGray
-.editor.text tag lower new
-.editor.text tag configure notes -foreground black
-.editor.text tag configure my_sel -background yellow
-
-.editor.textPrnt tag configure old -foreground $old_clr
-
-######################################
-# Bindings
-
-# load/save functions
-bind all <Control-o> {open-file}
-bind all <Control-s> {$save_func}
-bindtags .editor.text {all .editor.text Text . UndoBindings(1)}
-
-# node creation functions
-.editor.text tag bind new <ButtonRelease-1> {
-    create-a-node-here really
-}
-
-# node modification operations
-.editor.text tag bind bmarker <Control-ButtonPress-1> {
-    set seg_mrk_x %x
-    set seg_mrk_y %y
-    set txt_cursor [lindex [.editor.text configure -cursor] end]
-    .editor.text configure -cursor question_arrow
-    break
-}
-
-.editor.text tag bind bmarker <Control-ButtonRelease-1> {
-    .editor.text configure -cursor $txt_cursor
-    move-node .editor.text %x %y
-    set seg_mrk_x {}
-    set seg_mrk_y {}
-    break
-}
-
-.editor.text tag bind bmarker <Control-Alt-ButtonRelease-3> {
-    delete-node .editor.text %x %y
-}
-
 ######################################
 # Methods
 proc set-file-name { file_type { other_file {} } {create_dir {1}}} {
@@ -170,4 +68,120 @@ proc set-file-name { file_type { other_file {} } {create_dir {1}}} {
 	set uname $LOGIN
     }
     return [file join $dirname "$basename.$uname"]
+}
+
+######################################
+# Main Frame
+
+# encoding system euc-jp
+wm title . "RST-Editor"
+proc Quit {} {exit}
+wm protocol . WM_DELETE_WINDOW Quit
+frame .segmentframe
+
+######################################
+# Modules
+proc load-module {Path Files} {
+    foreach ifile $Files {
+	# puts stderr "Loading $ifile"
+	source [file join $Path $ifile]
+    }
+}
+
+set DIR [file dirname [info script]]
+set SRC     [file join $DIR Source]
+set LIBRARY [file join $SRC Library]
+set RELS    [file join $DIR Relation-Sets]
+set HELP    [file join $DIR Help]
+set LIB_FILES {delete.tcl dialog1.tcl draw.tcl node.tcl tcl-extens.tcl tkfbox.tcl \
+		   time.tcl toolbar.tcl}
+set SRC_FILES {Segmenter Structurer Draw EditRelations Layout Make Print Helper}
+set EDITOR_FILES {new.tcl lifo.tcl textundo.tcl Editor1.tcl}
+
+load-module $LIBRARY $LIB_FILES
+load-module $LIBRARY $EDITOR_FILES
+load-module $SRC $SRC_FILES
+
+array set relations {};
+load-relations [file join $RELS Relations]
+load-relations [file join $RELS ExtRelations] 1
+load_abbreviations [file join $RELS abbreviations]
+load_help
+
+install-segmenter
+reset-rst
+set-mode link
+
+######################################
+# Appearance
+
+# default appearance
+tk_setPalette background gray35 foreground white \
+    activebackground white activeforeground red
+catch {source $env(HOME)/.wishrc}
+
+.editor.text configure -fg black -bg white -selectbackground gray85
+.editor.textPrnt configure -fg black -bg white -selectbackground gray85
+$rstw configure -bg white
+
+set old_clr purple;
+.editor.text tag configure old -foreground $old_clr
+.editor.text tag configure next -foreground black
+.editor.text tag configure new -foreground DimGray
+.editor.text tag lower new
+.editor.text tag configure notes -foreground black
+.editor.text tag configure my_sel -background yellow
+
+.editor.textPrnt tag configure old -foreground $old_clr
+
+######################################
+# Bindings
+
+# load/save functions
+bind all <Control-o> {open-file}
+bind all <Control-s> {$save_func}
+
+bind all <Control-q> {$save_func; exit}
+
+bindtags .editor.text {all .editor.text Text . UndoBindings(1)}
+bind .editor.text <Any-Key> {break}
+bind .editor.text <ButtonRelease-2> {break}
+bind .editor.text <Control-C> {continue}
+bind .editor.text <Key-Super_L> {continue}
+bind .editor.text <Key-Super_R> {continue}
+
+# node creation functions
+.editor.text tag bind new <ButtonRelease-1> {
+    create-a-node-here really
+}
+
+.editor.text tag bind next <ButtonRelease-1> {
+    create-a-node-here really
+}
+
+# node modification operations
+.editor.text tag bind bmarker <Control-ButtonPress-1> {
+    set seg_mrk_x %x
+    set seg_mrk_y %y
+    set txt_cursor [lindex [.editor.text configure -cursor] end]
+    .editor.text configure -cursor question_arrow
+    break
+}
+
+.editor.text tag bind bmarker <Control-ButtonRelease-1> {
+    .editor.text configure -cursor $txt_cursor
+    move-node .editor.text %x %y
+    set seg_mrk_x {}
+    set seg_mrk_y {}
+    break
+}
+
+if {[tk windowingsystem] == "aqua"} {
+    .editor.text tag bind bmarker <Control-Option-ButtonRelease-2> {
+	delete-node .editor.text %x %y
+    }
+} else {
+    .editor.text tag bind bmarker <Control-Alt-ButtonRelease-3> {
+	delete-node .editor.text %x %y
+    }
 }
