@@ -1,12 +1,11 @@
 #!/usr/bin/env wish
 
 ######################################
-# Set Global Variables
+# Variables
 set LOGIN nobody
 set PLATFORM $tcl_platform(platform)
 set CHANGED 0;			# flag indicating whether any
 				# modifications are not saved
-
 set x1 {}
 set x2 {}
 set seg_mrk_x {}
@@ -50,14 +49,36 @@ array set help {};
 set helpmenu {relation_defs interface}
 
 ######################################
-# Create Main Frame
-wm title . "RSTTool"
+# Methods
+proc set-file-name { file_type { other_file {} } {create_dir {1}}} {
+    global currentfile trgdir
+    global PLATFORM LOGIN
+
+    if {$other_file == {}} {
+	set other_file $currentfile
+    }
+
+    set dirname [file join $trgdir $file_type]
+    if {$create_dir && ![file exists $dirname]} {file mkdir $dirname}
+
+    set basename [file rootname [file tail $other_file]]
+    if {$PLATFORM == "unix"} {
+	set uname [exec whoami]
+    } else {
+	set uname $LOGIN
+    }
+    return [file join $dirname "$basename.$uname"]
+}
+
+######################################
+# Main Frame
+wm title . "RST-Editor"
 proc Quit {} {exit}
 wm protocol . WM_DELETE_WINDOW Quit
 frame .segmentframe
 
 ######################################
-# Load Modules
+# Modules
 proc load-module {Path Files} {
     foreach ifile $Files {
 	# puts stderr "Loading $ifile"
@@ -79,6 +100,7 @@ load-module $LIBRARY $LIB_FILES
 load-module $LIBRARY $EDITOR_FILES
 load-module $SRC $SRC_FILES
 
+array set relations {};
 load-relations [file join $RELS Relations]
 load-relations [file join $RELS ExtRelations] 1
 load_abbreviations [file join $RELS abbreviations]
@@ -89,15 +111,15 @@ reset-rst
 set-mode link
 
 ######################################
-# Set Appearance
+# Appearance
 
 # default appearance
 tk_setPalette background gray35 foreground white \
     activebackground white activeforeground red
 catch {source $env(HOME)/.wishrc}
 
-.editor.text configure -fg black -bg white
-.editor.textPrnt configure -fg black -bg white
+.editor.text configure -fg black -bg white -selectbackground gray85
+.editor.textPrnt configure -fg black -bg white -selectbackground gray85
 $rstw configure -bg white
 
 set old_clr purple;
@@ -111,16 +133,20 @@ set old_clr purple;
 .editor.textPrnt tag configure old -foreground $old_clr
 
 ######################################
-# Define Bindings
+# Bindings
 
 # load/save functions
 bind all <Control-o> {open-file}
 bind all <Control-s> {$save_func}
+
+bind all <Control-q> {$save_func; exit}
+
 bindtags .editor.text {all .editor.text Text . UndoBindings(1)}
 bind .editor.text <Any-Key> {break}
 bind .editor.text <ButtonRelease-2> {break}
 bind .editor.text <Control-C> {continue}
 bind .editor.text <Key-Super_L> {continue}
+bind .editor.text <Key-Super_R> {continue}
 
 # node creation functions
 .editor.text tag bind new <ButtonRelease-1> {
@@ -156,26 +182,4 @@ if {[tk windowingsystem] == "aqua"} {
     .editor.text tag bind bmarker <Control-Alt-ButtonRelease-3> {
 	delete-node .editor.text %x %y
     }
-}
-
-######################################
-# Methods
-proc set-file-name { file_type { other_file {} } {create_dir {1}}} {
-    global currentfile trgdir
-    global PLATFORM LOGIN
-
-    if {$other_file == {}} {
-	set other_file $currentfile
-    }
-
-    set dirname [file join $trgdir $file_type]
-    if {$create_dir && ![file exists $dirname]} {file mkdir $dirname}
-
-    set basename [file rootname [file tail $other_file]]
-    if {$PLATFORM == "unix"} {
-	set uname [exec whoami]
-    } else {
-	set uname $LOGIN
-    }
-    return [file join $dirname "$basename.$uname"]
 }

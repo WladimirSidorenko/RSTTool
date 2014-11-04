@@ -36,6 +36,8 @@ parenthetical
 parenthetical-bound
 question
 question-bound
+question-answer-n
+question-answer-s
 reason
 reason-bound
 restatement
@@ -44,6 +46,7 @@ result
 result-bound
 rhetorical-question
 rhetorical-question-bound
+solutionhood
 summary
 summary-bound
 topic-drift

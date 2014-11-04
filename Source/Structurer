@@ -26,7 +26,7 @@ set DEBUG 0
 
 if {[winfo exists .rtbar]} {destroy .rtbar}
 #toplevel .rtbar
-frame .rtbar
+set rtbar [frame .rtbar]
 
 button .rtbar.link -text "Link" -command {set-mode link}
 button .rtbar.autolink -text "Auto" -command {set-mode autolink}
@@ -40,11 +40,9 @@ button .rtbar.enlarge -text "Enlarge" -command {resize-display 50}
 # button .rtbar.undo_by_redo -text "Don't Touch" -command {undo_by_redo}
 # button .rtbar.showtext -text "Show Text" -command {showText really}
 
-pack .rtbar -side top
+pack .rtbar
 pack .rtbar.link .rtbar.autolink .rtbar.disconnect .rtbar.modify .rtbar.change_rel \
-    .rtbar.change_schema .rtbar.reduce .rtbar.enlarge -in .rtbar -side left
-bind .editor.text <Any-Key> {break}
-bind .editor.text <ButtonRelease-2> {break}
+    .rtbar.change_schema .rtbar.reduce .rtbar.enlarge -in $rtbar -side left -fill x -expand 1
 
 menu .menubar
 # attach it to the main window
@@ -163,7 +161,7 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
     load-file $filename
     set savenum 0
 }
-$File add command -label "Open" -command open-file
+$File add command -label "Open    Ctrl-O" -command open-file
 
 # $File add command -label "Peruse" -command {
 #     export-time
@@ -203,11 +201,11 @@ $File add command -label "Open" -command open-file
 #     set-mode nothing
 # }
 
-$File add command -label "Save" -command save-raw
+$File add command -label "Save     Ctrl-S" -command save-raw
 # $Save add command -label "lisp format" -command {save-lisp}
 # $Save add command -label "sgml format" -command {save-sgml}
 
-$File add command -label "Quit" -command {
+$File add command -label "Quit      Ctrl-Q" -command {
     if {$currentfile != {}} {
 	$save_func
     }
@@ -1113,7 +1111,7 @@ proc expand {nid {really {}} } {
 
     proc ymove-node {nid ydelta} {
 	global node rstw
-	# change its pos 
+	# change its pos
 	move-item $rstw [ntw $nid] 0 $ydelta
 
 	# move its arrow down the distance
@@ -1130,10 +1128,10 @@ proc expand {nid {really {}} } {
     }
 
     ##################################################
-    # Manipulation MODES 
+    # Manipulation MODES
 
     proc install-structurer {} {
-	wm title . "RST Structurer"
+	wm title . "RST Editor"
 	#pack .rtbar -side left  -anchor nw
 	pack .rstframe -side top -fill both -expand true
     }
@@ -1427,11 +1425,10 @@ proc expand {nid {really {}} } {
 	}
 	return [popup-choose-from-list $range\
 		    [expr int([lindex $coords 0])]\
-		    [expr int([lindex $coords 1])]]
+		    [expr int([lindex $coords 1])] 0 1]
     }
 
-
-    proc popup-choose-from-list {Items xpos ypos {put_cancel {}} } {
+    proc popup-choose-from-list {Items xpos ypos {put_cancel {}} {show_tooltip 0}} {
 	global pcfl_selection cancelled
 	set pcfl_selection {}
 	if {[winfo exists .tmpwin]} {destroy .tmpwin}
@@ -1441,6 +1438,10 @@ proc expand {nid {really {}} } {
 	set my_menu .tmpwin
 	if {[tk windowingsystem] == "aqua"} {
 	    $my_menu configure -fg black
+	}
+
+	if {$show_tooltip} {
+	    bind-menu-tooltip $my_menu
 	}
 
 	foreach item $Items {
@@ -1455,6 +1456,9 @@ proc expand {nid {really {}} } {
 		AddMenuCascade $my_menu NEXT $my_menu.$item
 		if {[tk windowingsystem] == "aqua"} {
 		    $my_menu.$item configure -fg black
+		}
+		if {$show_tooltip} {
+		    bind-menu-tooltip $my_menu.$item
 		}
 		AddMenuItem $my_menu CANCEL "set pcfl_selection {}"
 		set cancel_exists 1

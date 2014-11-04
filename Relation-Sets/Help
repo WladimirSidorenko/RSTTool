@@ -1,3 +1,79 @@
-analogy {There is nothing for analogy
-testing - just testing}
+analogy {DEFINITION:
 
+The situation presented in SATELLITE is similar and comparable to the
+information presented in NUCLEUS.
+
+EXAMPLE:
+
+1. The US government increased the tax load for investment fonds.
+
+2. Just as it did it for companies a couple of years ago.
+
+1 <--analogy-- 2
+}
+
+antithesis {DEFINITION:
+
+The author presents contrasting facts in NUCLEUS and SATELLITE and has
+a clearly positive attitude to the situation presented in NUCLEUS.
+
+The facts presented in N and S are similar in many aspects, dissimilar
+in few aspects, and they are compared to each other with respect to
+some of their differences.
+
+EXAMPLE:
+
+1. The tragic of hundreds or even thousands of people snake-lining up
+for any task illustrates a lack of jobs,
+
+2. not laziness.
+
+1 <--antithesis-- 2
+}
+
+concession {DEFINITION:
+
+The authors admits the incompatibility of the situation presented in
+NUCLEUS with the information presented in SATELLITE.
+
+EXAMPLE:
+
+1. Although dioxin is toxic to some animals,
+
+2. evidence is lacking that it has any serious long-term effect on
+human beings.
+
+1 --concession--> 2
+}
+
+evidence {DEFINITION:
+
+SATELLITE provides some facts which support the truth status of the
+information described in NUCLEUS.
+
+EXAMPLE:
+
+1. The program as published for calender year 1980 really works.
+
+2. In only few minutes, I entered all the figures from my 1980 tax
+return and got a result which agreed with my hand calculation to the
+penny.
+
+1 <--evidence-- 2
+}
+
+justify {DEFINITION:
+
+The author explains in SATELLITE his right to present the information
+in NUCLEUS.
+
+EXAMPLE:
+
+1. The next music day is scheduled for July 21.
+
+2. I'll post more details later.
+
+3. But this is a good point to reserve the place on your calender.
+
+1 <--justify-- 3 <--concessiion-- 2
+}

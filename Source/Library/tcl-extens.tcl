@@ -66,7 +66,7 @@ proc MenuDelete { menuName {label {}}} {
 	if [catch {$menu index $label} index] {
 	    puts stdout "MenuDelete: Menu item $label not in menu $menuName!!"
 	    return
-	} 
+	}
 	$menu delete index
     }
 }
@@ -77,6 +77,61 @@ proc AddMenuCascade {menu label newmenu} {
 
 proc AddMenuItem {menu label cmd} {
     $menu add command -label $label -command $cmd
+}
+
+proc show-tooltip {a_wdgt a_txt} {
+    if [winfo exists $a_wdgt.tooltip] {destroy $a_wdgt.tooltip}
+
+    set tooltip [toplevel $a_wdgt.tooltip -bd 1 -bg black]
+    set scrh [winfo screenheight $a_wdgt]; # 1) flashing window fix
+    set scrw [winfo screenwidth $a_wdgt]; # 2) flashing window fix
+    wm geometry $tooltip +$scrh+$scrw; # 3) flashing window fix
+    wm overrideredirect $tooltip 1
+    pack [label $tooltip.label -bg lightyellow -fg black -text $a_txt -justify left]
+
+    set width [winfo reqwidth $tooltip.label]
+    set height [winfo reqheight $tooltip.label]
+    # a.) Is the pointer in the bottom half of the screen?
+    set pointer_below_midline [expr [winfo pointery .] > [expr [winfo screenheight .] / 2.0]]
+    # b.) Tooltip is centred horizontally on pointer.
+    set positionX [expr [winfo pointerx .] - round($width / 2.0)]
+    # c.) Tooltip is displayed above or below depending on pointer Y position.
+    set positionY [expr [winfo pointery .] + ($pointer_below_midline * -1) * ($height + 35) + \
+		       (35 - (round($height / 2.0) % 35))]
+
+    if  {[expr $positionX + $width] > [winfo screenwidth .]} {
+	set positionX [expr [winfo screenwidth .] - $width]
+    } elseif {$positionX < 0} {
+	set positionX 0
+    }
+
+    wm geometry $tooltip [join  "$width x $height + $positionX + $positionY" {}]
+    raise $tooltip
+}
+
+proc show-menu-tooltip {a_wdgt a_y} {
+    global help
+
+    # obtain menu entry
+    set mitem [$a_wdgt entrycget "@$a_y" -label]
+
+    # show help tooltip for menu entry
+    if {[info exists help($mitem)] && $help($mitem) != ""} {
+	show-tooltip $a_wdgt $help($mitem)
+    }
+}
+
+proc bind-menu-tooltip {a_wdgt} {
+    bind $a_wdgt <Any-Enter> [list after 400 [list show-menu-tooltip %W %y]]
+
+    bind $a_wdgt <Any-Motion> {
+	destroy %W.tooltip
+	show-menu-tooltip %W %y
+    }
+
+    bind $a_wdgt <Any-Leave> {destroy %W.tooltip}
+    bind $a_wdgt <Any-KeyPress> [list destroy %W.tooltip]
+    bind $a_wdgt <Any-Button> [list destroy %W.tooltip]
 }
 
 ##################################
@@ -203,12 +258,12 @@ proc scrolled-text {name args} {
     grid $name.title -row 0  -sticky "ew"
     # add buttons for navigating around discussions
     set navibar [frame $name.navibar]
-    grid $navibar -sticky "nsew" -row 1;
     set btnNext [button $name.btnNextMsg -text "Next Message" -command {next-message really}];
     set btnPrev [button $name.btnPrevMsg -text "Previous Message" -command {next-message really backward}];
     # set btnNextSent [button $name.nextsent -text "Next Sentence" -command {next-sentence really}];
     # grid $btnPrev $btnNext $btnNextSent -in $navibar;
-    grid $btnPrev $btnNext -in $navibar;
+    grid $navibar -sticky "nsew" -row 1;
+    pack $btnPrev $btnNext -in $navibar -side left -expand true -fill x;
 
     frame $name.textWindowPrnt
     text  $name.textPrnt  -bg $bg -relief sunken -yscrollcommand "$name.scrollPrnt set"

@@ -125,11 +125,11 @@ Same-Unit-SN multinuc
 Sequence multinuc
 Temporal-Same-Time multinuc
 TextualOrganization multinuc
-Topic-Comment multinuc 
-Topic-WA-Comment multinuc 
+Topic-Comment multinuc
+Topic-WA-Comment multinuc
 Topic-Drift multinuc
 Topic-Shift multinuc
-OTHER-multinuc multinuc 
+OTHER-multinuc multinuc
 -
 Title constit Paper
 Topic constit Paper
@@ -142,11 +142,3 @@ SectionText constit Paper
 Heading constit Section
 Summary  constit Section
 Column-Title constit Paper
-
-
-
-
-
-
-
-
