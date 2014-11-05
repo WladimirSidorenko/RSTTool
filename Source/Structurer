@@ -434,6 +434,8 @@ proc unlink-node {sat {redraw 1}} {
 	    }
 	}
     }
+    # puts stderr "unlink-node: dgn = $dgn"
+
     if {$dgn} {
 	if {$spannid != {}} {
 	    # puts stderr "destroy-group-node $spannid $nuc $redraw"
@@ -470,11 +472,11 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
     set prnt_msg_id $nid2msgid($gnid)
     # remove group node which connects two messages from msgs2extnid
     if {[llength $prnt_msg_id] > 1} {
-	set mkey [join $prnt_msg_id ","]
-	# puts stderr "destroy-group-node: msgs2extnid($mkey)"
-	if [info exists msgs2extnid($mkey)] {
-	    # puts stderr "destroy-group-node: msgs2extnid($mkey) exists - deleting"
-	    unset msgs2extnid($mkey)
+	set msgkey [join $prnt_msg_id ","]
+	# puts stderr "destroy-group-node: msgs2extnid($msgkey)"
+	if [info exists msgs2extnid($msgkey)] {
+	    # puts stderr "destroy-group-node: msgs2extnid($msgkey) exists - deleting"
+	    unset msgs2extnid($msgkey)
 	}
     }
     # delete `gnid` from the list of children of its parent
@@ -502,16 +504,16 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
 	# if `gnid` has children in other messages, then update
 	# information stored in msgs2extnid
 	if {[llength $prnt_msg_id] == 1 && $prnt_msg_id != $chld_msg_id} {
-	    set mkey "$prnt_msg_id,$chld_msg_id"
-	    # puts stderr "destroy-group-node: mkey = $mkey"
-	    if [info exists msgs2extnid($mkey)] {
-		# puts stderr "destroy-group-node: msgs2extnid($mkey) exists"
-		while {[set idx [lsearch -exact $msgs2extnid($mkey) $gnid]] != -1} {
-		    set msgs2extnid($mkey) [lreplace $msgs2extnid($mkey) $idx $idx $replnid]
+	    set msgkey "$prnt_msg_id,$chld_msg_id"
+	    # puts stderr "destroy-group-node: msgkey = $msgkey"
+	    if [info exists msgs2extnid($msgkey)] {
+		# puts stderr "destroy-group-node: msgs2extnid($msgkey) exists"
+		while {[set idx [lsearch -exact $msgs2extnid($msgkey) $gnid]] != -1} {
+		    set msgs2extnid($msgkey) [lreplace $msgs2extnid($msgkey) $idx $idx $replnid]
 		}
 		# update children in external nodes that connect
 		# multiple messages
-		foreach {prntid chldid relname} $msgs2extnid($mkey) {
+		foreach {prntid chldid relname} $msgs2extnid($msgkey) {
 		    if {$chldid == $replnid} {
 			set idx [lsearch -exact $node($prntid,children) $gnid]
 			set node($prntid,children) [lreplace $node($prntid,children) \
@@ -544,7 +546,7 @@ proc adjust-after-change {nuc sat {redraw 0}} {
 
 proc restructure-upwards {nid {redraw 0}} {
     global node visible_nodes
-    debug "restructure-upwards: $nid $redraw"
+    # puts stderr "restructure-upwards: $nid $redraw"
 
     # stop when no change in span nor in pos of node
     set adjust_needed 0
@@ -580,6 +582,7 @@ proc restructure-upwards {nid {redraw 0}} {
 	}
 
     } else {
+	# redisplay-node $nid
 	set adjust_needed 1
     }
 
@@ -1195,7 +1198,10 @@ proc expand {nid {really {}} } {
 		bind $rstw <ButtonRelease-1> {
 		    if {[clicked-node %x %y] != 0} {
 			compare-click-times
-			disconnect_node [clicked-node %x %y] disconnect} }
+			unlink-node [clicked-node %x %y]
+			redisplay-net
+		    }
+		}
 	    }
 	    modify { $rstw config -cursor X_cursor
 		bind $rstw <ButtonPress-1> {}
@@ -1203,7 +1209,8 @@ proc expand {nid {really {}} } {
 		bind $rstw <ButtonRelease-1> {
 		    if {[clicked-node %x %y] != 0} {
 			compare-click-times
-			disconnect_node [clicked-node %x %y] modify} }
+			disconnect_node [clicked-node %x %y] modify}
+		}
 	    }
 	    change_schema { $rstw config -cursor hand1
 		bind $rstw <ButtonPress-1> {}
@@ -1910,6 +1917,10 @@ proc expand {nid {really {}} } {
 	#we only allow disconnection of satellites and multinucs
 	set relation $node($clicked_node,relname)
 	set par $node($clicked_node,parent)
+	# puts stderr "disconnect_node: clicked_node = $clicked_node"
+	# puts stderr "disconnect_node: method = $method"
+	# puts stderr "disconnect_node: relation = $relation"
+	# puts stderr "disconnect_node: par = $par"
 	if {$par == {} || $relation == "span" || $disco_node != {}} {
 	} else {
 
@@ -1925,9 +1936,10 @@ proc expand {nid {really {}} } {
 
 	    #clean up any extra spans or single multinuclear relations
 	    set sibling {}
-	    if {[relation-type $relation] == "rst"|| [relation-type $relation] == "rst"} {
+	    if {[relation-type $relation] == "rst"} {
 		foreach child $node($par,children) {
-		    if {[relation-type $node($child,relname)] == "rst" || [relation-type $node($child,relname)] == "embedded"} {
+		    if {[relation-type $node($child,relname)] == "rst" || \
+			    [relation-type $node($child,relname)] == "embedded"} {
 			lappend sibling $child
 		    }
 		}
