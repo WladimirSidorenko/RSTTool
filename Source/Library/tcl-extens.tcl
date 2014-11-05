@@ -122,16 +122,16 @@ proc show-menu-tooltip {a_wdgt a_y} {
 }
 
 proc bind-menu-tooltip {a_wdgt} {
-    bind $a_wdgt <Any-Enter> [list after 400 [list show-menu-tooltip %W %y]]
+    bind $a_wdgt <Any-Enter> [list show-menu-tooltip %W %y]
 
     bind $a_wdgt <Any-Motion> {
 	destroy %W.tooltip
 	show-menu-tooltip %W %y
     }
 
-    bind $a_wdgt <Any-Leave> {destroy %W.tooltip}
-    bind $a_wdgt <Any-KeyPress> [list destroy %W.tooltip]
-    bind $a_wdgt <Any-Button> [list destroy %W.tooltip]
+    bind $a_wdgt <Any-Leave> [list destroy %W.tooltip [list continue]]
+    bind $a_wdgt <Any-KeyPress> [list destroy %W.tooltip [list continue]]
+    bind $a_wdgt <Any-Button> [list destroy %W.tooltip [list continue]]
 }
 
 ##################################

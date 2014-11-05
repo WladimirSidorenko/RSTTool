@@ -1476,6 +1476,8 @@ proc expand {nid {really {}} } {
 	    tkwait variable pcfl_selection
 	}
 	.tmpwin unpost
+	if [winfo exists .tmpwin.tooltip] {destroy .tmpwin.tooltip}
+
 	if {$pcfl_selection == {} } {
 	    set cancelled 1
 	}
