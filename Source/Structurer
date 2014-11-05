@@ -47,6 +47,9 @@ pack .rtbar.link .rtbar.autolink .rtbar.disconnect .rtbar.modify .rtbar.change_r
 menu .menubar
 # attach it to the main window
 . config -menu .menubar
+if {[tk windowingsystem] == "aqua"} {
+    .menubar configure -fg black
+}
 # create more cascade menus
 foreach m {File View Print Help} {
     set $m [menu .menubar.m$m -tearoff 0]
@@ -1483,11 +1486,8 @@ proc expand {nid {really {}} } {
 	return $pcfl_selection
     }
 
-
     ############################
     # MISC
-
-
     proc xscrollto {x} {
 	global rstw
 
