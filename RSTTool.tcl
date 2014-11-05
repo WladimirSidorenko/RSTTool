@@ -79,6 +79,13 @@ proc Quit {} {exit}
 wm protocol . WM_DELETE_WINDOW Quit
 frame .segmentframe
 
+# default appearance
+tk_setPalette background gray35 foreground white activebackground white activeforeground red
+# apply special default appearance settings for aqua
+if {[tk windowingsystem] == "aqua"} {
+    tk_setPalette background gray85 foreground black
+}
+
 ######################################
 # Modules
 proc load-module {Path Files} {
@@ -114,10 +121,6 @@ set-mode link
 
 ######################################
 # Appearance
-
-# default appearance
-tk_setPalette background gray35 foreground white \
-    activebackground white activeforeground red
 catch {source $env(HOME)/.wishrc}
 
 .editor.text configure -fg black -bg white -selectbackground gray85

@@ -47,16 +47,11 @@ pack .rtbar.link .rtbar.autolink .rtbar.disconnect .rtbar.modify .rtbar.change_r
 menu .menubar
 # attach it to the main window
 . config -menu .menubar
-if {[tk windowingsystem] == "aqua"} {
-    .menubar configure -fg black
-}
+
 # create more cascade menus
 foreach m {File View Print Help} {
     set $m [menu .menubar.m$m -tearoff 0]
     .menubar add cascade -label $m -menu .menubar.m$m
-    if {[tk windowingsystem] == "aqua"} {
-	.menubar.m$m configure -fg black
-    }
 }
 #menu items...
 
@@ -1439,9 +1434,6 @@ proc expand {nid {really {}} } {
 	set num_items 0
 	set cancel_exists 0
 	set my_menu .tmpwin
-	if {[tk windowingsystem] == "aqua"} {
-	    $my_menu configure -fg black
-	}
 
 	if {$show_tooltip} {
 	    bind-menu-tooltip $my_menu
@@ -1457,9 +1449,6 @@ proc expand {nid {really {}} } {
 		#set item $underscore
 		menu $my_menu.$item -tearoff 0
 		AddMenuCascade $my_menu NEXT $my_menu.$item
-		if {[tk windowingsystem] == "aqua"} {
-		    $my_menu.$item configure -fg black
-		}
 		if {$show_tooltip} {
 		    bind-menu-tooltip $my_menu.$item
 		}
