@@ -249,18 +249,19 @@ proc move-node {a_path x y} {
 
     	set delta_txt [$a_path get "$new_idx" "$old_idx -1 chars"]
 	set delta [string length "$delta_txt"]
-	# puts stderr "move-node: 1.0) delta_txt = '$delta_txt'; delta = $delta"
+	puts stderr "move-node: 1.0) istart = $istart;, delta_txt = '$delta_txt'; delta = $delta"
     	# append delta text to adjacent node, if one exists, or simply
     	# remove `old` tags otherwise
     	set node($inid,text) [string range $node($inid,text) 0 \
 				  [expr [string length "$node($inid,text)"] - \
 				       $delta - 1]]
-	# puts stderr "move-node: 1.1) node(inid = $inid,offsets) = $node($inid,offsets)"
+	puts stderr "move-node: 1.1) node(inid = $inid,offsets) = $node($inid,offsets)"
     	set node($inid,offsets) [subtract-points $node($inid,offsets) [list 0 $delta]]
-	# puts stderr "move-node: 1.2) node(inid = $inid,offsets) = $node($inid,offsets)"
+	puts stderr "move-node: 1.2) node(inid = $inid,offsets) = $node($inid,offsets)"
     	if {$nxt_nid == {}} {
+	    puts stderr "move-node: 1.3) tag remove old [$a_path index $new_idx] $istart"
     	    $a_path tag remove old "$new_idx" "$istart"
-    	    $a_path tag add new "$new_idx" "$istart"
+    	    $a_path tag add new "$new_idx" "$istart +1 chars"
 	    $a_path delete $istart $iend;		  # delete segment marker
 	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
 	    next-sentence

@@ -4,30 +4,39 @@ This program is a forked version of [Daniel Marcu's
 modification](http://www.isi.edu/publications/licensed-sw/RSTTool/) of
 the original [RSTTool from Michael
 O'Donell](http://www.wagsoft.com/RSTTool/).  This version provides a
-modified appearance for annotating multilogues (i.e. dialogues with
+modified appearance for annotation of multilogues (i.e. dialogues with
 multiple participants).  The user can view multilogues in a successive
 fashion (i.e. reply by reply) and can annotate RST-relations both
-within and among the replies.
-
+within and among the multilogue messages.
 
 ## Description
 
 After starting `./RSTTool &` from your shell, you should see a
-graphical frame consisting of three horizontal sub-windows.  The upper
-sub-window ("RST Editor") shows a graphical representation of the
-(partially constructed) RS tree.  The lower part ("Segment Editor")
-consists of two smaller windows that contain text of the multilogue
-messages.  The lower of these windows displays the answer to the text
-in the upper part.  That is, if you have a dialogue like:
+graphical window consisting of three horizontal sub-frames.  The upper
+sub-frame ("RST Editor") displays a graphical representation of the
+(partially constructed) RS tree.  The lower sub-frame ("Segment
+Editor") consists of two smaller sub-windows.  The upper of these
+windows shows a message in a given multilogue, and the lower window
+displays the response to this message.
+
+You can scroll through discussion(s) in a consecutive fashion by
+clicking on the buttons "Previous Message" and "Next Message" in the
+middle part of the frame.  These buttons will change the messages
+displayed in the lower sub-frame representing each message-response
+pair one at a time.  First, the very first message of the discussion
+will be displayed in the lowest sub-window.  In this window, you can
+also add and modify EDU boundaries for that message.  After clicking
+on "Next message", the root message of the discussion will appear in
+the upper sub-window, and the lower sub-window will display an answer
+to the root meesage.
+
+That is, if you have a dialogue like:
 
 *- How are you doing?*
 
 *- Fine. And you?*
 
-When scrolling through discussion, you should see the first message in
-the upper window part, and the second message, which is answer, in the
-lower window.  We also call the lower window "Segment Editor", since
-in it, you can create, delete, or move the boundaries of EDUs.
+To be continued...
 
 ### Input Format
 
