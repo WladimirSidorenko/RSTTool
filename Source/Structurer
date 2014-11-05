@@ -1773,13 +1773,40 @@ proc expand {nid {really {}} } {
 		# populate nodes
 		foreach field [lrange $fields 3 end] {
 		    set f [split $field "\034"]
-		    if {[llength $f] > 2} {
-			set node($nid,[lindex $f 0]) [lrange $f 1 end]
-		    } else {
-			if {[lindex $f 0] == "type" && [lindex $f 1] == "span"} {
-			    lappend group_nodes $nid
+		    set f_id [lindex $f 0]
+
+		    # perform consistency check on children
+		    if {$f_id == "children"} {
+			foreach ch_id [lrange $f 1 end] {
+			    if {[info exists nid2msgid($ch_id)] && \
+				    $nid2msgid($ch_id) == $nid2msgid($nid)} {
+				if {$node($ch_id,parent) != $nid} {
+				    error "Invalid discourse tree: parent of the child node\
+ $ch_id of node $nid is not $nid but $node($ch_id,parent)"
+				}
+			    }
+			    set node($ch_id,parent) $nid
 			}
-			set node($nid,[lindex $f 0]) [lindex $f 1]
+		    } elseif {$f_id == "parent" && [set prnt_id [lindex $f 1]] != {}} {
+			if {[info exists nid2msgid($prnt_id)] && \
+				$nid2msgid($nid) == $nid2msgid($prnt_id) && \
+				[info exists node($nid,parent)]} {
+			    if {$node($nid,parent) != $prnt_id} {
+				    error "Invalid discourse tree: different parents defined for node\
+ $nid ($node($nid,parent) vs. $prnt_id)"
+			    }
+			}
+		    }
+
+		    if {[llength $f] > 2} {
+			set node($nid,$f_id) [lrange $f 1 end]
+		    } else {
+			if {$f_id == "type" && [lindex $f 1] == "span"} {
+			    lappend group_nodes $nid
+			} elseif {$f_id == "parent"} {
+
+			}
+			set node($nid,$f_id) [lindex $f 1]
 		    }
 		}
 	    } elseif {[llength $fields] > 0} {
