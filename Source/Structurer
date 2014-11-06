@@ -1710,7 +1710,7 @@ proc expand {nid {really {}} } {
 	# output information about nodes
 	foreach nid [array names nid2msgid] {
 	    puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] \
-				     "text\034$node($nid,text)" \
+				     "text\034" [string trimright $node($nid,text) "\n"] \
 				     "type\034$node($nid,type)" \
 				     "textwgt\034$node($nid,textwgt)" \
 				     "labelwgt\034$node($nid,labelwgt)" \

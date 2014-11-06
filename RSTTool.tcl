@@ -156,10 +156,12 @@ bind .editor.text <Key-Super_R> {continue}
 # node creation functions
 .editor.text tag bind new <ButtonRelease-1> {
     create-a-node-here really
+    break;
 }
 
 .editor.text tag bind next <ButtonRelease-1> {
     create-a-node-here really
+    break;
 }
 
 # node modification operations
