@@ -139,19 +139,21 @@ set old_clr purple;
 
 ######################################
 # Bindings
+if {[tk windowingsystem] == "aqua"} {
+    set ModKey "Command"
+} else {
+    set ModKey "Control"
+}
 
 # load/save functions
-bind all <Control-o> {open-file}
-bind all <Control-s> {$save_func}
-
-bind all <Control-q> {$save_func; exit}
+bind all <$ModKey-o> {open-file}
+bind all <$ModKey-s> {$save_func}
+bind all <$ModKey-q> {$save_func; exit}
 
 bindtags .editor.text {all .editor.text Text . UndoBindings(1)}
 bind .editor.text <Any-Key> {break}
 bind .editor.text <ButtonRelease-2> {break}
-bind .editor.text <Control-C> {continue}
-bind .editor.text <Key-Super_L> {continue}
-bind .editor.text <Key-Super_R> {continue}
+bind .editor.text <$ModKey-c> {continue}
 
 # node creation functions
 .editor.text tag bind new <ButtonRelease-1> {

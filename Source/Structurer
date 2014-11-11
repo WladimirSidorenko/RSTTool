@@ -1437,7 +1437,7 @@ proc expand {nid {really {}} } {
 	global pcfl_selection cancelled
 	set pcfl_selection {}
 	if {[winfo exists .tmpwin]} {destroy .tmpwin}
-	menu .tmpwin -tearoff 0
+	menu .tmpwin -tearoff 0 -type normal
 	set num_items 0
 	set cancel_exists 0
 	set my_menu .tmpwin

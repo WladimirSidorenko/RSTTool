@@ -113,7 +113,7 @@ proc show-menu-tooltip {a_wdgt a_y} {
     global help
 
     # obtain menu entry
-    set mitem [$a_wdgt entrycget "@$a_y" -label]
+    set mitem [$a_wdgt entrycget active -label]
 
     # show help tooltip for menu entry
     if {[info exists help($mitem)] && $help($mitem) != ""} {
@@ -122,9 +122,7 @@ proc show-menu-tooltip {a_wdgt a_y} {
 }
 
 proc bind-menu-tooltip {a_wdgt} {
-    bind $a_wdgt <Any-Enter> [list show-menu-tooltip %W %y]
-
-    bind $a_wdgt <Any-Motion> {
+    bind $a_wdgt <<MenuSelect>> {
 	destroy %W.tooltip
 	show-menu-tooltip %W %y
     }
