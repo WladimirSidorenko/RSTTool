@@ -1437,18 +1437,16 @@ proc expand {nid {really {}} } {
 	global pcfl_selection cancelled
 	set pcfl_selection {}
 	if {[winfo exists .tmpwin]} {destroy .tmpwin}
-	menu .tmpwin -tearoff 0 -type normal
+	menu .tmpwin -tearoff 0
 	set num_items 0
 	set cancel_exists 0
 	set my_menu .tmpwin
-
 	if {$show_tooltip} {
 	    bind-menu-tooltip $my_menu
 	}
 
 	foreach item $Items {
-	    incr num_items
-	    if {$num_items <= 33} {
+	    if {$num_items < 33} {
 		AddMenuItem $my_menu $item "set pcfl_selection $item"
 	    } else {
 		#set underscore ""
@@ -1465,7 +1463,9 @@ proc expand {nid {really {}} } {
 		AddMenuItem $my_menu $item "set pcfl_selection $item"
 		set num_items 0
 	    }
+	    incr num_items
 	}
+
 	if { $put_cancel != "NOcancel" && $cancel_exists == 0 } {
 	    AddMenuItem .tmpwin CANCEL "set pcfl_selection {}"
 	}

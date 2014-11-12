@@ -70,7 +70,6 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
     global offsetShift
     global last_text_node_id newest_node savenum new_node_text
 
-    puts stderr "calling create-a-node-here"
     # if no index was specified, set the index position to the
     # position of the cursor and move it to the left, if currently
     # pointed character is a space
@@ -96,8 +95,6 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
 	    break
 	}
     }
-    puts stderr "create-a-node-here: my_current = $my_current"
-    puts stderr "create-a-node-here: my_end = $my_end"
     # put mark called `insert` before current position -- current is position
     # nearest to the mouse pointer
     .editor.text mark set insert $my_current
@@ -106,7 +103,6 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
 	    [.editor.text compare new.first >= $my_current]} {
 	return
     }
-    puts stderr "create-a-node-here: continuing"
     # remove tag `my_sel` from the whole text area
     .editor.text tag remove my_sel 1.0 end
     if { $do_it == "really" } {
@@ -207,7 +203,6 @@ proc make-node {text type {start_pos {}} {end_pos {}}} {
 proc move-node {a_path x y} {
     global node seg_mrk_x seg_mrk_y
 
-    puts stderr "calling move-node"
     if {$seg_mrk_x == {} || $seg_mrk_y == {}} {return}
     set old_idx "@$seg_mrk_x,$seg_mrk_y wordstart"
     set new_idx "@$x,$y"
@@ -239,8 +234,6 @@ proc move-node {a_path x y} {
     # determine where the next location of the cursor is and find
     # adjacent node
     set delta_txt ""
-    puts stderr "move-node: new_idx = [$a_path index $new_idx]"
-    puts stderr "move-node: old_idx = [$a_path index $old_idx]"
     if [$a_path compare "$new_idx" < "$old_idx"] {
     	# if the node has shrinked, set the minimum possible index of
     	# the new shrinked node to the end of the first word in the
@@ -261,26 +254,17 @@ proc move-node {a_path x y} {
     	set node($inid,text) [string range $node($inid,text) 0 \
 				  [expr [string length "$node($inid,text)"] - \
 				       $delta - 1]]
-	puts stderr "move-node: 1.1) node(inid = $inid,offsets) = $node($inid,offsets)"
     	set node($inid,offsets) [subtract-points $node($inid,offsets) [list 0 $delta]]
 	# puts stderr "move-node: 1.2) node(inid = $inid,offsets) = $node($inid,offsets)"
     	if {$nxt_nid == {}} {
-	    puts stderr "move-node: 1.3) tag ranges old [$a_path tag ranges old]"
-	    puts stderr "move-node: 1.4) tag ranges new [$a_path tag ranges new]"
     	    $a_path tag remove old "$new_idx" "$istart"
     	    $a_path tag add new "$new_idx" "$istart +1 chars"
-	    puts stderr "move-node: 1.5) tag ranges old [$a_path tag ranges old]"
-	    puts stderr "move-node: 1.6) tag ranges new [$a_path tag ranges new]"
 	    $a_path delete $istart $iend;		  # delete segment marker
 	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
-	    puts stderr "move-node: 1.7) tag ranges old [$a_path tag ranges old]"
-	    puts stderr "move-node: 1.8) tag ranges new [$a_path tag ranges new]"
 	    next-sentence
     	} else {
     	    set node($nxt_nid,text) "$delta_txt$node($nxt_nid,text)"
-	    puts stderr "move-node: 1.9) node(nxt_nid = $nxt_nid,offsets) = $node($nxt_nid,offsets)"
 	    set node($nxt_nid,offsets) [subtract-points $node($nxt_nid,offsets) [list $delta 0]]
-	    puts stderr "move-node: 1.10) node(nxt_nid = $nxt_nid,offsets) = $node($nxt_nid,offsets)"
 	    $a_path delete $istart $iend;		  # delete segment marker
 	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
     	}
@@ -297,7 +281,6 @@ proc move-node {a_path x y} {
 	}
 	set delta_txt [$a_path get "$iend" "$new_idx"]
 	set delta [string length "$delta_txt"]
-	puts stderr "move-node: 2.0) delta_txt = '$delta_txt'; delta = $delta"
 	# append delta text to adjacent node, if one exists, or simply
 	# remove `old` tags otherwise
 	set node($inid,text) "$node($inid,text)$delta_txt"
@@ -305,8 +288,8 @@ proc move-node {a_path x y} {
 	set node($inid,offsets) [add-points $node($inid,offsets) [list 0 $delta]]
 	# puts stderr "move-node: 2.2) node(inid = $inid,offsets) = $node($inid,offsets)"
 	if {$nxt_nid == {}} {
-	    puts stderr "move-node: 2.1) tag ranges old [$a_path tag ranges old]"
-	    puts stderr "move-node: 2.1) tag ranges new [$a_path tag ranges new]"
+	    # puts stderr "move-node: 2.1) tag ranges old [$a_path tag ranges old]"
+	    # puts stderr "move-node: 2.1) tag ranges new [$a_path tag ranges new]"
 	    $a_path tag add old "$iend" "$new_idx"
 	    $a_path tag remove new "$iend" "$new_idx"
 	    $a_path tag remove next "$iend" "$new_idx"

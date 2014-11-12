@@ -123,8 +123,8 @@ proc show-menu-tooltip {a_wdgt a_y} {
 
 proc bind-menu-tooltip {a_wdgt} {
     bind $a_wdgt <<MenuSelect>> {
-	destroy %W.tooltip
-	show-menu-tooltip %W %y
+    	destroy %W.tooltip
+    	show-menu-tooltip %W %y
     }
 
     bind $a_wdgt <Any-Leave> [list destroy %W.tooltip [list continue]]

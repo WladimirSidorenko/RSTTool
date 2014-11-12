@@ -1,6 +1,9 @@
 #!/usr/bin/env wish
 
 ######################################
+# Libraries
+
+######################################
 # Variables
 set LOGIN nobody
 set PLATFORM $tcl_platform(platform)
@@ -110,8 +113,8 @@ load-module $LIBRARY $EDITOR_FILES
 load-module $SRC $SRC_FILES
 
 array set relations {};
-load-relations [file join $RELS Relations]
-load-relations [file join $RELS ExtRelations] 1
+load-relations [file join $RELS PCC.rel]
+load-relations [file join $RELS R-PCC.rel] 1
 load_abbreviations [file join $RELS abbreviations]
 load_help
 
