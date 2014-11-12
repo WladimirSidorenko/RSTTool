@@ -1,39 +1,52 @@
-r-antithesis
-r-background
-r-circumstance
-r-concession
-r-condition
-r-conjunction
-r-contrast
-r-disjunction
-r-elaboration
-r-enablement
-r-evaluation
-r-evaluation-n
-r-evaluation-s
-r-evidence
-r-interpretation
-r-joint
-r-justify
-r-list
-r-means
-r-motivation
-r-nonvolitional-cause
-r-nonvolitional-result
-r-otherwise
-r-preparation
-r-progression
-r-purpose
-r-reason
-r-restatement
-r-restatement-mn
-r-sequence
-r-solutionhood
-r-span
-r-summary
-r-unconditional
-r-unless
-r-volitional-cause
-r-volitional-result
-
-r-other
+r-antithesis	rst
+r-background	rst
+r-circumstance	rst
+r-concession	rst
+r-condition	rst
+r-conjunction	rst
+r-contrast	rst
+r-disjunction	rst
+r-elaboration	rst
+r-enablement	rst
+r-evaluation	rst
+r-evaluation-n	rst
+r-evaluation-s	rst
+r-evidence	rst
+r-interpretation	rst
+r-joint	rst
+r-justify	rst
+r-list	rst
+r-means	rst
+r-motivation	rst
+r-nonvolitional-cause	rst
+r-nonvolitional-result	rst
+r-otherwise	rst
+r-preparation	rst
+r-progression	rst
+r-purpose	rst
+r-reason	rst
+r-restatement	rst
+r-restatement-mn	rst
+r-sequence	rst
+r-solutionhood	rst
+r-span	rst
+r-summary	rst
+r-unconditional	rst
+r-unless	rst
+r-volitional-cause	rst
+r-volitional-result	rst
+r-OTHER	rst
+-
+cause-result multinuc
+comment-topic multinuc
+contrast multinuc
+disjunction multinuc
+enablement multinuc
+evaluation multinuc
+interpretation multinuc
+joint multinuc
+list multinuc
+otherwise multinuc
+reason multinuc
+sequence multinuc
+OTHER multinuc

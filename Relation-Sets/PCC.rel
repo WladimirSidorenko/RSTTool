@@ -1,42 +1,56 @@
-at-mention
-antithesis
-background
-circumstance
-concession
-condition
-conjunction
-contrast
-disjunction
-elaboration
-enablement
-evaluation
-evaluation-n
-evaluation-s
-evidence
-hashtag
-interpretation
-joint
-justify
-list
-means
-motivation
-nonvolitional-cause
-nonvolitional-result
-otherwise
-preparation
-progression
-purpose
-reason
-restatement
-restatement-mn
-sequence
-solutionhood
-span
-summary
-unconditional
-unless
-uri
-volitional-cause
-volitional-result
-
-OTHER
+at-mention	rst
+antithesis	rst
+background	rst
+circumstance	rst
+concession	rst
+condition	rst
+conjunction	rst
+contrast	rst
+disjunction	rst
+elaboration	rst
+enablement	rst
+evaluation	rst
+evaluation-n	rst
+evaluation-s	rst
+evidence	rst
+hashtag	rst
+interpretation	rst
+joint	rst
+justify	rst
+list	rst
+means	rst
+motivation	rst
+nonvolitional-cause	rst
+nonvolitional-result	rst
+otherwise	rst
+preparation	rst
+progression	rst
+purpose	rst
+reason	rst
+restatement	rst
+restatement-mn	rst
+sequence	rst
+solutionhood	rst
+span	rst
+summary	rst
+unconditional	rst
+unless	rst
+uri	rst
+volitional-cause	rst
+volitional-result	rst
+OTHER	rst
+-
+OTHER multinuc
+at-mention	multinuc
+cause-result multinuc
+comment-topic multinuc
+contrast multinuc
+disjunction multinuc
+enablement multinuc
+evaluation multinuc
+interpretation multinuc
+joint multinuc
+list multinuc
+otherwise multinuc
+reason multinuc
+sequence multinuc
