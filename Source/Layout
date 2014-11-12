@@ -68,7 +68,7 @@ proc sort-vi-nodes {} {
     # append node id's from child message
     if [info exists msgid2nid($crntMsgId)] {
 	foreach inid [lsort -integer $msgid2nid($crntMsgId)] {
-	    if [info exists visible_nodes($inid)] {
+	    if [info exists vicopy($inid)] {
 		lappend ret $inid
 		unset vicopy($inid)
 	    }

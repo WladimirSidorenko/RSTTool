@@ -6,7 +6,7 @@
 ######################################
 # Variables
 set LOGIN nobody
-set PLATFORM $tcl_platform(platform)
+set PLATFORM $::tcl_platform(platform)
 set CHANGED 0;			# flag indicating whether any
 				# modifications are not saved
 set x1 {}
@@ -49,7 +49,7 @@ array set msgid2nid {};	  # mapping from message ids to ids of internal nodes
 			  # belonging to that message
 array set nid2msgid {};	  # mapping from node id to message id
 array set help {};
-set helpmenu {relation_defs interface}
+set helpmenu {relation_defs interface};
 
 ######################################
 # Methods
@@ -93,7 +93,6 @@ if {[tk windowingsystem] == "aqua"} {
 # Modules
 proc load-module {Path Files} {
     foreach ifile $Files {
-	# puts stderr "Loading $ifile"
 	source [file join $Path $ifile]
     }
 }

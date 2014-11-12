@@ -409,7 +409,7 @@ proc unlink-node {sat {redraw 1}} {
     # puts stderr "unlink-node: spannid = $spannid"
 
     # 2. Redraw satellite substructure
-    if {$redraw == 1} {y-layout-subtree $sat}
+    if {$redraw} {y-layout-subtree $sat}
 
     # 3. If parent has no more children, delete span node and shift
     # the parent up the structure
@@ -517,7 +517,7 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
 		    if {$chldid == $replnid} {
 			set idx [lsearch -exact $node($prntid,children) $gnid]
 			set node($prntid,children) [lreplace $node($prntid,children) \
-							 $idx $idx $replnid]
+							$idx $idx $replnid]
 			# update span information of the parent
 			restructure-upwards $prntid 0
 		    }
@@ -703,7 +703,7 @@ proc find-node-span {nid} {
 	    set msgids $nid2msgid($nid)
 	    foreach child $node($nid,children) {
 		if { ($node($child,relname) == "span" \
-		    || [constit-relation-p $node($child,relname)]) && \
+			  || [constit-relation-p $node($child,relname)]) && \
 			 [lsearch -exact $msgids $nid2msgid($child)] != -1} {
 		    set min [min [lindex $node($child,span) 0] $min]
 		    set max [max [lindex $node($child,span) 1] $max]
@@ -780,11 +780,9 @@ proc expand {nid {really {}} } {
 
     if {![info exists node($nid,text)]} {return}
 
-    #  if { [legal-node $nid] != 0 } {
     foreach child  $node($nid,children) {
 	expand $child really
-	#    }
-	#  } else {
+
 	set junk [lsearch -exact $collapsed_nodes $nid]
 	if { "$junk" != "-1" } {
 	    set collapsed_nodes [lreplace $collapsed_nodes $junk $junk]
@@ -796,1538 +794,1552 @@ proc expand {nid {really {}} } {
 	# Scroll to new position
 	# collapsed - scroll to the new node position
 	xscrollto [max [expr $node($nid,xpos) - 50] 0]
-	#  }
     }
-    #END
+}
+#END
 
-    proc hide-node {nid} {
-	global node visible_nodes
-	if {[info exists visible_nodes($nid)]} {
-	    unset visible_nodes($nid)
-	    foreach cid $node($nid,children) {
-		hide-node $cid
-	    }
-	} else {
-	    return
-	}
-    }
-
-    proc show-node {nid} {
-	global node visible_nodes
-	set visible_nodes($nid) 1
+proc hide-node {nid} {
+    global node visible_nodes
+    if {[info exists visible_nodes($nid)]} {
+	unset visible_nodes($nid)
 	foreach cid $node($nid,children) {
-	    show-node $cid
+	    hide-node $cid
 	}
+    } else {
+	return
     }
+}
 
-    ##################################################
-    # Save and Load RST
+proc show-node {nid} {
+    global node visible_nodes
+    set visible_nodes($nid) 1
+    foreach cid $node($nid,children) {
+	show-node $cid
+    }
+}
 
-    proc save-rst { {filenum {}} } {
-	global currentfile rstw node text_nodes group_nodes
-	if {"$filenum" == {} } {
-	    set rstfile [fileselect "Save RST File" [file dirname $currentfile]/rst [file tail [file rootname $currentfile]].0]
+##################################################
+# Save and Load RST
+
+proc save-rst { {filenum {}} } {
+    global currentfile rstw node text_nodes group_nodes
+    if {"$filenum" == {} } {
+	set rstfile [fileselect "Save RST File" [file dirname $currentfile]/rst [file tail [file rootname $currentfile]].0]
+    } else {
+	set junk [string last / $currentfile]
+	set junkplus [expr $junk + 1]
+	set rstfile [file dirname $currentfile]/rst/[file tail [file rootname $currentfile]].$filenum
+    }
+    if {$rstfile == {}} {return}
+
+    # Now save the file
+    set f [open $rstfile w 0644]
+    foreach itm [concat $text_nodes $group_nodes] {
+	puts $f $itm
+	if [group-node-p $itm] {
+	    puts $f $node($itm,type)
 	} else {
-	    set junk [string last / $currentfile]
-	    set junkplus [expr $junk + 1]
-	    set rstfile [file dirname $currentfile]/rst/[file tail [file rootname $currentfile]].$filenum
+	    puts $f $node($itm,text)
 	}
-	if {$rstfile == {}} {return}
-
-	# Now save the file
-	set f [open $rstfile w 0644]
-	foreach itm [concat $text_nodes $group_nodes] {
-	    puts $f $itm
-	    if [group-node-p $itm] {
-		puts $f $node($itm,type)
-	    } else {
-		puts $f $node($itm,text)
-	    }
-	    puts $f $node($itm,parent)
-	    puts $f $node($itm,relname)
-	    puts $f $node($itm,constit)
-	}
-	close $f
+	puts $f $node($itm,parent)
+	puts $f $node($itm,relname)
+	puts $f $node($itm,constit)
     }
+    close $f
+}
 
 
-    proc save-sgml {} {
-	global currentfile rstw node text_nodes group_nodes
+proc save-sgml {} {
+    global currentfile rstw node text_nodes group_nodes
 
-	set rstfile [file dirname $currentfile]/rst/[set-file-name sgml]
-	if {$rstfile == {}} {return}
+    set rstfile [file dirname $currentfile]/rst/[set-file-name sgml]
+    if {$rstfile == {}} {return}
 
-	# Now save the file
-	set f [open $rstfile w 0644]
+    # Now save the file
+    set f [open $rstfile w 0644]
 
-	foreach itm $text_nodes {
-	    if { $node($itm,parent) != {} } {
-		set parent " PARENT=$node($itm,parent) RELNAME=$node($itm,relname)"
-		if {$node($itm,constit) != {}} {
-		    set parent "$parent SCHEMA=$node($itm,constit)"
-		}
-	    } else {
-		set parent ""
-	    }
-	    puts $f "<node ID=$itm $parent>$node($itm,text)</node>"
-	}
-	foreach itm $group_nodes {
-	    if { $node($itm,parent) != {} } {
-		set parent " PARENT=$node($itm,parent) RELNAME=$node($itm,relname)"
-		if {$node($itm,constit) != {}} {
-		    set parent "$parent SCHEMA=$node($itm,constit)"
-		}
-	    } else {
-		set parent ""
-	    }
-	    puts $f "<$node($itm,type) ID=$itm$parent>"
-	}
-	close $f
-    }
-
-    proc load-rst { {filenum {}} } {
-	global rstfile node text_nodes currentfile group_nodes \
-	    last_text_node_id last_group_node_id
-	set last_text_node_id 0
-	set last_group_node_id 5000
-	if {"$filenum" == {} } {
-	    set rstfile [fileselect]
-	} else {
-	    set junk [string last / $currentfile]
-	    set junkplus [expr $junk + 1]
-	    set rstfile [file dirname $currentfile]/rst/[file tail [file rootname $currentfile]].$filenum
-	}
-	if {$rstfile == {}} {return}
-	set f [open $rstfile r]
-	set segs {}
-	reset-rst
-	while {[gets $f nid] >= 0} {
-	    clear-node $nid
-	    gets $f node($nid,text)
-	    gets $f node($nid,parent)
-	    gets $f node($nid,relname)
-	    gets $f node($nid,constit)
-	    if { $node($nid,relname) != {}
-		 && [relation-type $node($nid,relname) ] == 0 } {
-		puts "Load-RST: Unknown relation: $node($nid,relname) - ignoring."
-		set node($nid,relname) {}
-		set node($nid,parent) {}
-	    }
-
-	    # set the type
-	    if { [member  $node($nid,text) {span multinuc constit embedded}] } {
-		set node($nid,type) $node($nid,text)
-		if ![member $nid $group_nodes] {add-group-node $nid}
-	    } else {
-		set node($nid,type) "text"
-		add-text-node $nid
-		set node($nid,span) "$nid $nid"
-	    }
-	}
-	close $f
-
-	# Establish child field
-	foreach nid $text_nodes {
-	    set last_text_node_id [max $last_text_node_id $nid]
-	    if { $node($nid,parent) != {} } {
-		lappend node($node($nid,parent),children) $nid
-	    }
-	}
-	foreach nid $group_nodes {
-	    set last_group_node_id [max $last_group_node_id $nid]
-	    if { $node($nid,parent) != {} } {
-		lappend node($node($nid,parent),children) $nid
-	    }
-	}
-
-	# Establish span field, start at any top nodes
-	foreach nid  $group_nodes {
-	    if {$node($nid,span) == {} } {
-		set-subtree-node-span $nid
-	    }
-	}
-
-	# Layou/Draw the net
-	redisplay-net
-    }
-
-
-    ##################################################
-    #  Relations Functions
-    proc load-relations {{file {}} {extrel 0}} {
-	global relationfile relations extRelations schemas schema_elements
-	if {$file == {}} {
-	    set file [fileselect "Specify Relations File" {}]
-	}
-
-	if {$file == {}} {return}; # cancelled
-	set relationstream [open $file]
-
-	if {$extrel} {
-	    foreach rel [split [read $relationstream] \n] {
-		switch -- [lindex $rel 0] {
-		    {}      {}
-		    -       {}
-		    default {
-			lappend extRelations [lindex $rel 0]
-		    }
-		}
+    foreach itm $text_nodes {
+	if { $node($itm,parent) != {} } {
+	    set parent " PARENT=$node($itm,parent) RELNAME=$node($itm,relname)"
+	    if {$node($itm,constit) != {}} {
+		set parent "$parent SCHEMA=$node($itm,constit)"
 	    }
 	} else {
-	    set relationfile $file
-	    set relations(rst) {}
-	    set relations(multinuc) {}
-	    set relations(constit) {}
-	    set relations(embedded) {}
-	    set schemas {}
-	    if [info exists schema_elements] {
-		unset schema_elements
+	    set parent ""
+	}
+	puts $f "<node ID=$itm $parent>$node($itm,text)</node>"
+    }
+    foreach itm $group_nodes {
+	if { $node($itm,parent) != {} } {
+	    set parent " PARENT=$node($itm,parent) RELNAME=$node($itm,relname)"
+	    if {$node($itm,constit) != {}} {
+		set parent "$parent SCHEMA=$node($itm,constit)"
 	    }
-	    foreach rel [split [read $relationstream] \n] {
-		switch -- [lindex $rel 0] {
-		    {}      {}
-		    -       {}
-		    default {
-			set type [lindex $rel 1]
-			if { $type == {} } { set type rst }
-			lappend relations($type) [lindex $rel 0]
+	} else {
+	    set parent ""
+	}
+	puts $f "<$node($itm,type) ID=$itm$parent>"
+    }
+    close $f
+}
 
-			# store the elements of each schema
-			if { $type == "constit" } {
-			    set schema [lindex $rel 2]
-			    if ![member $schema $schemas] {
-				lappend schemas $schema
-			    }
-			    lappend schema_elements($schema)\
-				[lindex $rel 0]
+proc load-rst { {filenum {}} } {
+    global rstfile node text_nodes currentfile group_nodes \
+	last_text_node_id last_group_node_id
+    set last_text_node_id 0
+    set last_group_node_id 5000
+    if {"$filenum" == {} } {
+	set rstfile [fileselect]
+    } else {
+	set junk [string last / $currentfile]
+	set junkplus [expr $junk + 1]
+	set rstfile [file dirname $currentfile]/rst/[file tail [file rootname $currentfile]].$filenum
+    }
+    if {$rstfile == {}} {return}
+    set f [open $rstfile r]
+    set segs {}
+    reset-rst
+    while {[gets $f nid] >= 0} {
+	clear-node $nid
+	gets $f node($nid,text)
+	gets $f node($nid,parent)
+	gets $f node($nid,relname)
+	gets $f node($nid,constit)
+	if { $node($nid,relname) != {}
+	     && [relation-type $node($nid,relname) ] == 0 } {
+	    puts "Load-RST: Unknown relation: $node($nid,relname) - ignoring."
+	    set node($nid,relname) {}
+	    set node($nid,parent) {}
+	}
+
+	# set the type
+	if { [member  $node($nid,text) {span multinuc constit embedded}] } {
+	    set node($nid,type) $node($nid,text)
+	    if ![member $nid $group_nodes] {add-group-node $nid}
+	} else {
+	    set node($nid,type) "text"
+	    add-text-node $nid
+	    set node($nid,span) "$nid $nid"
+	}
+    }
+    close $f
+
+    # Establish child field
+    foreach nid $text_nodes {
+	set last_text_node_id [max $last_text_node_id $nid]
+	if { $node($nid,parent) != {} } {
+	    lappend node($node($nid,parent),children) $nid
+	}
+    }
+    foreach nid $group_nodes {
+	set last_group_node_id [max $last_group_node_id $nid]
+	if { $node($nid,parent) != {} } {
+	    lappend node($node($nid,parent),children) $nid
+	}
+    }
+
+    # Establish span field, start at any top nodes
+    foreach nid  $group_nodes {
+	if {$node($nid,span) == {} } {
+	    set-subtree-node-span $nid
+	}
+    }
+
+    # Layou/Draw the net
+    redisplay-net
+}
+
+
+##################################################
+#  Relations Functions
+proc load-relations {{file {}} {extrel 0}} {
+    global relationfile relations extRelations schemas schema_elements
+    if {$file == {}} {
+	set file [fileselect "Specify Relations File" {}]
+    }
+
+    if {$file == {}} {return}; # cancelled
+    set relationstream [open $file]
+
+    if {$extrel} {
+	foreach rel [split [read $relationstream] \n] {
+	    switch -- [lindex $rel 0] {
+		{}      {}
+		-       {}
+		default {
+		    lappend extRelations [lindex $rel 0]
+		}
+	    }
+	}
+    } else {
+	set relationfile $file
+	set relations(rst) {}
+	set relations(multinuc) {}
+	set relations(constit) {}
+	set relations(embedded) {}
+	set schemas {}
+	if [info exists schema_elements] {
+	    unset schema_elements
+	}
+	foreach rel [split [read $relationstream] \n] {
+	    switch -- [lindex $rel 0] {
+		{}      {}
+		-       {}
+		default {
+		    set type [lindex $rel 1]
+		    if { $type == {} } { set type rst }
+		    lappend relations($type) [lindex $rel 0]
+
+		    # store the elements of each schema
+		    if { $type == "constit" } {
+			set schema [lindex $rel 2]
+			if ![member $schema $schemas] {
+			    lappend schemas $schema
 			}
+			lappend schema_elements($schema)\
+			    [lindex $rel 0]
 		    }
 		}
 	    }
 	}
-	close $relationstream
+    }
+    close $relationstream
+}
+
+proc add-relation {} {
+    global relationfile relname
+    set rel [GetValue "Specify Relation"]
+    if { $rel == {} } {
+	return
+    }
+    set relationstream [open $relationfile a]
+    puts $relationstream "$rel"
+    close $relationstream
+    load-relations $relationfile
+    set relname $rel
+}
+
+
+
+##################################################
+# General Functions
+
+proc add-text-node {nid} {
+    global text_nodes
+
+    # Report error if repeated add
+    if [member $nid $text_nodes] {
+	puts stderr "add-text-node: error: $nid already defined"
     }
 
-    proc add-relation {} {
-	global relationfile relname
-	set rel [GetValue "Specify Relation"]
-	if { $rel == {} } {
-	    return
-	}
-	set relationstream [open $relationfile a]
-	puts $relationstream "$rel"
-	close $relationstream
-	load-relations $relationfile
-	set relname $rel
-    }
+    # add the node
+    lappend text_nodes $nid
+}
 
+proc bottom-point {item} {
+    global rstw
+    list [lindex [$rstw coords $item] 0]\
+	[lindex [$rstw bbox $item] 3]
+}
 
+proc clicked-widget {x y} {
+    global rstw wtn erased_nodes
+    set x1 [$rstw canvasx $x]
+    set y1 [$rstw canvasy $y]
+    set wgts [$rstw find overlapping [expr $x1-2] [expr $y1-2]\
+		  [expr $x1+2] [expr $y1+2]]
 
-    ##################################################
-    # General Functions
-
-    proc add-text-node {nid} {
-	global text_nodes
-
-	# Report error if repeated add
-	if [member $nid $text_nodes] {
-	    puts stderr "add-text-node: error: $nid already defined"
-	}
-
-	# add the node
-	lappend text_nodes $nid
-    }
-
-    proc bottom-point {item} {
-	global rstw
-	list [lindex [$rstw coords $item] 0]\
-	    [lindex [$rstw bbox $item] 3]
-    }
-
-    proc clicked-widget {x y} {
-	global rstw wtn erased_nodes
-	set x1 [$rstw canvasx $x]
-	set y1 [$rstw canvasy $y]
-	set wgts [$rstw find overlapping [expr $x1-2] [expr $y1-2]\
-		      [expr $x1+2] [expr $y1+2]]
-
-	if { [lindex $wgts 1] != {} } {
-	    foreach wgt $wgts {
-		if {[info exists wtn($wgt)] && $erased_nodes != {}} {
-		    if {[lsearch $erased_nodes $wtn($wgt)] == -1} {
-			return $wgt
-		    }
+    if { [lindex $wgts 1] != {} } {
+	foreach wgt $wgts {
+	    if {[info exists wtn($wgt)] && $erased_nodes != {}} {
+		if {[lsearch $erased_nodes $wtn($wgt)] == -1} {
+		    return $wgt
 		}
 	    }
+	}
+    } else {
+	return $wgts
+    }
+}
+
+proc clicked-node {x y} {
+    debug "clicked-node: [wtn [clicked-widget $x $y]]"
+    wtn [clicked-widget $x $y]
+}
+
+proc legal-node {the_node {prev_node {}} } {
+    global node newest_node
+
+    if {![info exists newest_node] || $the_node == $newest_node} {return $the_node}
+
+    if { $prev_node == {} } {
+	set prev_node $newest_node
+	if { $node($newest_node,parent) == {} } {
+	    incr prev_node -1
+	}
+    }
+
+    if { $prev_node != 0 } {
+	if { $the_node == $prev_node } {
+	    return $the_node
 	} else {
-	    return $wgts
-	}
-    }
-
-    proc clicked-node {x y} {
-	debug "clicked-node: [wtn [clicked-widget $x $y]]"
-	wtn [clicked-widget $x $y]
-    }
-
-    proc legal-node {the_node {prev_node {}} } {
-	global node newest_node
-
-	if {![info exists newest_node] || $the_node == $newest_node} {return $the_node}
-
-	if { $prev_node == {} } {
-	    set prev_node $newest_node
-	    if { $node($newest_node,parent) == {} } {
-		incr prev_node -1
-	    }
-	}
-
-	if { $prev_node != 0 } {
-	    if { $the_node == $prev_node } {
-		return $the_node
+	    if {$node($prev_node,parent) == {}} {
+		return 0
 	    } else {
-		if {$node($prev_node,parent) == {}} {
-		    return 0
-		} else {
-		    legal-node $the_node $node($prev_node,parent)
-		}
-	    }
-	} else {
-	    return 0
-	}
-    }
-
-    proc wtn {widget} {
-	global wtn
-	if [info exists wtn($widget)] {
-	    return $wtn($widget)
-	} else {return 0}
-    }
-
-    proc ntw {nid} {
-	global node
-	return $node($nid,textwgt)
-    }
-
-    # 1. Function to move a given node to a given y-height
-
-    proc ymove-node {nid ydelta} {
-	global node rstw
-	# change its pos
-	move-item $rstw [ntw $nid] 0 $ydelta
-
-	# move its arrow down the distance
-	if [info exists node($nid,arrowwgt)] {
-	    move-item $rstw $node($nid,arrowwgt)   0 $ydelta
-	    move-item $rstw $node($nid,spanwgt) 0 $ydelta
-	    move-item $rstw $node($nid,labelwgt)   0 $ydelta
-	}
-
-	# Move its children down
-	foreach child $node($nid,children) {
-	    ymove-node $child $ydelta
-	}
-    }
-
-    ##################################################
-    # Manipulation MODES
-
-    proc install-structurer {} {
-	wm title . "RST Editor"
-	#pack .rtbar -side left  -anchor nw
-	pack .rstframe -side top -fill both -expand true
-    }
-
-    proc uninstall-structurer {} {
-	pack forget .rtbar .rstframe
-    }
-
-
-    # managing modes
-    proc set-mode {mode} {
-	global rstw currentmode newest_node waited_nid disco_node
-
-	if ![info exists currentmode] { set currentmode link }
-	toggle-button $currentmode "raised"
-	set currentmode $mode
-	toggle-button $currentmode "sunken"
-
-	bind $rstw <Control-ButtonRelease-1> {
-	    if {[clicked-node %x %y] != 0} {
-		compare-click-times
-		collapse [clicked-node %x %y]}
-	}
-	bind $rstw <ButtonRelease-2> {
-	    if {[clicked-node %x %y] != 0} {
-		compare-click-times
-		collapse [clicked-node %x %y]}
-	}
-	bind $rstw <Shift-Control-ButtonRelease-1> {
-	    if {[clicked-node %x %y] != 0} {
-		compare-click-times
-		expand [clicked-node %x %y]}
-	}
-	bind $rstw <ButtonRelease-3> {
-	    if {[clicked-node %x %y] != 0} {
-		compare-click-times
-		expand [clicked-node %x %y]}
-	}
-	switch -- $mode {
-	    autolink { $rstw config -cursor hand2
-		bind $rstw <ButtonPress-1> {}
-		bind $rstw <ButtonRelease-1> {
-		    set clicked_node [clicked-node %x %y]
-		    if { [legal-node $clicked_node] != 0} {
-			compare-click-times
-			autolink_nodes $clicked_node
-		    }
-		}
-	    }
-	    link   { $rstw config -cursor sb_h_double_arrow
-		$rstw bind nodes <Button-1> {}
-		bind $rstw <ButtonPress-1> {
-		    if {[clicked-node %x %y] != 0} {
-			set newest_node [clicked-node %x %y] } }
-		bind $rstw <ButtonRelease-1> {
-		    if {[clicked-node %x %y] != 0} {
-			compare-click-times
-			autolink_nodes [clicked-node %x %y] } }
-	    }
-	    disconnect { $rstw config -cursor X_cursor
-		bind $rstw <ButtonPress-1> {}
-		$rstw bind nodes <Button-1> {}
-		bind $rstw <ButtonRelease-1> {
-		    if {[clicked-node %x %y] != 0} {
-			compare-click-times
-			unlink-node [clicked-node %x %y]
-			redisplay-net
-		    }
-		}
-	    }
-	    modify { $rstw config -cursor X_cursor
-		bind $rstw <ButtonPress-1> {}
-		$rstw bind nodes <Button-1> {}
-		bind $rstw <ButtonRelease-1> {
-		    if {[clicked-node %x %y] != 0} {
-			compare-click-times
-			disconnect_node [clicked-node %x %y] modify}
-		}
-	    }
-	    change_schema { $rstw config -cursor hand1
-		bind $rstw <ButtonPress-1> {}
-		bind $rstw <ButtonRelease-1> {
-		    if { [clicked-node %x %y] != 0} {
-			compare-click-times
-			change_constit [clicked-node %x %y]
-		    }
-		}
-	    }
-	    change { $rstw config -cursor hand1
-		bind $rstw <ButtonPress-1> {}
-		bind $rstw <ButtonRelease-1> {
-		    if { [clicked-node %x %y] != 0} {
-			compare-click-times
-			change_rel [clicked-node %x %y]
-		    }
-		}
-	    }
-	    parenthetical { $rstw config -cursor X_cursor
-		bind $rstw <ButtonPress-1> {
-		    if {[clicked-node %x %y] != 0} {
-			compare-click-times
-			set waited_nid [clicked-node %x %y] } }
-		bind $rstw <ButtonRelease-1> {}
-	    }
-	    nothing { $rstw config -cursor X_cursor
-		bind $rstw <ButtonPress-1> {}
-		bind $rstw <ButtonRelease-1> {}
+		legal-node $the_node $node($prev_node,parent)
 	    }
 	}
-    }
-
-    proc toggle-button {mode dir} {
-	switch -- $mode {
-	    link   {.rtbar.link configure -relief $dir}
-	    change {.rtbar.change_rel configure -relief $dir}
-	    change_schema {.rtbar.change_schema configure -relief $dir}
-	    disconnect {.rtbar.disconnect configure -relief $dir}
-	    modify {.rtbar.modify configure -relief $dir}
-	    autolink {.rtbar.autolink configure -relief $dir}
-	    parenthetical {}
-	    nothing {}
-	}
-    }
-
-    proc savepsmode {} {
-	global rstw  currentmode
-	toggle-button $currentmode "raised"
-	set currentmode saveps
-	toggle-button $currentmode "sunken"
-	bind $rstw <ButtonPress-1> {}
-	$rstw bind nodes <Button-1> {}
-	bind $rstw <ButtonRelease-1> {
-	    save-subtree-as-ps  [clicked-node %x %y]}
-	$rstw config -cursor top_side
-    }
-
-
-    proc reeditaction {} {
-	global text_nodes node undoer
-	.editor.text delete 1.0 end
-	foreach segment $text_nodes {
-	    set endpnt [.editor.text index end]
-	    .editor.text insert end $node($segment,text) $segment
-	    .editor.text insert end "<br>\n"
-	}
-	.editor.text delete "end - 6 char" end
-	textUndoer:reset $undoer
-    }
-
-
-    #########################
-    # logical function
-    #########################
-
-    proc find-top-nuc {nid} {
-	global node
-	if {$node($nid,parent) == {} } {
-	    return $nid
-	} else {
-	    return [find-top-nuc $node($nid,parent)]
-	}
-    }
-
-    proc relation-type {rel} {
-	global relations
-	if { $rel == "span" } {
-	    return span
-	} elseif [member $rel $relations(rst)] {
-	    return rst
-	} elseif [member $rel $relations(multinuc)] {
-	    return multinuc
-	} elseif [member $rel $relations(constit)] {
-	    return constit
-	} elseif [member $rel $relations(embedded)] {
-	    return embedded
-	} else {
-	    return 0}
-    }
-
-    proc group-node-p {nid} {
-	global node
-	member $node($nid,type) {span multinuc constit embedded}
-    }
-
-    proc text-node-p {nid} {
-	global node
-	#come back here
-	if { $nid == {} || $node($nid,type) == "text"} {
-	    return 1
-	} else {
-	    return 0
-	}
-    }
-
-    proc old-group-node-p {nid} {
-	global old_node
-	member $old_node($nid,type) {span multinuc constit embedded}
-    }
-
-    proc group-relation-p {rel} {
-	global relations
-	if { $rel == "span" || [member $rel $relations(multinuc)]\
-		 || [member $rel $relations(constit)] } {
-	    return 1
-	} else { return 0 }
-    }
-
-    proc rst-relation-p {rel} {
-	global relations
-
-	if {$rel == {} } {return 0}
-
-	return [member $rel $relations(rst)] || [member $rel $relations(embedded)]
-    }
-
-    proc constit-relation-p {rel} {
-	global relations
-
-	if {$rel == {} } {return 0}
-
-	return [member $rel $relations(constit)]
-    }
-
-    proc node-has-satellites-p {nid} {
-	global node
-	foreach child $node($nid,children) {
-	    if { [rst-relation-p $node($child,relname)] } {
-		return 1
-	    }
-	}
+    } else {
 	return 0
     }
+}
 
-    proc node-is-satellite-p {nid} {
-	global node
-	return [rst-relation-p $node($nid,relname)]
+proc wtn {widget} {
+    global wtn
+    if [info exists wtn($widget)] {
+	return $wtn($widget)
+    } else {return 0}
+}
+
+proc ntw {nid} {
+    global node
+    return $node($nid,textwgt)
+}
+
+# 1. Function to move a given node to a given y-height
+
+proc ymove-node {nid ydelta} {
+    global node rstw
+    # change its pos
+    move-item $rstw [ntw $nid] 0 $ydelta
+
+    # move its arrow down the distance
+    if [info exists node($nid,arrowwgt)] {
+	move-item $rstw $node($nid,arrowwgt)   0 $ydelta
+	move-item $rstw $node($nid,spanwgt) 0 $ydelta
+	move-item $rstw $node($nid,labelwgt)   0 $ydelta
     }
 
-
-    proc find-multinuc-type {nid} {
-	global node relations
-	foreach child $node($nid,children) {
-	    if { [member $node($child,relname) $relations(multinuc)] } {
-		return $node($child,relname)
-	    }
-	}
+    # Move its children down
+    foreach child $node($nid,children) {
+	ymove-node $child $ydelta
     }
+}
 
-    proc find-schema-type {nid} {
-	global node relations schemas schema_elements
-	foreach child $node($nid,children) {
-	    set rel $node($child,relname)
-	    if { [member $rel $relations(constit)] } {
-		foreach schema $schemas {
-		    if [member $rel $schema_elements($schema)] {
-			return $schema
-		    }
+##################################################
+# Manipulation MODES
+
+proc install-structurer {} {
+    wm title . "RST Editor"
+    #pack .rtbar -side left  -anchor nw
+    pack .rstframe -side top -fill both -expand true
+}
+
+proc uninstall-structurer {} {
+    pack forget .rtbar .rstframe
+}
+
+
+# managing modes
+proc set-mode {mode} {
+    global rstw currentmode newest_node waited_nid disco_node
+
+    if ![info exists currentmode] { set currentmode link }
+    toggle-button $currentmode "raised"
+    set currentmode $mode
+    toggle-button $currentmode "sunken"
+
+    bind $rstw <Control-ButtonRelease-1> {
+	if {[clicked-node %x %y] != 0} {
+	    compare-click-times
+	    collapse [clicked-node %x %y]}
+    }
+    bind $rstw <ButtonRelease-2> {
+	if {[clicked-node %x %y] != 0} {
+	    compare-click-times
+	    collapse [clicked-node %x %y]}
+    }
+    bind $rstw <Shift-Control-ButtonRelease-1> {
+	if {[clicked-node %x %y] != 0} {
+	    compare-click-times
+	    expand [clicked-node %x %y]}
+    }
+    bind $rstw <ButtonRelease-3> {
+	if {[clicked-node %x %y] != 0} {
+	    compare-click-times
+	    expand [clicked-node %x %y]}
+    }
+    switch -- $mode {
+	autolink { $rstw config -cursor hand2
+	    bind $rstw <ButtonPress-1> {}
+	    bind $rstw <ButtonRelease-1> {
+		set clicked_node [clicked-node %x %y]
+		if { [legal-node $clicked_node] != 0} {
+		    compare-click-times
+		    autolink_nodes $clicked_node
 		}
 	    }
 	}
-	# no prior element
-	return "constit"
+	link   { $rstw config -cursor sb_h_double_arrow
+	    $rstw bind nodes <Button-1> {}
+	    bind $rstw <ButtonPress-1> {
+		if {[clicked-node %x %y] != 0} {
+		    set newest_node [clicked-node %x %y] } }
+	    bind $rstw <ButtonRelease-1> {
+		if {[clicked-node %x %y] != 0} {
+		    compare-click-times
+		    autolink_nodes [clicked-node %x %y] } }
+	}
+	disconnect { $rstw config -cursor X_cursor
+	    bind $rstw <ButtonPress-1> {}
+	    $rstw bind nodes <Button-1> {}
+	    bind $rstw <ButtonRelease-1> {
+		if {[clicked-node %x %y] != 0} {
+		    compare-click-times
+		    unlink-node [clicked-node %x %y]
+		    redisplay-net
+		}
+	    }
+	}
+	modify { $rstw config -cursor X_cursor
+	    bind $rstw <ButtonPress-1> {}
+	    $rstw bind nodes <Button-1> {}
+	    bind $rstw <ButtonRelease-1> {
+		if {[clicked-node %x %y] != 0} {
+		    compare-click-times
+		    disconnect_node [clicked-node %x %y] modify}
+	    }
+	}
+	change_schema { $rstw config -cursor hand1
+	    bind $rstw <ButtonPress-1> {}
+	    bind $rstw <ButtonRelease-1> {
+		if { [clicked-node %x %y] != 0} {
+		    compare-click-times
+		    change_constit [clicked-node %x %y]
+		}
+	    }
+	}
+	change { $rstw config -cursor hand1
+	    bind $rstw <ButtonPress-1> {}
+	    bind $rstw <ButtonRelease-1> {
+		if { [clicked-node %x %y] != 0} {
+		    compare-click-times
+		    change_rel [clicked-node %x %y]
+		}
+	    }
+	}
+	parenthetical { $rstw config -cursor X_cursor
+	    bind $rstw <ButtonPress-1> {
+		if {[clicked-node %x %y] != 0} {
+		    compare-click-times
+		    set waited_nid [clicked-node %x %y] } }
+	    bind $rstw <ButtonRelease-1> {}
+	}
+	nothing { $rstw config -cursor X_cursor
+	    bind $rstw <ButtonPress-1> {}
+	    bind $rstw <ButtonRelease-1> {}
+	}
+    }
+}
+
+proc toggle-button {mode dir} {
+    switch -- $mode {
+	link   {.rtbar.link configure -relief $dir}
+	change {.rtbar.change_rel configure -relief $dir}
+	change_schema {.rtbar.change_schema configure -relief $dir}
+	disconnect {.rtbar.disconnect configure -relief $dir}
+	modify {.rtbar.modify configure -relief $dir}
+	autolink {.rtbar.autolink configure -relief $dir}
+	parenthetical {}
+	nothing {}
+    }
+}
+
+proc savepsmode {} {
+    global rstw  currentmode
+    toggle-button $currentmode "raised"
+    set currentmode saveps
+    toggle-button $currentmode "sunken"
+    bind $rstw <ButtonPress-1> {}
+    $rstw bind nodes <Button-1> {}
+    bind $rstw <ButtonRelease-1> {
+	save-subtree-as-ps  [clicked-node %x %y]}
+    $rstw config -cursor top_side
+}
+
+
+proc reeditaction {} {
+    global text_nodes node undoer
+    .editor.text delete 1.0 end
+    foreach segment $text_nodes {
+	set endpnt [.editor.text index end]
+	.editor.text insert end $node($segment,text) $segment
+	.editor.text insert end "<br>\n"
+    }
+    .editor.text delete "end - 6 char" end
+    textUndoer:reset $undoer
+}
+
+
+#########################
+# logical function
+#########################
+
+proc find-top-nuc {nid} {
+    global node
+    if {$node($nid,parent) == {} } {
+	return $nid
+    } else {
+	return [find-top-nuc $node($nid,parent)]
+    }
+}
+
+proc relation-type {rel} {
+    global relations
+    if { $rel == "span" } {
+	return span
+    } elseif [member $rel $relations(rst)] {
+	return rst
+    } elseif [member $rel $relations(multinuc)] {
+	return multinuc
+    } elseif [member $rel $relations(constit)] {
+	return constit
+    } elseif [member $rel $relations(embedded)] {
+	return embedded
+    } else {
+	return 0}
+}
+
+proc group-node-p {nid} {
+    global node
+    member $node($nid,type) {span multinuc constit embedded}
+}
+
+proc text-node-p {nid} {
+    global node
+    #come back here
+    if { $nid == {} || $node($nid,type) == "text"} {
+	return 1
+    } else {
+	return 0
+    }
+}
+
+proc old-group-node-p {nid} {
+    global old_node
+    member $old_node($nid,type) {span multinuc constit embedded}
+}
+
+proc group-relation-p {rel} {
+    global relations
+    if { $rel == "span" || [member $rel $relations(multinuc)]\
+	     || [member $rel $relations(constit)] } {
+	return 1
+    } else { return 0 }
+}
+
+proc rst-relation-p {rel} {
+    global relations
+
+    if {$rel == {} } {return 0}
+
+    return [member $rel $relations(rst)] || [member $rel $relations(embedded)]
+}
+
+proc constit-relation-p {rel} {
+    global relations
+
+    if {$rel == {} } {return 0}
+
+    return [member $rel $relations(constit)]
+}
+
+proc node-has-satellites-p {nid} {
+    global node
+    foreach child $node($nid,children) {
+	if { [rst-relation-p $node($child,relname)] } {
+	    return 1
+	}
+    }
+    return 0
+}
+
+proc node-is-satellite-p {nid} {
+    global node
+    return [rst-relation-p $node($nid,relname)]
+}
+
+
+proc find-multinuc-type {nid} {
+    global node relations
+    foreach child $node($nid,children) {
+	if { [member $node($child,relname) $relations(multinuc)] } {
+	    return $node($child,relname)
+	}
+    }
+}
+
+proc find-schema-type {nid} {
+    global node relations schemas schema_elements
+    foreach child $node($nid,children) {
+	set rel $node($child,relname)
+	if { [member $rel $relations(constit)] } {
+	    foreach schema $schemas {
+		if [member $rel $schema_elements($schema)] {
+		    return $schema
+		}
+	    }
+	}
+    }
+    # no prior element
+    return "constit"
+}
+
+
+####################################################
+# THE relation popup Menu
+
+proc choose-label {sat type {external 0}} {
+    global relations extRelations rstw schemas schema_elements
+    debug "choose-label: $sat $type"
+
+    set coords [screen-coords [ntw $sat] $rstw]
+    set conv(satellite) rst
+    set conv(nucleus) rst
+    set conv(rst) rst
+    set conv(multinuclear) multinuc
+    set conv(multinuc) multinuc
+    set conv(schema) constit
+    set conv(constit) constit
+    set conv(nucleus-embedded) embedded
+    set conv(satellite-embedded) embedded
+    set conv(embedded) embedded
+    set type $conv($type)
+
+    if {$external} {
+	# Choose connection type from a set of external relations
+	set range $extRelations
+    } elseif [member $type {rst constit multinuc embedded}] {
+	# Choose from the defined set
+	set range $relations($type)
+    } else {
+	# this must be a schema type, choose from that set
+	set range $schema_elements($type)
+    }
+    return [popup-choose-from-list $range\
+		[expr int([lindex $coords 0])]\
+		[expr int([lindex $coords 1])] 0 1]
+}
+
+proc popup-choose-from-list {Items xpos ypos {put_cancel {}} {show_tooltip 0}} {
+    global pcfl_selection cancelled
+    set pcfl_selection {}
+    if {[winfo exists .tmpwin]} {destroy .tmpwin}
+    menu .tmpwin -tearoff 0
+    set num_items 0
+    set cancel_exists 0
+    set my_menu .tmpwin
+    if {$show_tooltip} {
+	bind-menu-tooltip $my_menu
     }
 
-
-    ####################################################
-    # THE relation popup Menu
-
-    proc choose-label {sat type {external 0}} {
-	global relations extRelations rstw schemas schema_elements
-	debug "choose-label: $sat $type"
-
-	set coords [screen-coords [ntw $sat] $rstw]
-	set conv(satellite) rst
-	set conv(nucleus) rst
-	set conv(rst) rst
-	set conv(multinuclear) multinuc
-	set conv(multinuc) multinuc
-	set conv(schema) constit
-	set conv(constit) constit
-	set conv(nucleus-embedded) embedded
-	set conv(satellite-embedded) embedded
-	set conv(embedded) embedded
-	set type $conv($type)
-
-	if {$external} {
-	    # Choose connection type from a set of external relations
-	    set range $extRelations
-	} elseif [member $type {rst constit multinuc embedded}] {
-	    # Choose from the defined set
-	    set range $relations($type)
+    foreach item $Items {
+	if {$num_items < 33} {
+	    AddMenuItem $my_menu $item "set pcfl_selection $item"
 	} else {
-	    # this must be a schema type, choose from that set
-	    set range $schema_elements($type)
-	}
-	return [popup-choose-from-list $range\
-		    [expr int([lindex $coords 0])]\
-		    [expr int([lindex $coords 1])] 0 1]
-    }
-
-    proc popup-choose-from-list {Items xpos ypos {put_cancel {}} {show_tooltip 0}} {
-	global pcfl_selection cancelled
-	set pcfl_selection {}
-	if {[winfo exists .tmpwin]} {destroy .tmpwin}
-	menu .tmpwin -tearoff 0
-	set num_items 0
-	set cancel_exists 0
-	set my_menu .tmpwin
-	if {$show_tooltip} {
-	    bind-menu-tooltip $my_menu
-	}
-
-	foreach item $Items {
-	    if {$num_items < 33} {
-		AddMenuItem $my_menu $item "set pcfl_selection $item"
-	    } else {
-		#set underscore ""
-		#append underscore $item
-		#set item $underscore
-		menu $my_menu.$item -tearoff 0
-		AddMenuCascade $my_menu NEXT $my_menu.$item
-		if {$show_tooltip} {
-		    bind-menu-tooltip $my_menu.$item
-		}
-		AddMenuItem $my_menu CANCEL "set pcfl_selection {}"
-		set cancel_exists 1
-		set my_menu $my_menu.$item
-		AddMenuItem $my_menu $item "set pcfl_selection $item"
-		set num_items 0
+	    #set underscore ""
+	    #append underscore $item
+	    #set item $underscore
+	    menu $my_menu.$item -tearoff 0
+	    AddMenuCascade $my_menu NEXT $my_menu.$item
+	    if {$show_tooltip} {
+		bind-menu-tooltip $my_menu.$item
 	    }
-	    incr num_items
+	    AddMenuItem $my_menu CANCEL "set pcfl_selection {}"
+	    set cancel_exists 1
+	    set my_menu $my_menu.$item
+	    AddMenuItem $my_menu $item "set pcfl_selection $item"
+	    set num_items 0
 	}
-
-	if { $put_cancel != "NOcancel" && $cancel_exists == 0 } {
-	    AddMenuItem .tmpwin CANCEL "set pcfl_selection {}"
-	}
-
-	# now make the popup
-	.tmpwin post $xpos $ypos
-	if {[tk windowingsystem] != "aqua"} {
-	    tkwait variable pcfl_selection
-	}
-	.tmpwin unpost
-	if [winfo exists .tmpwin.tooltip] {destroy .tmpwin.tooltip}
-
-	if {$pcfl_selection == {} } {
-	    set cancelled 1
-	}
-	return $pcfl_selection
+	incr num_items
     }
 
-    ############################
-    # MISC
-    proc xscrollto {x} {
-	global rstw
-
-	set width [lindex [lindex [$rstw config -scrollregion] 4] 2]
-	$rstw xview moveto [expr $x / $width.000]
+    if { $put_cancel != "NOcancel" && $cancel_exists == 0 } {
+	AddMenuItem .tmpwin CANCEL "set pcfl_selection {}"
     }
 
-    proc yscrollto {y} {
-	global rstw
-
-	set width [lindex [lindex [$rstw config -scrollregion] 4] 3]
-	$rstw yview moveto [expr $y / $width.000]
+    # now make the popup
+    .tmpwin post $xpos $ypos
+    if {[tk windowingsystem] != "aqua"} {
+	tkwait variable pcfl_selection
     }
+    .tmpwin unpost
+    if [winfo exists .tmpwin.tooltip] {destroy .tmpwin.tooltip}
 
-    proc update_promotion {} {
-	global node last_text_node_id last_group_node_id
+    if {$pcfl_selection == {} } {
+	set cancelled 1
+    }
+    return $pcfl_selection
+}
 
-	for {set i 5001} {$i <= $last_group_node_id} {incr i} {
-	    set node($i,promotion) {}
-	}
-	for {set i 1} {$i <= $last_text_node_id} {incr i} {
-	    set node($i,promotion) $i
-	    set j $i
+############################
+# MISC
+proc xscrollto {x} {
+    global rstw
+
+    set width [lindex [lindex [$rstw config -scrollregion] 4] 2]
+    $rstw xview moveto [expr $x / $width.000]
+}
+
+proc yscrollto {y} {
+    global rstw
+
+    set width [lindex [lindex [$rstw config -scrollregion] 4] 3]
+    $rstw yview moveto [expr $y / $width.000]
+}
+
+proc update_promotion {} {
+    global node last_text_node_id last_group_node_id
+
+    for {set i 5001} {$i <= $last_group_node_id} {incr i} {
+	set node($i,promotion) {}
+    }
+    for {set i 1} {$i <= $last_text_node_id} {incr i} {
+	set node($i,promotion) $i
+	set j $i
+	set j_relation $node($j,relname)
+	while {$node($j,parent) != {} && $node($j,parent) != $j && \
+		   [group-relation-p $j_relation]} {
+	    set j_parent $node($j,parent)
+	    if {$node($j_parent,promotion) != {}} {
+		append node($j_parent,promotion) " "
+	    }
+	    append node($j_parent,promotion) "$i"
+	    set j $j_parent
 	    set j_relation $node($j,relname)
-	    while {$node($j,parent) != {} && $node($j,parent) != $j && \
-		       [group-relation-p $j_relation]} {
-		set j_parent $node($j,parent)
-		if {$node($j_parent,promotion) != {}} {
-		    append node($j_parent,promotion) " "
-		}
-		append node($j_parent,promotion) "$i"
-		set j $j_parent
-		set j_relation $node($j,relname)
-	    }
 	}
     }
+}
 
-    set dotfile {}
+set dotfile {}
+set used_nodes {}
+
+proc print_dot { } {
+    global node last_text_node_id currentfile dotfile used_nodes
+    global last_group_node_id pages fill orient p_width p_height
+
+    update_promotion 
+
+    if {$currentfile != {}} {
+	set dotfilename $currentfile.rst/[set-file-name dot]
+    } else {
+	set dotfilename [set-file-name dot tmp]
+    }
+    set dotfile [open $dotfilename w 0644]
+
     set used_nodes {}
 
-    proc print_dot { } {
-	global node last_text_node_id currentfile dotfile used_nodes
-	global last_group_node_id pages fill orient p_width p_height
-
-	update_promotion 
-
-	if {$currentfile != {}} {
-	    set dotfilename $currentfile.rst/[set-file-name dot]
-	} else {
-	    set dotfilename [set-file-name dot tmp]
-	}
-	set dotfile [open $dotfilename w 0644]
-
-	set used_nodes {}
-
-	puts $dotfile "digraph G { 
+    puts $dotfile "digraph G { 
   node \[shape = box, fontname = Helvetica, fontsize = 10\]; 
   rankdir = TB; 
   page = \"8.5, 11\";" 
-	if { $orient == "landscape" } {
-	    puts $dotfile "orientation = landscape;"
-	}
-	if { $pages == "one" } {
-	    puts $dotfile "size = \"7.5, 10\";" 
-	} elseif { $pages == "user" } {
-	    puts $dotfile "size = \"[expr 7.5 * $p_width], [expr 10 * $p_height]\";"
-	}
-	if { $fill == "fill" } {
-	    puts $dotfile "ratio = fill;"
-	}
-	puts $dotfile "ranksep = .2; 
+    if { $orient == "landscape" } {
+	puts $dotfile "orientation = landscape;"
+    }
+    if { $pages == "one" } {
+	puts $dotfile "size = \"7.5, 10\";" 
+    } elseif { $pages == "user" } {
+	puts $dotfile "size = \"[expr 7.5 * $p_width], [expr 10 * $p_height]\";"
+    }
+    if { $fill == "fill" } {
+	puts $dotfile "ratio = fill;"
+    }
+    puts $dotfile "ranksep = .2; 
   nodesep = .2;
   concentrate = TRUE
   edge \[dir = none, fontname = Helvetica, fontsize = 10\]" 
 
-	set root_nodes {}
-	for {set i 1} {$i <= $last_text_node_id} {incr i} {
+    set root_nodes {}
+    for {set i 1} {$i <= $last_text_node_id} {incr i} {
+	set j $i
+	while {$node($j,parent) != {} } {
+	    set j $node($j,parent)
+	}
+	if {[lsearch $root_nodes $j] == -1} {
+	    lappend root_nodes $j
+	}
+    }
+    foreach root $root_nodes {
+	puts $dotfile "$root \[shape=box\];\n"
+	print_dot_recursion $root 
+    }
+    puts $dotfile "}"
+    close $dotfile
+}
+
+proc print_dot_recursion {nid} {
+    global node dotfile used_nodes mode
+
+    append used_nodes " $nid"
+
+    #  print relevant information
+    set nid_parent $node($nid,parent)
+    append to_print "$nid \[label=\""
+    if { $node($nid,constit) != {} } {
+	append to_print "[capital $node($nid,constit)] \\n"
+    }
+    append to_print "$node($nid,promotion)"
+    if { $node($nid,relname) != "span" &&
+	 [relation-type $node($nid,relname)] != "multinuc"} {
+	append to_print " [capital $node($nid,relname)]"
+    }
+    if {$mode == "text"} {
+	set the_text $node($nid,text)
+	while {$the_text != {}} {
+	    set counter 0
+	    append to_print " \\n"
+	    while {$counter < 18} {
+		set the_word [lindex $the_text 0]
+		if {$the_word == {}} {
+		    set counter 18
+		} else {
+		    append to_print "$the_word "
+		    #delete the word from the list
+		    set the_text [lreplace $the_text 0 0]
+		    set wordlength [string length $the_word]
+		    set counter [expr $counter + $wordlength + 1]
+		}
+	    }
+	}
+    }
+    append to_print "\"\];\n"
+
+    set child_list {}
+    foreach child $node($nid,children) {
+	if { [relation-type $node($child,relname)] != "rst" &&  [relation-type $node($child,relname)] != "embedded" } {
+	    lappend child_list $child
+	    set grandchild_list $node($child,children)
+	    foreach grandchild $grandchild_list {
+		if { [relation-type $node($grandchild,relname)] == "rst" || [relation-type $node($grandchild,relname)] == "embedded"} {
+		    lappend child_list $grandchild
+		}
+	    }
+	}
+    }  
+    set new_child_list {}
+    foreach child $child_list {
+	if {$child > 5000} {
+	    set index $node($child,text)
+	    set index [split $index -]
+	    set index [lindex $index 0]
+	    set backreference($index) $child
+	    lappend new_child_list $index
+	} else {
+	    set backreference($child) $child
+	    lappend new_child_list $child
+	}
+    }
+    set new_child_list [lsort -integer $new_child_list]
+    foreach child $new_child_list {
+	set the_child $backreference($child)
+	if { [relation-type $node($the_child,relname)] == "rst" || [relation-type $node($the_child,relname)] == "embedded"} {
+	    append to_print "$the_child \[shape=box,style=dotted\];\n"
+	    append to_print "edge \[style=dotted,label=\"\"\];\n"
+	    append to_print "$nid -> $the_child;\n";
+	} else {
+	    append to_print "$the_child \[shape=box\];\n"
+	    if { $node($the_child,relname) == "span" } {
+		append to_print "edge \[style=bold,label=\"\"\];\n"
+	    } else {
+		append to_print \
+		    "edge \[style=bold,label=\"[capital $node($the_child,relname)]\"\];\n"
+	    }
+	    append to_print "$nid -> $the_child;\n";
+	}
+    }
+    puts $dotfile $to_print
+    flush $dotfile
+
+    foreach child $new_child_list {
+	print_dot_recursion $backreference($child)
+    }
+}
+
+proc capital { the_string } {
+    regsub -all a $the_string A the_string
+    regsub -all b $the_string B the_string
+    regsub -all c $the_string C the_string
+    regsub -all d $the_string D the_string
+    regsub -all e $the_string E the_string
+    regsub -all f $the_string F the_string
+    regsub -all g $the_string G the_string
+    regsub -all h $the_string H the_string
+    regsub -all i $the_string I the_string
+    regsub -all j $the_string J the_string
+    regsub -all k $the_string K the_string
+    regsub -all l $the_string L the_string
+    regsub -all m $the_string M the_string
+    regsub -all n $the_string N the_string
+    regsub -all o $the_string O the_string
+    regsub -all p $the_string P the_string
+    regsub -all q $the_string Q the_string
+    regsub -all r $the_string R the_string
+    regsub -all s $the_string S the_string
+    regsub -all t $the_string T the_string
+    regsub -all u $the_string U the_string
+    regsub -all v $the_string V the_string
+    regsub -all w $the_string W the_string
+    regsub -all x $the_string X the_string
+    regsub -all y $the_string Y the_string
+    regsub -all z $the_string Z the_string
+    return $the_string
+}
+
+proc save-raw {} {
+    global trgfname
+    global node nid2msgid msgs2extnid
+
+    set trgfile [open $trgfname w 0644]
+    # output child/parent pair mapping specific to particular messages
+    foreach ikey [array names msgs2extnid] {
+	puts $trgfile [join [list "msgs2extnid" "$ikey" \
+				 [join $msgs2extnid($ikey) "\034"]] "\t"]
+    }
+    # output information about nodes
+    foreach nid [array names nid2msgid] {
+	puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] \
+				 "text\034" [string trimright $node($nid,text) "\n"] \
+				 "type\034$node($nid,type)" \
+				 "textwgt\034$node($nid,textwgt)" \
+				 "labelwgt\034$node($nid,labelwgt)" \
+				 "arrowwgt\034$node($nid,arrowwgt)" \
+				 "spanwgt\034$node($nid,spanwgt)" \
+				 "relname\034$node($nid,relname)" \
+				 "children\034[join $node($nid,children) \034]" \
+				 "parent\034$node($nid,parent)" \
+				 "constituents\034[join $node($nid,constituents) \034]" \
+				 "visible\034$node($nid,visible)" \
+				 "span\034[join $node($nid,span) \034]" \
+				 "offsets\034[join $node($nid,offsets) \034]" \
+				 "xpos\034$node($nid,xpos)" \
+				 "ypos\034$node($nid,ypos)" \
+				 "oldindex\034$node($nid,oldindex)" \
+				 "newindex\034$node($nid,newindex)" \
+				 "constit\034$node($nid,constit)" \
+				 "promotion\034$node($nid,promotion)"] "\t"]
+    }
+    close $trgfile
+}
+
+proc load-raw {} {
+    global trgfname
+    global node msgid2nid nid2msgid msgs2extnid group_nodes
+    global last_text_node_id last_group_node_id
+
+    # open annotation file for reading
+    set srcfile [open $trgfname r 0444]
+
+    set nid {}
+    set iline {}
+    set f {}
+    set field {}
+    set fields {}
+    # process annotation line by line
+    while {[gets $srcfile iline] >= 0} {
+	# puts stderr "iline = '$iline'"
+	set fields [split $iline "\t"]
+	if {[lindex $fields 0] == "msgs2extnid"} {
+	    set msgs2extnid([lindex $fields 1]) [split [lindex $fields 2] "\034"]
+	} elseif {[lindex $fields 0] == "nid"} {
+	    set nid [lindex $fields 1]
+	    if {$nid > 5000} {
+		if {$nid > $last_group_node_id} {
+		    set last_group_node_id $nid
+		}
+	    } elseif {$nid > $last_text_node_id} {
+		set last_text_node_id $nid;
+	    }
+	    set nid2msgid($nid) [split [lindex $fields 2] "\034"]
+	    # add reverse mapping from message id to its corresponding node ids
+	    if {[llength $nid2msgid($nid)] == 1} {
+		set msgid [lindex $nid2msgid($nid) 0]
+		if {! [info exists msgid2nid($msgid)] } {
+		    set msgid2nid($msgid) {}
+		}
+		lappend msgid2nid($msgid) $nid
+	    }
+	    # populate nodes
+	    foreach field [lrange $fields 3 end] {
+		set f [split $field "\034"]
+		set f_id [lindex $f 0]
+
+		# perform consistency check on children
+		if {$f_id == "children"} {
+		    foreach ch_id [lrange $f 1 end] {
+			if {[info exists nid2msgid($ch_id)] && \
+				$nid2msgid($ch_id) == $nid2msgid($nid)} {
+			    if {$node($ch_id,parent) != $nid} {
+				error "Invalid discourse tree: parent of the child node\
+ $ch_id of node $nid is not $nid but $node($ch_id,parent)"
+			    }
+			}
+			set node($ch_id,parent) $nid
+		    }
+		} elseif {$f_id == "parent" && [set prnt_id [lindex $f 1]] != {}} {
+		    if {[info exists nid2msgid($prnt_id)] && \
+			    $nid2msgid($nid) == $nid2msgid($prnt_id) && \
+			    [info exists node($nid,parent)]} {
+			if {$node($nid,parent) != $prnt_id} {
+			    error "Invalid discourse tree: different parents defined for node\
+ $nid ($node($nid,parent) vs. $prnt_id)"
+			}
+		    }
+		}
+
+		if {[llength $f] > 2} {
+		    set node($nid,$f_id) [lrange $f 1 end]
+		} else {
+		    if {$f_id == "type" && [lindex $f 1] == "span"} {
+			lappend group_nodes $nid
+		    } elseif {$f_id == "parent"} {
+
+		    }
+		    set node($nid,$f_id) [lindex $f 1]
+		}
+	    }
+	} elseif {[llength $fields] > 0} {
+	    error "Unrecognized line format: '$iline'"
+	}
+    }
+    # sort node ids stored in msgid2nid in topological order
+    foreach msgid [array names msgid2nid] {
+	set msgid2nid($msgid) [lsort -integer $msgid2nid($msgid)]
+    }
+    close $srcfile
+}
+
+proc save-lisp {} {
+    global trgfname
+    global node last_text_node_id currentfile used_nodes
+
+    update_promotion
+
+    set trgfile [open $trgfname w 0644]
+
+    set used_nodes {}
+
+    for {set i 1} {$i <= $last_text_node_id} {incr i} {
+	if {[lsearch -exact $used_nodes $i] == -1} {
 	    set j $i
 	    while {$node($j,parent) != {} } {
 		set j $node($j,parent)
 	    }
-	    if {[lsearch $root_nodes $j] == -1} {
-		lappend root_nodes $j
-	    }
+	    save-lisp_recursion $j 0
 	}
-	foreach root $root_nodes {
-	    puts $dotfile "$root \[shape=box\];\n"
-	    print_dot_recursion $root 
-	}
-	puts $dotfile "}"
-	close $dotfile
+    }
+    close $trgfile
+}
+
+proc save-lisp_recursion {nid depth} {
+    global node lispfile used_nodes
+
+    if {[group-relation-p $node($nid,relname)]} {
+	incr depth
     }
 
-    proc print_dot_recursion {nid} {
-	global node dotfile used_nodes mode
+    append used_nodes " $nid"
 
-	append used_nodes " $nid"
+    #  print all the junk
+    set to_print {}
+    for {set i 0} {$i < $depth} {incr i} {
+	append to_print "   "
+    }
+    append to_print "( "
 
-	#  print relevant information
-	set nid_parent $node($nid,parent)
-	append to_print "$nid \[label=\""
-	if { $node($nid,constit) != {} } {
-	    append to_print "[capital $node($nid,constit)] \\n"
-	}
-	append to_print "$node($nid,promotion)"
-	if { $node($nid,relname) != "span" &&
-	     [relation-type $node($nid,relname)] != "multinuc"} {
-	    append to_print " [capital $node($nid,relname)]"
-	}
-	if {$mode == "text"} {
-	    set the_text $node($nid,text)
-	    while {$the_text != {}} {
-		set counter 0
-		append to_print " \\n"
-		while {$counter < 18} {
-		    set the_word [lindex $the_text 0]
-		    if {$the_word == {}} {
-			set counter 18
-		    } else {
-			append to_print "$the_word "
-			#delete the word from the list
-			set the_text [lreplace $the_text 0 0]
-			set wordlength [string length $the_word]
-			set counter [expr $counter + $wordlength + 1]
-		    }
-		}
-	    }
-	}
-	append to_print "\"\];\n"
+    set nid_parent $node($nid,parent)
+    if {$nid_parent == {}} {
+	append to_print "Root"
+    } elseif {[group-relation-p $node($nid,relname)]} {
+	append to_print "Nucleus"
+    } else {
+	append to_print "Satellite"
+    }
+    if {$node($nid,type) == "text"} {
+	append to_print " (leaf $nid)"
+    } else {
+	append to_print " (span $node($nid,span))"
+    }
+    if {$nid_parent != {}} {
+	append to_print " (rel2par $node($nid,relname))"
+    }
+    append to_print " (prom $node($nid,promotion))"
+    if {$node($nid,constit) != {}} {
+	append to_print " (schema $node($nid,constit))"
+    }
+    if {$node($nid,type) == "text"} {
+	append to_print " (text $node($nid,text))"
+	append to_print " )"
+    }
+    puts $lispfile $to_print
+    flush $lispfile
 
-	set child_list {}
-	foreach child $node($nid,children) {
-	    if { [relation-type $node($child,relname)] != "rst" &&  [relation-type $node($child,relname)] != "embedded" } {
-		lappend child_list $child
-		set grandchild_list $node($child,children)
-		foreach grandchild $grandchild_list {
-		    if { [relation-type $node($grandchild,relname)] == "rst" || [relation-type $node($grandchild,relname)] == "embedded"} {
-			lappend child_list $grandchild
-		    }
-		}
-	    }
-	}  
-	set new_child_list {}
-	foreach child $child_list {
-	    if {$child > 5000} {
-		set index $node($child,text)
-		set index [split $index -]
-		set index [lindex $index 0]
-		set backreference($index) $child
-		lappend new_child_list $index
-	    } else {
-		set backreference($child) $child
-		lappend new_child_list $child
-	    }
+    #  print the other nodes recursively
+    set prom_list {}
+    foreach child $node($nid,children) {
+	set prom [lindex $node($child,promotion) 0]
+	if {$prom_list == {}} {
+	    append prom_list "$prom"
+	} else {
+	    append prom_list " $prom"
 	}
-	set new_child_list [lsort -integer $new_child_list]
-	foreach child $new_child_list {
-	    set the_child $backreference($child)
-	    if { [relation-type $node($the_child,relname)] == "rst" || [relation-type $node($the_child,relname)] == "embedded"} {
-		append to_print "$the_child \[shape=box,style=dotted\];\n"
-		append to_print "edge \[style=dotted,label=\"\"\];\n"
-		append to_print "$nid -> $the_child;\n";
-	    } else {
-		append to_print "$the_child \[shape=box\];\n"
-		if { $node($the_child,relname) == "span" } {
-		    append to_print "edge \[style=bold,label=\"\"\];\n"
-		} else {
-		    append to_print \
-			"edge \[style=bold,label=\"[capital $node($the_child,relname)]\"\];\n"
-		}
-		append to_print "$nid -> $the_child;\n";
-	    }
-	}
-	puts $dotfile $to_print
-	flush $dotfile
-
-	foreach child $new_child_list {
-	    print_dot_recursion $backreference($child)
+	set backreference($prom) $child
+    }
+    set prom_list [lsort -integer $prom_list]
+    foreach prom $prom_list {
+	if {$backreference($prom) != $nid} {
+	    save-lisp_recursion $backreference($prom) $depth
 	}
     }
 
-    proc capital { the_string } {
-	regsub -all a $the_string A the_string
-	regsub -all b $the_string B the_string
-	regsub -all c $the_string C the_string
-	regsub -all d $the_string D the_string
-	regsub -all e $the_string E the_string
-	regsub -all f $the_string F the_string
-	regsub -all g $the_string G the_string
-	regsub -all h $the_string H the_string
-	regsub -all i $the_string I the_string
-	regsub -all j $the_string J the_string
-	regsub -all k $the_string K the_string
-	regsub -all l $the_string L the_string
-	regsub -all m $the_string M the_string
-	regsub -all n $the_string N the_string
-	regsub -all o $the_string O the_string
-	regsub -all p $the_string P the_string
-	regsub -all q $the_string Q the_string
-	regsub -all r $the_string R the_string
-	regsub -all s $the_string S the_string
-	regsub -all t $the_string T the_string
-	regsub -all u $the_string U the_string
-	regsub -all v $the_string V the_string
-	regsub -all w $the_string W the_string
-	regsub -all x $the_string X the_string
-	regsub -all y $the_string Y the_string
-	regsub -all z $the_string Z the_string
-	return $the_string
-    }
-
-    proc save-raw {} {
-	global trgfname
-	global node nid2msgid msgs2extnid
-
-	set trgfile [open $trgfname w 0644]
-	# output child/parent pair mapping specific to particular messages
- 	foreach ikey [array names msgs2extnid] {
-	    puts $trgfile [join [list "msgs2extnid" "$ikey" \
-				     [join $msgs2extnid($ikey) "\034"]] "\t"]
-	}
-	# output information about nodes
-	foreach nid [array names nid2msgid] {
-	    puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] \
-				     "text\034" [string trimright $node($nid,text) "\n"] \
-				     "type\034$node($nid,type)" \
-				     "textwgt\034$node($nid,textwgt)" \
-				     "labelwgt\034$node($nid,labelwgt)" \
-				     "arrowwgt\034$node($nid,arrowwgt)" \
-				     "spanwgt\034$node($nid,spanwgt)" \
-				     "relname\034$node($nid,relname)" \
-				     "children\034[join $node($nid,children) \034]" \
-				     "parent\034$node($nid,parent)" \
-				     "constituents\034[join $node($nid,constituents) \034]" \
-				     "visible\034$node($nid,visible)" \
-				     "span\034[join $node($nid,span) \034]" \
-				     "offsets\034[join $node($nid,offsets) \034]" \
-				     "xpos\034$node($nid,xpos)" \
-				     "ypos\034$node($nid,ypos)" \
-				     "oldindex\034$node($nid,oldindex)" \
-				     "newindex\034$node($nid,newindex)" \
-				     "constit\034$node($nid,constit)" \
-				     "promotion\034$node($nid,promotion)"] "\t"]
-	}
-	close $trgfile
-    }
-
-    proc load-raw {} {
-	global trgfname
-	global node msgid2nid nid2msgid msgs2extnid group_nodes
-	global last_text_node_id last_group_node_id
-
-	# open annotation file for reading
-	set srcfile [open $trgfname r 0444]
-
-	set nid {}
-	set iline {}
-	set f {}
-	set field {}
-	set fields {}
-	# process annotation line by line
-	while {[gets $srcfile iline] >= 0} {
-	    # puts stderr "iline = '$iline'"
-	    set fields [split $iline "\t"]
-	    if {[lindex $fields 0] == "msgs2extnid"} {
-		set msgs2extnid([lindex $fields 1]) [split [lindex $fields 2] "\034"]
-	    } elseif {[lindex $fields 0] == "nid"} {
-		set nid [lindex $fields 1]
-		if {$nid > 5000} {
-		    if {$nid > $last_group_node_id} {
-			set last_group_node_id $nid
-		    }
-		} elseif {$nid > $last_text_node_id} {
-		    set last_text_node_id $nid;
-		}
-		set nid2msgid($nid) [split [lindex $fields 2] "\034"]
-		# add reverse mapping from message id to its corresponding node ids
-		if {[llength $nid2msgid($nid)] == 1} {
-		    set msgid [lindex $nid2msgid($nid) 0]
-		    if {! [info exists msgid2nid($msgid)] } {
-		    	set msgid2nid($msgid) {}
-		    }
-		    lappend msgid2nid($msgid) $nid
-		}
-		# populate nodes
-		foreach field [lrange $fields 3 end] {
-		    set f [split $field "\034"]
-		    set f_id [lindex $f 0]
-
-		    # perform consistency check on children
-		    if {$f_id == "children"} {
-			foreach ch_id [lrange $f 1 end] {
-			    if {[info exists nid2msgid($ch_id)] && \
-				    $nid2msgid($ch_id) == $nid2msgid($nid)} {
-				if {$node($ch_id,parent) != $nid} {
-				    error "Invalid discourse tree: parent of the child node\
- $ch_id of node $nid is not $nid but $node($ch_id,parent)"
-				}
-			    }
-			    set node($ch_id,parent) $nid
-			}
-		    } elseif {$f_id == "parent" && [set prnt_id [lindex $f 1]] != {}} {
-			if {[info exists nid2msgid($prnt_id)] && \
-				$nid2msgid($nid) == $nid2msgid($prnt_id) && \
-				[info exists node($nid,parent)]} {
-			    if {$node($nid,parent) != $prnt_id} {
-				    error "Invalid discourse tree: different parents defined for node\
- $nid ($node($nid,parent) vs. $prnt_id)"
-			    }
-			}
-		    }
-
-		    if {[llength $f] > 2} {
-			set node($nid,$f_id) [lrange $f 1 end]
-		    } else {
-			if {$f_id == "type" && [lindex $f 1] == "span"} {
-			    lappend group_nodes $nid
-			} elseif {$f_id == "parent"} {
-
-			}
-			set node($nid,$f_id) [lindex $f 1]
-		    }
-		}
-	    } elseif {[llength $fields] > 0} {
-		error "Unrecognized line format: '$iline'"
-	    }
-	}
-	# sort node ids stored in msgid2nid in topological order
-	foreach msgid [array names msgid2nid] {
-	    set msgid2nid($msgid) [lsort -integer $msgid2nid($msgid)]
-	}
-	close $srcfile
-    }
-
-    proc save-lisp {} {
-	global trgfname
-	global node last_text_node_id currentfile used_nodes
-
-	update_promotion
-
-	set trgfile [open $trgfname w 0644]
-
-	set used_nodes {}
-
-	for {set i 1} {$i <= $last_text_node_id} {incr i} {
-	    if {[lsearch -exact $used_nodes $i] == -1} {
-		set j $i
-		while {$node($j,parent) != {} } {
-		    set j $node($j,parent)
-		}
-		save-lisp_recursion $j 0
-	    }
-	}
-	close $trgfile
-    }
-
-    proc save-lisp_recursion {nid depth} {
-	global node lispfile used_nodes
-
-	if {[group-relation-p $node($nid,relname)]} {
-	    incr depth
-	}
-
-	append used_nodes " $nid"
-
-	#  print all the junk
+    #  print end parentheses, if neccessary
+    if {$node($nid,type) != "text"} {
 	set to_print {}
 	for {set i 0} {$i < $depth} {incr i} {
 	    append to_print "   "
 	}
-	append to_print "( "
-
-	set nid_parent $node($nid,parent)
-	if {$nid_parent == {}} {
-	    append to_print "Root"
-	} elseif {[group-relation-p $node($nid,relname)]} {
-	    append to_print "Nucleus"
-	} else {
-	    append to_print "Satellite"
-	}
-	if {$node($nid,type) == "text"} {
-	    append to_print " (leaf $nid)"
-	} else {
-	    append to_print " (span $node($nid,span))"
-	}
-	if {$nid_parent != {}} {
-	    append to_print " (rel2par $node($nid,relname))"
-	}
-	append to_print " (prom $node($nid,promotion))"
-	if {$node($nid,constit) != {}} {
-	    append to_print " (schema $node($nid,constit))"
-	}
-	if {$node($nid,type) == "text"} {
-	    append to_print " (text $node($nid,text))"
-	    append to_print " )"
-	}
+	append to_print ")"
 	puts $lispfile $to_print
 	flush $lispfile
-
-	#  print the other nodes recursively
-	set prom_list {}
-	foreach child $node($nid,children) {
-	    set prom [lindex $node($child,promotion) 0]
-	    if {$prom_list == {}} {
-		append prom_list "$prom"
-	    } else {
-		append prom_list " $prom"
-	    }
-	    set backreference($prom) $child
-	}
-	set prom_list [lsort -integer $prom_list]
-	foreach prom $prom_list {
-	    if {$backreference($prom) != $nid} {
-		save-lisp_recursion $backreference($prom) $depth
-	    }
-	}
-
-	#  print end parentheses, if neccessary
-	if {$node($nid,type) != "text"} {
-	    set to_print {}
-	    for {set i 0} {$i < $depth} {incr i} {
-		append to_print "   "
-	    }
-	    append to_print ")"
-	    puts $lispfile $to_print
-	    flush $lispfile
-	}
     }
+}
 
-    proc describe-node {nid} {
+proc describe-node {nid} {
 
-	global node
-	puts "id $nid"
-	puts "text $node($nid,text)"
-	puts "type $node($nid,type)"
-	puts "textwgt $node($nid,textwgt)"
-	puts "labelwgt $node($nid,labelwgt)"
-	puts "arrowwgt $node($nid,arrowwgt)"
-	puts "spanwgt $node($nid,spanwgt)"
-	puts "relname $node($nid,relname)"
-	puts "children $node($nid,children)"
-	puts "parent $node($nid,parent)"
-	puts "constituents $node($nid,constituents)"
-	puts "visible $node($nid,visible)"
-	puts "span $node($nid,span)"
-	puts "xpos $node($nid,xpos)"
-	puts "ypos $node($nid,ypos)"
-	puts "oldindex $node($nid,oldindex)"
-	puts "newindex $node($nid,newindex)"
-	puts "promotion $node($nid,promotion)"
-    }
+    global node
+    puts "id $nid"
+    puts "text $node($nid,text)"
+    puts "type $node($nid,type)"
+    puts "textwgt $node($nid,textwgt)"
+    puts "labelwgt $node($nid,labelwgt)"
+    puts "arrowwgt $node($nid,arrowwgt)"
+    puts "spanwgt $node($nid,spanwgt)"
+    puts "relname $node($nid,relname)"
+    puts "children $node($nid,children)"
+    puts "parent $node($nid,parent)"
+    puts "constituents $node($nid,constituents)"
+    puts "visible $node($nid,visible)"
+    puts "span $node($nid,span)"
+    puts "xpos $node($nid,xpos)"
+    puts "ypos $node($nid,ypos)"
+    puts "oldindex $node($nid,oldindex)"
+    puts "newindex $node($nid,newindex)"
+    puts "promotion $node($nid,promotion)"
+}
 
-    proc dn {nid} {describe-node $nid}
+proc dn {nid} {describe-node $nid}
 
-    proc disconnect_node {clicked_node method} {
-	global node savenum disco_node erased_nodes
+proc disconnect_node {clicked_node method} {
+    global node savenum disco_node erased_nodes
 
-	#we only allow disconnection of satellites and multinucs
-	set relation $node($clicked_node,relname)
-	set par $node($clicked_node,parent)
-	# puts stderr "disconnect_node: clicked_node = $clicked_node"
-	# puts stderr "disconnect_node: method = $method"
-	# puts stderr "disconnect_node: relation = $relation"
-	# puts stderr "disconnect_node: par = $par"
-	if {$par == {} || $relation == "span" || $disco_node != {}} {
-	} else {
+    #we only allow disconnection of satellites and multinucs
+    set relation $node($clicked_node,relname)
+    set par $node($clicked_node,parent)
+    # puts stderr "disconnect_node: clicked_node = $clicked_node"
+    # puts stderr "disconnect_node: method = $method"
+    # puts stderr "disconnect_node: relation = $relation"
+    # puts stderr "disconnect_node: par = $par"
+    if {$par == {} || $relation == "span" || $disco_node != {}} {
+    } else {
 
-	    #disconnect node from parent
-	    set node($clicked_node,parent) {}
-	    set node($clicked_node,relname) {}
-	    redisplay-node $clicked_node
+	#disconnect node from parent
+	set node($clicked_node,parent) {}
+	set node($clicked_node,relname) {}
+	redisplay-node $clicked_node
 
-	    #disconnect parent from node
-	    set index [lsearch $node($par,children) $clicked_node]
-	    set node($par,children) [lreplace $node($par,children) $index $index]
-	    adjust-after-change $par $par 1
+	#disconnect parent from node
+	set index [lsearch $node($par,children) $clicked_node]
+	set node($par,children) [lreplace $node($par,children) $index $index]
+	adjust-after-change $par $par 1
 
-	    #clean up any extra spans or single multinuclear relations
-	    set sibling {}
-	    if {[relation-type $relation] == "rst"} {
+	#clean up any extra spans or single multinuclear relations
+	set sibling {}
+	if {[relation-type $relation] == "rst"} {
+	    foreach child $node($par,children) {
+		if {[relation-type $node($child,relname)] == "rst" || \
+			[relation-type $node($child,relname)] == "embedded"} {
+		    lappend sibling $child
+		}
+	    }
+	    if {$sibling == {}} {
+		###########
+		#extra span
+		###########
+		set grandpar $node($par,parent)
+		set greatgrand $node($grandpar,parent)
+
+		#put par in grandpar position
+		#sibling gets grandpar's children
+		foreach child $node($grandpar,children) {
+		    if {$child != $par} {
+			set node($child,parent) $par
+			lappend node($par,children) $child
+		    }
+		}
+		set node($par,parent) $greatgrand
+		set node($par,relname) $node($grandpar,relname)
+		if {$greatgrand != {}} {
+		    #there is a greatgrandparent
+		    #greatgrand gets par as child
+		    set index [lsearch $node($greatgrand,children) $grandpar]
+		    set node($greatgrand,children)\
+			[lreplace $node($greatgrand,children) $index $index $par]
+		}
+		#eliminate grandpar
+		clear-node $grandpar
+		set node($grandpar,type) span
+		lappend erased_nodes $grandpar
+		adjust-after-change $par $par 1
+	    }
+	} elseif {[relation-type $relation] == "multinuc"} {
+	    foreach child $node($par,children) {
+		if {[relation-type $node($child,relname)] == "multinuc"} {
+		    lappend sibling $child
+		}
+	    }
+	    if {[lindex $sibling 1] == {}} {
+		###########
+		#unary multinuc
+		###########
+		set grandpar $node($par,parent)
+
+		#put sibling into par position
+		#sibling gets par's children
 		foreach child $node($par,children) {
-		    if {[relation-type $node($child,relname)] == "rst" || \
-			    [relation-type $node($child,relname)] == "embedded"} {
-			lappend sibling $child
+		    if {$child != $sibling} {
+			set node($child,parent) $sibling
+			lappend node($sibling,children) $child
 		    }
 		}
-		if {$sibling == {}} {
-		    ###########
-		    #extra span
-		    ###########
-		    set grandpar $node($par,parent)
-		    set greatgrand $node($grandpar,parent)
-
-		    #put par in grandpar position
-		    #sibling gets grandpar's children
-		    foreach child $node($grandpar,children) {
-			if {$child != $par} {
-			    set node($child,parent) $par
-			    lappend node($par,children) $child
-			}
-		    }
-		    set node($par,parent) $greatgrand
-		    set node($par,relname) $node($grandpar,relname)
-		    if {$greatgrand != {}} {
-			#there is a greatgrandparent
-			#greatgrand gets par as child
-			set index [lsearch $node($greatgrand,children) $grandpar]
-			set node($greatgrand,children)\
-			    [lreplace $node($greatgrand,children) $index $index $par]
-		    }
-		    #eliminate grandpar
-		    clear-node $grandpar
-		    set node($grandpar,type) span
-		    lappend erased_nodes $grandpar
-		    adjust-after-change $par $par 1
+		set node($sibling,parent) $grandpar
+		set node($sibling,relname) $node($par,relname)
+		if {$grandpar != {}} {
+		    #there is a grandparent
+		    #grandpar gets sibling as child
+		    set index [lsearch $node($grandpar,children) $par]
+		    set node($grandpar,children)\
+			[lreplace $node($grandpar,children) $index $index $sibling]
 		}
-	    } elseif {[relation-type $relation] == "multinuc"} {
-		foreach child $node($par,children) {
-		    if {[relation-type $node($child,relname)] == "multinuc"} {
-			lappend sibling $child
-		    }
-		}
-		if {[lindex $sibling 1] == {}} {
-		    ###########
-		    #unary multinuc
-		    ###########
-		    set grandpar $node($par,parent)
-
-		    #put sibling into par position
-		    #sibling gets par's children
-		    foreach child $node($par,children) {
-			if {$child != $sibling} {
-			    set node($child,parent) $sibling
-			    lappend node($sibling,children) $child
-			}
-		    }
-		    set node($sibling,parent) $grandpar
-		    set node($sibling,relname) $node($par,relname)
-		    if {$grandpar != {}} {
-			#there is a grandparent
-			#grandpar gets sibling as child
-			set index [lsearch $node($grandpar,children) $par]
-			set node($grandpar,children)\
-			    [lreplace $node($grandpar,children) $index $index $sibling]
-		    }
-		    #eliminate par
-		    clear-node $par
-		    set node($par,type) span
-		    lappend erased_nodes $par
-		    adjust-after-change $sibling $sibling 1
-		}
-	    }
-
-	    #bookkeeping
-	    set this_step "disconnect_node $clicked_node $method"
-	    # save-step "$this_step"
-	    incr savenum
-	    # save-rst $savenum
-	    if {$method == "disconnect"} {
-		set disco_node {}
-		set-mode nothing
-	    } else {
-		#method == modify
-		set disco_node $clicked_node
-		set-mode link
-	    }
-	    editor-message "disconnected $clicked_node $method"
-	}
-    }
-
-    proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
-			     {ambiguity {}} {space_holder {}} } {
-	global newest_node rstw node savenum currentsat cancelled
-	global last_group_node_id disco_node
-	global msgid2nid msgs2extnid nid2msgid theForrest
-	global visible_nodes
-
-	if {$dragged_node == {}} {
-	    if {[info exists newest_node] && [info exists visible_nodes($newest_node)]} {
-		set dragged_node $newest_node
-	    } else {
-		return
+		#eliminate par
+		clear-node $par
+		set node($par,type) span
+		lappend erased_nodes $par
+		adjust-after-change $sibling $sibling 1
 	    }
 	}
 
-	if {$disco_node != {}} {
-	    set dragged_node $disco_node
+	#bookkeeping
+	set this_step "disconnect_node $clicked_node $method"
+	# save-step "$this_step"
+	incr savenum
+	# save-rst $savenum
+	if {$method == "disconnect"} {
 	    set disco_node {}
+	    set-mode nothing
+	} else {
+	    #method == modify
+	    set disco_node $clicked_node
+	    set-mode link
 	}
+	editor-message "disconnected $clicked_node $method"
+    }
+}
 
-	if {$node($dragged_node,parent) != {} && \
-		[info exists visible_nodes($node($dragged_node,parent))]} {return}
-	if {$type == {} && $clicked_node == $dragged_node} {return}
-	# check that clicked and dragged node are not already
-	# ancestors of each other, since it would create an infinite
-	# loop, if we tried to connect them again
-	if {[is-ancestor $clicked_node $dragged_node] || [is-ancestor $dragged_node $clicked_node]} {
+proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
+			 {ambiguity {}} {space_holder {}} } {
+    global newest_node rstw node savenum currentsat cancelled
+    global last_group_node_id disco_node
+    global msgid2nid msgs2extnid nid2msgid theForrest
+    global visible_nodes
+
+    if {$dragged_node == {}} {
+	if {[info exists newest_node] && [info exists visible_nodes($newest_node)]} {
+	    set dragged_node $newest_node
+	} else {
 	    return
 	}
-	# prevent non-projective edges, i.e. a given node can only be
-	# linked to its adjacent span
+    }
 
-	#set par $node($clicked_node,parent)
-	set children $node($clicked_node,children)
-	if { $children != {} && ! [info exists visible_nodes([lindex $children 0])]} {
-	    expand $clicked_node
-	    foreach child $children {
-		collapse $child
-	    }
-	    # reestablish
+    if {$disco_node != {}} {
+	set dragged_node $disco_node
+	set disco_node {}
+    }
+
+    if {$node($dragged_node,parent) != {} && \
+	    [info exists visible_nodes($node($dragged_node,parent))]} {return}
+    if {$type == {} && $clicked_node == $dragged_node} {return}
+    # check that clicked and dragged node are not already
+    # ancestors of each other, since it would create an infinite
+    # loop, if we tried to connect them again
+    if {[is-ancestor $clicked_node $dragged_node] || [is-ancestor $dragged_node $clicked_node]} {
+	return
+    }
+    # prevent non-projective edges, i.e. a given node can only be
+    # linked to its adjacent span
+
+    #set par $node($clicked_node,parent)
+    set children $node($clicked_node,children)
+    if { $children != {} && ! [info exists visible_nodes([lindex $children 0])]} {
+	expand $clicked_node
+	foreach child $children {
+	    collapse $child
 	}
+	# reestablish
+    }
 
-	# obtain message id's of dragged and clicked nodes
-	set dragged_msgid $nid2msgid($dragged_node)
-	set clicked_msgid $nid2msgid($clicked_node)
-	set clicked_is_prnt 0
-	set ext_connection 0
-	if {$dragged_msgid != $clicked_msgid} { set ext_connection 1 }
+    # obtain message id's of dragged and clicked nodes
+    set dragged_msgid $nid2msgid($dragged_node)
+    set clicked_msgid $nid2msgid($clicked_node)
+    set clicked_is_prnt 0
+    set ext_connection 0
+    if {$dragged_msgid != $clicked_msgid} { set ext_connection 1 }
 
-	if {$type == {} } {
-	    set coords [screen-coords [ntw $clicked_node] $rstw]
-	    # determine which kind of relationship may hold between two nodes
-	    set nucleus nucleus
-	    set nucleus_embedded nucleus-embedded
-	    set satellite satellite
-	    set satellite_embedded satellite-embedded
-	    # if parent message of the dragged node is the message
-	    # corresponding to the clicked node, we cannot make the clicked
-	    # node a satellite
-	    set dragged_node_prnt_id [lindex $theForrest($dragged_msgid) 1]
-	    set clicked_node_prnt_id [lindex $theForrest($clicked_msgid) 1]
-	    if {$dragged_node_prnt_id == $clicked_msgid} {
-		set nucleus ""
-		set nucleus_embedded ""
-		set clicked_is_prnt 1
-	    } elseif {$clicked_node_prnt_id == $dragged_msgid} {
-		set satellite ""
-		set satellite_embedded ""
-	    } else {
-		# if both nodes belong to the same message, it can
-		# still be the case that
-	    }
-	    set type [popup-choose-from-list \
-			  [concat $nucleus $satellite $nucleus_embedded $satellite_embedded \
-			       {multinuclear schema}] \
-			  [expr int([lindex $coords 0])] [expr int([lindex $coords 1])]]
+    if {$type == {} } {
+	set coords [screen-coords [ntw $clicked_node] $rstw]
+	# determine which kind of relationship may hold between two nodes
+	set nucleus nucleus
+	set nucleus_embedded nucleus-embedded
+	set satellite satellite
+	set satellite_embedded satellite-embedded
+	# if parent message of the dragged node is the message
+	# corresponding to the clicked node, we cannot make the clicked
+	# node a satellite
+	set dragged_node_prnt_id [lindex $theForrest($dragged_msgid) 1]
+	set clicked_node_prnt_id [lindex $theForrest($clicked_msgid) 1]
+	if {$dragged_node_prnt_id == $clicked_msgid} {
+	    set nucleus ""
+	    set nucleus_embedded ""
+	    set clicked_is_prnt 1
+	} elseif {$clicked_node_prnt_id == $dragged_msgid} {
+	    set satellite ""
+	    set satellite_embedded ""
+	} else {
+	    # if both nodes belong to the same message, it can
+	    # still be the case that
 	}
-	if {$type == {} } {
-	    # it was cancelled
-	    set cancelled 0
-	    return
-	}
-	append this_step " $type"
+	set type [popup-choose-from-list \
+		      [concat $nucleus $satellite $nucleus_embedded $satellite_embedded \
+			   {multinuclear schema}] \
+		      [expr int([lindex $coords 0])] [expr int([lindex $coords 1])]]
+    }
+    if {$type == {} } {
+	# it was cancelled
+	set cancelled 0
+	return
+    }
+    append this_step " $type"
 
-	# determine if ambiguous
-	if { $type == "satellite" || $type == "satellite-embedded" } {
-	    if { $ambiguity == {} } {
-		foreach child $node($clicked_node,children) {
-		    if { [relation-type $node($child,relname)] == "rst" || \
-			     [relation-type $node($child,relname)] == "embedded"} {
-			# 1) ambiguous
-			set ambiguity "unknown"
-		    }
-		}
-	    }
-	} elseif { $type == "multinuclear" } {
-	    if {"$node($clicked_node,type)" == "multinuc"} {
-		# 1) ambiguous
-		if { "$ambiguity" == {} } {
+    # determine if ambiguous
+    if { $type == "satellite" || $type == "satellite-embedded" } {
+	if { $ambiguity == {} } {
+	    foreach child $node($clicked_node,children) {
+		if { [relation-type $node($child,relname)] == "rst" || \
+			 [relation-type $node($child,relname)] == "embedded"} {
+		    # 1) ambiguous
 		    set ambiguity "unknown"
 		}
 	    }
 	}
-
-	if { $ambiguity == "unknown" } {
-	    set coords [screen-coords [ntw $clicked_node] $rstw]
-	    set ambiguity [popup-choose-from-list {above below}\
-			       [expr int([lindex $coords 0])] [expr int([lindex $coords 1])] NOcancel]
+    } elseif { $type == "multinuclear" } {
+	if {"$node($clicked_node,type)" == "multinuc"} {
+	    # 1) ambiguous
+	    if { "$ambiguity" == {} } {
+		set ambiguity "unknown"
+	    }
 	}
+    } elseif {($type == "nucleus" || $type == "nucleus-embedded") && \
+		  $node($clicked_node,parent) != {} && \
+		  [info exists visible_nodes($node($clicked_node,parent))]} {
+	return
+    }
 
-	if { $type == "multinuclear" && $ambiguity == "below" } {
-	    # exception #1
-	    set i 0
-	    set child 0
-	    while { $child != {} } {
-		set child [lindex $children $i]
-		if { [relation-type $node($child,relname)] == "multinuc" } {
-		    set relation $node($child,relname)
-		    set child {}
-		}
-		incr i
+    if { $ambiguity == "unknown" } {
+	set coords [screen-coords [ntw $clicked_node] $rstw]
+	set ambiguity [popup-choose-from-list {above below}\
+			   [expr int([lindex $coords 0])] [expr int([lindex $coords 1])] NOcancel]
+    }
+
+    if { $type == "multinuclear" && $ambiguity == "below" } {
+	# exception #1
+	set i 0
+	set child 0
+	while { $child != {} } {
+	    set child [lindex $children $i]
+	    if { [relation-type $node($child,relname)] == "multinuc" } {
+		set relation $node($child,relname)
+		set child {}
 	    }
-	    if {$clicked_node == $dragged_node} {return}
-	    link-par-to-child $clicked_node $dragged_node $relation
-	} elseif { ($type == "satellite" || $type == "satellite-embedded") && \
-		       $ambiguity == "above" } {
-	    #exception #2
+	    incr i
+	}
+	if {$clicked_node == $dragged_node} {return}
+	link-par-to-child $clicked_node $dragged_node $relation
+    } elseif { ($type == "satellite" || $type == "satellite-embedded") && \
+		   $ambiguity == "above" } {
+	#exception #2
+	set relation [choose-label $clicked_node $type $ext_connection]
+	if {$relation == {} || $clicked_node == $dragged_node} {return}
+	link-par-to-child $clicked_node $dragged_node $relation
+    } elseif { $type == "schema" } {
+	# exception #3
+	set relation [choose-label $clicked_node $type $ext_connection]
+	if {$relation == {}} {return}
+	set node($clicked_node,constit) $relation
+    } else {
+	# standard algorithm
+	if {$relation == {}} {
 	    set relation [choose-label $clicked_node $type $ext_connection]
-	    if {$relation == {} || $clicked_node == $dragged_node} {return}
-	    link-par-to-child $clicked_node $dragged_node $relation
-	} elseif { $type == "schema" } {
-	    # exception #3
-	    set relation [choose-label $clicked_node $type $ext_connection]
-	    if {$relation == {}} {return}
-	    set node($clicked_node,constit) $relation
-	} else {
-	    # standard algorithm
+	}
+	if {$relation == {}} {return}
 
-	    # check that node which we are going to connect to, is not
-	    # already someone else's satellite (subject to change, maybe
-	    # some type-checking should be applied here)
-	    if {($type == "nucleus" || $type == "nucleus-embedded") && \
-		    $node($clicked_node,parent) != {} && \
-		    [info exists visible_nodes($node($clicked_node,parent))]} {
-		return
-	    }
-	    set relation [choose-label $clicked_node $type $ext_connection]
-	    if {$relation == {}} {return}
-
+	if {$ambiguity == {}} {
 	    incr last_group_node_id
 	    add-group-node $last_group_node_id
 	    clear-node $last_group_node_id
-	    # put-in-place-of $clicked_node $last_group_node_id
-	    # show new group node
 	    set visible_nodes($last_group_node_id) 1
-	    if {$ext_connection} {
-		# remember ids of messages which the new external node
-		# connects.  Additionally, if external parent already has an
-		# ancestor, link the newly create common group node to that
-		# ancestor.
-		if {$clicked_is_prnt} {
-		    # if dragged and clicked nodes belong to different messages,
-		    # remember both messages for the new group node
-		    set nid2msgid($last_group_node_id) [list $clicked_msgid $dragged_msgid]
-		    # if {[info exists node($clicked_node,parent)] && \
-					   # 	    $node($clicked_node,parent) != {}} {
-		    # 	set $node($last_group_node_id,parent) $node($clicked_node,parent)
-		    # }
-		    set msgs2extnid($clicked_msgid,$dragged_msgid) [list $last_group_node_id $clicked_node span \
-									$clicked_node $dragged_node $relation]
-		} else {
-		    set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
-		    # if {[info exists node($dragged_node,parent)] && \
-			    # 	    $node($dragged_node,parent) != {}} {
-		    # 	set $node($last_group_node_id,parent) $node($dragged_node,parent)
-		    # }
-		    set msgs2extnid($dragged_msgid,$clicked_msgid) [list $last_group_node_id $dragged_node span \
-									$dragged_node $clicked_node $relation]
-		}
-	    } else {
-		# if dragged and clicked nodes belong to one message, remember
-		# that the new group node corresponds to that message id
-		set nid2msgid($last_group_node_id) [list $clicked_msgid]
-		# remember to which message the new internal group node belongs
-		lappend msgid2nid($clicked_msgid) $last_group_node_id
-	    }
+	}
 
-	    if {$type == "multinuclear"} {
-		set node($last_group_node_id,type) multinuc
-		link-par-to-child $last_group_node_id $clicked_node $relation
-		link-par-to-child $last_group_node_id $dragged_node $relation
-		fix-children $last_group_node_id $clicked_node $dragged_node
+	if {$ext_connection} {
+	    # remember ids of messages which the new external node
+	    # connects.  Additionally, if external parent already has an
+	    # ancestor, link the newly create common group node to that
+	    # ancestor.
+	    if {$clicked_is_prnt} {
+		# if dragged and clicked nodes belong to different messages,
+		# remember both messages for the new group node
+		set nid2msgid($last_group_node_id) [list $clicked_msgid $dragged_msgid]
+		# if {[info exists node($clicked_node,parent)] && \
+		    # 	    $node($clicked_node,parent) != {}} {
+		# 	set $node($last_group_node_id,parent) $node($clicked_node,parent)
+		# }
+		set msgs2extnid($clicked_msgid,$dragged_msgid) [list $last_group_node_id $clicked_node span \
+								    $clicked_node $dragged_node $relation]
 	    } else {
-		# if {$clicked_node == $dragged_node} {return;}
-		set node($last_group_node_id,type) span
-		if {$type == "satellite" || $type == "satellite-embedded"} {
+		set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
+		# if {[info exists node($dragged_node,parent)] && \
+		    # 	    $node($dragged_node,parent) != {}} {
+		# 	set $node($last_group_node_id,parent) $node($dragged_node,parent)
+		# }
+		set msgs2extnid($dragged_msgid,$clicked_msgid) [list $last_group_node_id $dragged_node span \
+								    $dragged_node $clicked_node $relation]
+	    }
+	} else {
+	    # if dragged and clicked nodes belong to one message, remember
+	    # that the new group node corresponds to that message id
+	    set nid2msgid($last_group_node_id) [list $clicked_msgid]
+	    # remember to which message the new internal group node belongs
+	    lappend msgid2nid($clicked_msgid) $last_group_node_id
+	}
+
+	if {$type == "multinuclear"} {
+	    set node($last_group_node_id,type) multinuc
+	    link-par-to-child $last_group_node_id $clicked_node $relation
+	    link-par-to-child $last_group_node_id $dragged_node $relation
+	    fix-children $last_group_node_id $clicked_node $dragged_node
+	} else {
+	    # if {$clicked_node == $dragged_node} {return;}
+	    set node($last_group_node_id,type) span
+	    if {$type == "satellite" || $type == "satellite-embedded"} {
+		if {$ambiguity == {}} {
+		    # if assumed nucleus already is someone's satellite, we
+		    if {$node($clicked_node,relname) != "span" && \
+			    [info exists visible_nodes($node($clicked_node,parent))]} {
+			set grnd_prnt $node($clicked_node,parent);
+			set node($clicked_node,parent) {}
+			set node($grnd_prnt,children)  [ldelete $node($grnd_prnt,children) $clicked_node]
+			link-par-to-child $grnd_prnt $last_group_node_id $node($clicked_node,relname)
+		    }
 		    link-par-to-child $last_group_node_id $clicked_node span
-		    link-par-to-child $clicked_node $dragged_node $relation
-		} elseif {$type == "nucleus" || $type == "nucleus-embedded"} {
-		    link-par-to-child $last_group_node_id $dragged_node span
-		    link-par-to-child $dragged_node $clicked_node $relation
 		}
-		fix-children $last_group_node_id $clicked_node $dragged_node
+		link-par-to-child $clicked_node $dragged_node $relation
+	    } elseif {$type == "nucleus" || $type == "nucleus-embedded"} {
+		link-par-to-child $last_group_node_id $dragged_node span
+		link-par-to-child $dragged_node $clicked_node $relation
 	    }
-	}
-
-	append this_step " $relation"
-	append this_step " $ambiguity"
-	append this_step " $last_group_node_id"
-	# save-step "$this_step"
-	incr savenum
-	# save-rst $savenum
-	if { $type == "schema" } {
-	    set-mode autolink
-	}
-	#  else {
-	#     set-mode nothing
-	# }
-	editor-message \
-	    "linked $dragged_node to $clicked_node as a $relation $type $ambiguity"
-	# reestablish
-	xscrollto [max $node($dragged_node,xpos) $node($clicked_node,xpos)]
-	yscrollto [max $node($dragged_node,ypos) $node($clicked_node,ypos)]
-	if { $cancelled == 1 } {
-	    set cancelled 0
-	    # undo_by_reload
+	    fix-children $last_group_node_id $clicked_node $dragged_node
 	}
     }
 
-    proc link-par-to-child {par child relation } {
-	global node
-	if {$par == $child} {return;}
-
-	lappend node($par,children) $child
-	set node($par,children) [lsort -integer $node($par,children)]
-
-	set node($child,parent) $par
-	set node($child,relname) $relation
-
-	adjust-after-change $par $child 1
+    append this_step " $relation"
+    append this_step " $ambiguity"
+    append this_step " $last_group_node_id"
+    # save-step "$this_step"
+    incr savenum
+    # save-rst $savenum
+    if { $type == "schema" } {
+	set-mode autolink
     }
+    #  else {
+    #     set-mode nothing
+    # }
+    editor-message \
+	"linked $dragged_node to $clicked_node as a $relation $type $ambiguity"
+    # reestablish
+    xscrollto [max $node($dragged_node,xpos) $node($clicked_node,xpos)]
+    yscrollto [max $node($dragged_node,ypos) $node($clicked_node,ypos)]
+    if { $cancelled == 1 } {
+	set cancelled 0
+	# undo_by_reload
+    }
+}
 
-    proc fix-children {new_node clicked_node dragged_node} {
-	global node
-	foreach child $node($new_node,children) {
-	    if { $child == $clicked_node } {
-	    } elseif { $child == $dragged_node } {
-	    } elseif { $node($child,relname) == "span" } {
-		link-par-to-child $clicked_node $child span
-	    } elseif { [relation-type $node($child,relname)] == "multinuc" } {
-		link-par-to-child $clicked_node $child $node($child,relname)
-	    }
+proc link-par-to-child {par child relation } {
+    global node
+    # puts stderr "link-par-to-child: Linking child $child to parent $par"
+    if {$par == $child} {return;}
+
+    # puts stderr "node($par,children) before: $node($par,children)"
+    lappend node($par,children) $child
+    set node($par,children) [lsort -integer $node($par,children)]
+    # puts stderr "node($par,children) after: $node($par,children)"
+
+    # puts stderr "node($child,parent) before: $node($child,parent)"
+    set node($child,parent) $par
+    # puts stderr "node($child,parent) after: $node($child,parent)"
+    set node($child,relname) $relation
+    # puts stderr "node($child,relname): $node($child,relname)"
+
+    adjust-after-change $par $child 1
+}
+
+proc fix-children {new_node clicked_node dragged_node} {
+    global node
+    foreach child $node($new_node,children) {
+	if { $child == $clicked_node } {
+	} elseif { $child == $dragged_node } {
+	} elseif { $node($child,relname) == "span" } {
+	    link-par-to-child $clicked_node $child span
+	} elseif { [relation-type $node($child,relname)] == "multinuc" } {
+	    link-par-to-child $clicked_node $child $node($child,relname)
 	}
     }
+}
 
-    proc put-in-place-of { original substitute } {
-	global node
+proc put-in-place-of { original substitute } {
+    global node
 
-	set node($substitute,relname) $node($original,relname)
-	set node($substitute,parent) $node($original,parent)
-	set node($substitute,children) $node($original,children)
-	foreach child $node($original,children) {
-	    set node($child,parent) $substitute
-	}
+    set node($substitute,relname) $node($original,relname)
+    set node($substitute,parent) $node($original,parent)
+    set node($substitute,children) $node($original,children)
+    foreach child $node($original,children) {
+	set node($child,parent) $substitute
     }
+}
 
-    proc add-group-node {nid} {
-	global node group_nodes
+proc add-group-node {nid} {
+    global node group_nodes
 
-	# Report error if repeated add
-	if [member $nid $group_nodes] {error "add-group-node: error: $nid already defined"}
+    # Report error if repeated add
+    if [member $nid $group_nodes] {error "add-group-node: error: $nid already defined"}
 
-	# add the node
-	lappend group_nodes $nid
-    }
+    # add the node
+    lappend group_nodes $nid
+}
