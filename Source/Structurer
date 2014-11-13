@@ -368,7 +368,6 @@ pack .rstframe.canvas -fill both -expand 1 -side left
 #  node($wgt,parent): the node-id of the node's parent
 #  node($wgt,children): the node-id's of the node's children
 
-
 set maxlen 20
 set node_width 100
 set half_node_width [expr $node_width / 2]
@@ -1044,6 +1043,7 @@ proc bottom-point {item} {
 
 proc clicked-widget {x y} {
     global rstw wtn erased_nodes
+    # puts stderr "clicked-widget: x = $x, y = $y"
     set x1 [$rstw canvasx $x]
     set y1 [$rstw canvasy $y]
     set wgts [$rstw find overlapping [expr $x1-2] [expr $y1-2]\
@@ -1051,10 +1051,9 @@ proc clicked-widget {x y} {
 
     if { [lindex $wgts 1] != {} } {
 	foreach wgt $wgts {
-	    if {[info exists wtn($wgt)] && $erased_nodes != {}} {
-		if {[lsearch $erased_nodes $wtn($wgt)] == -1} {
-		    return $wgt
-		}
+	    if {[info exists wtn($wgt)] && \
+		    ($erased_nodes == {} || [lsearch $erased_nodes $wtn($wgt)] == -1)} {
+		return $wgt
 	    }
 	}
     } else {
@@ -1063,7 +1062,6 @@ proc clicked-widget {x y} {
 }
 
 proc clicked-node {x y} {
-    debug "clicked-node: [wtn [clicked-widget $x $y]]"
     wtn [clicked-widget $x $y]
 }
 
@@ -1312,7 +1310,7 @@ proc relation-type {rel} {
 
 proc group-node-p {nid} {
     global node
-    member $node($nid,type) {span multinuc constit embedded}
+    member $node($nid,type) {span multinuc multinuclear constit embedded}
 }
 
 proc text-node-p {nid} {
@@ -1332,7 +1330,7 @@ proc old-group-node-p {nid} {
 
 proc group-relation-p {rel} {
     global relations
-    if { $rel == "span" || [member $rel $relations(multinuc)]\
+    if { $rel == "span" || [member $rel $relations(multinuc)] \
 	     || [member $rel $relations(constit)] } {
 	return 1
     } else { return 0 }
@@ -1708,7 +1706,7 @@ proc save-raw {} {
     # output information about nodes
     foreach nid [array names nid2msgid] {
 	puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] \
-				 "text\034" [string trimright $node($nid,text) "\n"] \
+				 "text\034[string trimright $node($nid,text) \n]" \
 				 "type\034$node($nid,type)" \
 				 "textwgt\034$node($nid,textwgt)" \
 				 "labelwgt\034$node($nid,labelwgt)" \
@@ -2073,6 +2071,9 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
 	set dragged_node $disco_node
 	set disco_node {}
     }
+    # puts stderr "autolink_nodes: clicked_node = $clicked_node"
+    # puts stderr "autolink_nodes: dragged_node = $dragged_node"
+    # puts stderr "autolink_nodes: type = $type"
 
     if {$node($dragged_node,parent) != {} && \
 	    [info exists visible_nodes($node($dragged_node,parent))]} {return}
@@ -2162,6 +2163,7 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
 	return
     }
 
+    # puts stderr "autolink_nodes: ambiguity = $ambiguity"
     if { $ambiguity == "unknown" } {
 	set coords [screen-coords [ntw $clicked_node] $rstw]
 	set ambiguity [popup-choose-from-list {above below}\
@@ -2250,12 +2252,20 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
 	    if {$type == "satellite" || $type == "satellite-embedded"} {
 		if {$ambiguity == {}} {
 		    # if assumed nucleus already is someone's satellite, we
+		    set grnd_prnt $node($clicked_node,parent)
 		    if {$node($clicked_node,relname) != "span" && \
-			    [info exists visible_nodes($node($clicked_node,parent))]} {
-			set grnd_prnt $node($clicked_node,parent);
+			    [info exists visible_nodes($grnd_prnt)]} {
 			set node($clicked_node,parent) {}
 			set node($grnd_prnt,children)  [ldelete $node($grnd_prnt,children) $clicked_node]
+			set grnd_prnt_msgid $nid2msgid($grnd_prnt)
+			if {$grnd_prnt_msgid != $clicked_msgid && \
+				[info exists msgs2extnid($grnd_prnt_msgid,$clicked_msgid)]} {
+			    set msgs2extnid($grnd_prnt_msgid,$clicked_msgid) \
+				[concat [lrange $msgs2extnid($grnd_prnt_msgid,$clicked_msgid) 0 2] \
+				     [list $grnd_prnt $last_group_node_id $node($clicked_node,relname)]]
+			}
 			link-par-to-child $grnd_prnt $last_group_node_id $node($clicked_node,relname)
+			redisplay-net
 		    }
 		    link-par-to-child $last_group_node_id $clicked_node span
 		}
@@ -2267,35 +2277,22 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
 	    fix-children $last_group_node_id $clicked_node $dragged_node
 	}
     }
-
     append this_step " $relation"
     append this_step " $ambiguity"
     append this_step " $last_group_node_id"
-    # save-step "$this_step"
+
     incr savenum
-    # save-rst $savenum
-    if { $type == "schema" } {
-	set-mode autolink
-    }
-    #  else {
-    #     set-mode nothing
-    # }
     editor-message \
 	"linked $dragged_node to $clicked_node as a $relation $type $ambiguity"
-    # reestablish
     xscrollto [max $node($dragged_node,xpos) $node($clicked_node,xpos)]
     yscrollto [max $node($dragged_node,ypos) $node($clicked_node,ypos)]
-    if { $cancelled == 1 } {
-	set cancelled 0
-	# undo_by_reload
-    }
+    set cancelled 0
 }
 
 proc link-par-to-child {par child relation } {
     global node
     # puts stderr "link-par-to-child: Linking child $child to parent $par"
     if {$par == $child} {return;}
-
     # puts stderr "node($par,children) before: $node($par,children)"
     lappend node($par,children) $child
     set node($par,children) [lsort -integer $node($par,children)]

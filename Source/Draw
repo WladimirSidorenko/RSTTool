@@ -52,9 +52,7 @@ proc display-node {nid} {
     # puts stderr "display-node: step 3"
     set node($nid,textwgt) $wgt
     set wtn($wgt) $nid
-    # puts stderr "display-node: calling display-span $nid"
     display-span $nid
-    # puts stderr "display-node: display-arc $nid"
     display-arc $nid
 }
 

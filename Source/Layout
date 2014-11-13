@@ -24,9 +24,9 @@ proc redisplay-net {} {
     global rstw node_width visible_nodes node
 
     # 1. Clean up from earlier structures
+    $rstw delete all
     if [info exists wtn] {unset wtn}
     if [info exists ntw] {unset ntw}
-    $rstw delete all
 
     # 2. layout and draw the new
     x-layout
@@ -260,6 +260,7 @@ proc y-layout-subtree {nid} {
 
 proc y-layout-node {nid} {
     global rstw node y_top
+    # puts stderr "y-layout-node: nid = $nid"
     #  Position this node under its parent
     set nuc $node($nid,parent)
     # 1. Position this node
@@ -268,8 +269,10 @@ proc y-layout-node {nid} {
 	set node($nid,ypos) $y_top
     } elseif { [group-relation-p $node($nid,relname)] } {
 	# group node - position under parent
+	# puts stderr "y-layout-node: set node($nid,ypos) [expr [lindex [$rstw bbox [ntw $nuc]] 3] + 30]"
 	set node($nid,ypos) [expr [lindex [$rstw bbox [ntw $nuc]] 3] + 30]
     } else {
+	# puts stderr "y-layout-node: set node($nid,ypos)  $node($nuc,ypos)"
 	set node($nid,ypos) $node($nuc,ypos)
     }
     redisplay-node $nid
