@@ -1,3 +1,4 @@
+r-answer	rst
 r-antithesis	rst
 r-background	rst
 r-circumstance	rst
@@ -24,6 +25,7 @@ r-otherwise	rst
 r-preparation	rst
 r-progression	rst
 r-purpose	rst
+r-question	rst
 r-reason	rst
 r-restatement	rst
 r-restatement-mn	rst
@@ -37,16 +39,10 @@ r-volitional-cause	rst
 r-volitional-result	rst
 r-OTHER	rst
 -
-cause-result multinuc
-comment-topic multinuc
-contrast multinuc
-disjunction multinuc
-enablement multinuc
-evaluation multinuc
-interpretation multinuc
-joint multinuc
-list multinuc
-otherwise multinuc
-reason multinuc
-sequence multinuc
-OTHER multinuc
+r-Comparison multinuc
+r-Contrast multinuc
+r-Disjunction multinuc
+r-Joint multinuc
+r-List multinuc
+r-OTHER-multinuc multinuc
+r-Sequence multinuc

@@ -439,8 +439,7 @@ proc unlink-node {sat {redraw 1}} {
 	if {$spannid != {}} {
 	    # puts stderr "destroy-group-node $spannid $nuc $redraw"
 	    destroy-group-node $spannid $nuc $redraw
-	} else {
-	    # TODO: check, if this function works appropriately in all contexts!!!
+	} elseif [group-node-p $nuc] {
 	    destroy-node $nuc $redraw
 	}
     }

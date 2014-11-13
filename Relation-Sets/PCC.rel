@@ -1,5 +1,6 @@
-at-mention	rst
 antithesis	rst
+at-mention	rst
+attribution	rst
 background	rst
 circumstance	rst
 concession	rst
@@ -31,7 +32,6 @@ restatement	rst
 restatement-mn	rst
 sequence	rst
 solutionhood	rst
-span	rst
 summary	rst
 unconditional	rst
 unless	rst
@@ -40,16 +40,10 @@ volitional-cause	rst
 volitional-result	rst
 OTHER	rst
 -
-Cause-Result multinuc
-Comment-Topic multinuc
+Comparison multinuc
 Contrast multinuc
 Disjunction multinuc
-Enablement multinuc
-Evaluation multinuc
-Interpretation multinuc
 Joint multinuc
 List multinuc
-Otherwise multinuc
-Reason multinuc
-Sequence multinuc
 OTHER-multinuc	multinuc
+Sequence multinuc
