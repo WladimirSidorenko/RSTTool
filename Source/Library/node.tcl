@@ -269,7 +269,7 @@ proc move-node {a_path x y} {
 	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
 	    next-sentence
     	} else {
-	    if {[$a_path compare my_sel.first <= $iend]} {
+	    if {[.editor.text tag ranges my_sel] != {} && [$a_path compare my_sel.first <= $iend]} {
 		$a_path tag add my_sel "$new_idx" "$iend"
 	    }
     	    set node($nxt_nid,text) "$delta_txt$node($nxt_nid,text)"
