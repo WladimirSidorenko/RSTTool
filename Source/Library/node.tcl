@@ -77,10 +77,9 @@ proc create-a-node-here { do_it {my_current {}} {junk1 {}} {junk2 {}} } {
 	set my_current current
 	while {[.editor.text compare $my_current > 1.0] && \
 		   [.editor.text compare $my_current > new.first]} {
-	    if {[string is space [.editor.text get "$my_current -1 chars"]]} {
+	    if {[string is space [.editor.text get "$my_current"]]} {
 		set my_current "$my_current -1 chars"
 	    } else {
-		# set my_current "$my_current wordend"
 		break
 	    }
 	}
@@ -206,14 +205,19 @@ proc move-node {a_path x y} {
     if {$seg_mrk_x == {} || $seg_mrk_y == {}} {return}
     set old_idx "@$seg_mrk_x,$seg_mrk_y wordstart"
     set new_idx "@$x,$y"
+
+    # puts stderr "move-node: old_idx = $old_idx ('[$a_path get $old_idx]')"
+    # puts stderr "move-node: new_idx = $new_idx ('[$a_path get $new_idx]')"
     if {[string is space [$a_path get $new_idx]] &&  [$a_path compare $new_idx != "end -1 chars"]} {
 	while {[$a_path compare 1.0 < $new_idx] && \
 		   [string is space [$a_path get $new_idx]]} {
 	    set new_idx "$new_idx -1 chars"
 	}
+	set new_idx "$new_idx +1 chars"
     } else {
 	set new_idx "$new_idx wordend"
     }
+    # puts stderr "move-node: new_idx after space correction = $new_idx ('[$a_path get $new_idx]')"
 
     # obtain id of the node at initial coordinates
     lassign [get-node-number $a_path $seg_mrk_x $seg_mrk_y] inid istart iend
@@ -257,12 +261,17 @@ proc move-node {a_path x y} {
     	set node($inid,offsets) [subtract-points $node($inid,offsets) [list 0 $delta]]
 	# puts stderr "move-node: 1.2) node(inid = $inid,offsets) = $node($inid,offsets)"
     	if {$nxt_nid == {}} {
+	    $a_path tag remove my_sel "$new_idx" "end"
+	    $a_path tag remove sel "$new_idx" "end"
     	    $a_path tag remove old "$new_idx" "$istart"
     	    $a_path tag add new "$new_idx" "$istart +1 chars"
 	    $a_path delete $istart $iend;		  # delete segment marker
 	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
 	    next-sentence
     	} else {
+	    if {[$a_path compare my_sel.first <= $iend]} {
+		$a_path tag add my_sel "$new_idx" "$iend"
+	    }
     	    set node($nxt_nid,text) "$delta_txt$node($nxt_nid,text)"
 	    set node($nxt_nid,offsets) [subtract-points $node($nxt_nid,offsets) [list $delta 0]]
 	    $a_path delete $istart $iend;		  # delete segment marker
@@ -290,11 +299,14 @@ proc move-node {a_path x y} {
 	if {$nxt_nid == {}} {
 	    # puts stderr "move-node: 2.1) tag ranges old [$a_path tag ranges old]"
 	    # puts stderr "move-node: 2.1) tag ranges new [$a_path tag ranges new]"
+	    $a_path tag add my_sel "$iend" "$new_idx"
 	    $a_path tag add old "$iend" "$new_idx"
+	    $a_path tag remove sel "$new_idx" "end"
 	    $a_path tag remove new "$iend" "$new_idx"
 	    $a_path tag remove next "$iend" "$new_idx"
 	    $a_path tag remove bmarker "$iend" "end"
 	} else {
+	    $a_path tag remove my_sel "$iend" "$new_idx"
 	    set node($nxt_nid,text) [string range $node($nxt_nid,text) $delta end]
 	    # puts stderr "move-node: 2.3) node(nxt_nid = $nxt_nid,offsets) = $node($nxt_nid,offsets)"
 	    set node($nxt_nid,offsets) [add-points $node($nxt_nid,offsets) [list $delta 0]]
@@ -330,6 +342,7 @@ proc delete-node {a_path x y} {
 	if {$prevend == {}} {set prevend 1.0}
 	$a_path tag remove my_sel $prevend $istart
 	$a_path tag remove old $prevend $istart
+	$a_path tag remove next $prevend end
 	$a_path tag add new $prevend $istart
 	next-sentence
     } else {
