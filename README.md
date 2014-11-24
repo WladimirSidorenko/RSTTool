@@ -1,5 +1,11 @@
 # RSTTool for Annotation of Discussions
 
+.. image:: http://img.shields.io/github/issues/badges/shields.svg
+   :alt: open issues counter
+   :align: right
+   :target: https://github.com/WladimirSidorenko/RSTTool/issues
+
+
 This program is a forked version of [Daniel Marcu's
 modification](http://www.isi.edu/publications/licensed-sw/RSTTool/) of
 the original [RSTTool from Michael

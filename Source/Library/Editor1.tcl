@@ -370,6 +370,8 @@ proc next-message { {do_it {}} {direction {forward}}} {
     global msgQueue msgPrevQueue
     global offsetShift
 
+    # puts stderr "next-mesage called"
+
     # remember current message id
     set prev_msg_id $crntMsgId
     # remember the old parent

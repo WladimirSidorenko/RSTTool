@@ -433,7 +433,6 @@ proc unlink-node {sat {redraw 1}} {
 	    }
 	}
     }
-    # puts stderr "unlink-node: dgn = $dgn"
 
     if {$dgn} {
 	if {$spannid != {}} {
@@ -2131,7 +2130,7 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
 			   {multinuclear schema}] \
 		      [expr int([lindex $coords 0])] [expr int([lindex $coords 1])]]
     }
-    if {$type == {} } {
+    if {$type == {}} {
 	# it was cancelled
 	set cancelled 0
 	return
@@ -2242,9 +2241,19 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
 
 	if {$type == "multinuclear"} {
 	    set node($last_group_node_id,type) multinuc
+	    # if clicked node is already linked to another node, link
+	    # new group node to this parent
+	    set grnd_prnt $node($clicked_node,parent)
+	    if {$grnd_prnt != {} &&  [info exists visible_nodes($grnd_prnt)]} {
+		link-par-to-child $grnd_prnt $last_group_node_id $node($clicked_node,relname);
+		# unlink clicked node from its previous parent
+		set node($clicked_node,parent) {}
+		set node($grnd_prnt,children)  [ldelete $node($grnd_prnt,children) $clicked_node]
+	    }
 	    link-par-to-child $last_group_node_id $clicked_node $relation
 	    link-par-to-child $last_group_node_id $dragged_node $relation
 	    fix-children $last_group_node_id $clicked_node $dragged_node
+	    redisplay-net
 	} else {
 	    # if {$clicked_node == $dragged_node} {return;}
 	    set node($last_group_node_id,type) span
