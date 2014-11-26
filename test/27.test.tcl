@@ -1,9 +1,13 @@
 # -*- mode: tcl; -*-
 
+reset-rst
+
 set disco_node {}
 set last_group_node_id 5027
 set relations(rst) {antithesis}
+array unset visible_nodes
 array set visible_nodes {1 1 2 1}
+array unset nid2msgid
 array set nid2msgid {1 1 2 2}
 
 set node(1,arrowwgt) 325
@@ -38,8 +42,7 @@ set node(2,ypos) 0
 
 autolink_nodes 1 2 "multinuclear" "list"
 redisplay-net
-puts stderr "clicked-widget: ntw $last_group_node_id = [$rstw coords [ntw $last_group_node_id]]"
 
-if {[clicked-widget {*}[$rstw coords [ntw $last_group_node_id]]] == {}} {
+if {[clicked-widget {*}[screen-coords [ntw $last_group_node_id] $rstw]] == {}} {
     error "Abstract nucleus node of two multi-nuclear relations is not visible for `clicked-widget`."
 }

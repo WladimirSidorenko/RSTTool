@@ -500,7 +500,7 @@ proc clear-current-file {} {
     ##############################
     #SHORTCIRCUIT
     #  set result [tk_dialog .d1 {File Clear} "Save Open File?"\
-	#		  warning 0 {Yes} {No} "Cancel"]
+    #		  warning 0 {Yes} {No} "Cancel"]
     #  switch -- $result {
     #         0 {save-file $currentfile}
     #         2 {return 0}

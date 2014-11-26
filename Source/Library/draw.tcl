@@ -35,10 +35,9 @@ proc draw-arc {window points} {
 proc screen-coords {item canvas} {
     # Returns the screen coordes of a canvas item
     set screencorrect "[winfo rootx $canvas] [winfo rooty $canvas]"
-    set coords  [$canvas coords $item] 
+    set coords [$canvas coords $item]
 
-    set scrollcorrection "[$canvas canvasx 0]\
-                  [$canvas canvasy 0]"
+    set scrollcorrection "[$canvas canvasx 0] [$canvas canvasy 0]"
     return [add-points [subtract-points $coords $scrollcorrection]\
 		$screencorrect]
 }
