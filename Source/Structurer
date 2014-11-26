@@ -1041,12 +1041,12 @@ proc bottom-point {item} {
 
 proc clicked-widget {x y} {
     global rstw wtn erased_nodes
-    # puts stderr "clicked-widget: x = $x, y = $y"
+    puts stderr "clicked-widget: x = $x, y = $y"
     set x1 [$rstw canvasx $x]
     set y1 [$rstw canvasy $y]
-    set wgts [$rstw find overlapping [expr $x1-2] [expr $y1-2]\
-		  [expr $x1+2] [expr $y1+2]]
+    set wgts [$rstw find overlapping [expr $x1-2] [expr $y1-2] [expr $x1+2] [expr $y1+2]]
 
+    puts stderr "clicked-widget: wgts = $wgts"
     if { [lindex $wgts 1] != {} } {
 	foreach wgt $wgts {
 	    if {[info exists wtn($wgt)] && \

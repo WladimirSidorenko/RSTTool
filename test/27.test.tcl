@@ -38,6 +38,7 @@ set node(2,ypos) 0
 
 autolink_nodes 1 2 "multinuclear" "list"
 redisplay-net
+puts stderr "clicked-widget: ntw $last_group_node_id = [$rstw coords [ntw $last_group_node_id]]"
 
 if {[clicked-widget {*}[$rstw coords [ntw $last_group_node_id]]] == {}} {
     error "Abstract nucleus node of two multi-nuclear relations is not visible for `clicked-widget`."
