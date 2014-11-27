@@ -99,8 +99,8 @@ proc load-module {Path Files} {
 
 set DIR [file dirname [info script]]
 set SRC     [file join $DIR src]
+set RELS    [file join $DIR rel]
 set LIBRARY [file join $SRC Library]
-set RELS    [file join $DIR Relation-Sets]
 set HELP    [file join $DIR Help]
 set LIB_FILES {delete.tcl dialog1.tcl draw.tcl node.tcl tcl-extens.tcl tkfbox.tcl \
 		   time.tcl toolbar.tcl}
