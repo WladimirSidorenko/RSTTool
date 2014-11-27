@@ -10,8 +10,8 @@
 set SCRIPT [file normalize [info script]]
 set DIRNAME [file dirname $SCRIPT]
 set BASENAME [file tail $SCRIPT]
-set SRCDIR "$DIRNAME/Source"
-set LIBDIR "$SRCDIR/Library"
+set SRCDIR [file join $DIRNAME src]
+set LIBDIR [file join $SRCDIR Library]
 
 ##################################################################
 # Methods

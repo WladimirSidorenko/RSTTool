@@ -98,7 +98,7 @@ proc load-module {Path Files} {
 }
 
 set DIR [file dirname [info script]]
-set SRC     [file join $DIR Source]
+set SRC     [file join $DIR src]
 set LIBRARY [file join $SRC Library]
 set RELS    [file join $DIR Relation-Sets]
 set HELP    [file join $DIR Help]
