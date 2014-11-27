@@ -8,6 +8,7 @@ modified appearance for annotation of multilogues (i.e. dialogues with
 multiple participants).  The user can view multilogues in a successive
 fashion (i.e. reply by reply) and can annotate RST-relations both
 within and among the multilogue messages.
+
 ---
 
 ## Description
@@ -50,6 +51,8 @@ After you are finished with your annotation, you can save your data
 either by using the menu <tt>File/Save</tt> or by using the hot key
 <tt>Ctrl-S</tt> (<tt>Cmd-S</tt> on Mac).
 
+---
+
 ### Input Format
 
 This tool accepts discussion files in tab-separated format where each
@@ -67,6 +70,8 @@ message.  An answer to the answer should begin with two tabs and so
 on.  You can see an example of the input file
 [here](examples/input.txt).
 
+---
+
 ### Output Format
 
 Currently, this tool saves all annotations in a tab-separated format
@@ -82,6 +87,8 @@ from each other by tab characters.  The particular set of attributes
 and their values mostly depends on the type of the node.  Further
 works are planned to provide an appropriate exporter for this format
 to other formats like (RST Treebank Lisp Format or RS3).
+
+---
 
 ## Bindings
 
