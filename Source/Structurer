@@ -160,50 +160,8 @@ Should it be erased before loading?." warning 1 {Erase} {Load} "Cancel"]
     set savenum 0
 }
 $File add command -label "Open    Ctrl-O" -command open-file
-
-# $File add command -label "Peruse" -command {
-#     export-time
-
-#     if {$currentfile != {}} {
-# 	save-lisp
-
-# 	set mode text
-# 	set fill fill
-# 	set orient landscape
-# 	set pages multi
-# 	print_dot
-# 	set my_dotfile [set-file-name dot]
-# 	if {$DOT_EXISTS == "YES"} {
-# 	    exec $DOT -Tps $currentfile.rst/$my_dotfile -o\
-    # 		$currentfile.rst/$my_dotfile.ps
-# 	}
-# 	save-sgml
-#     }
-#     set step_file {}
-#     set currentfile {}
-#     set filename [fileselect]
-#     if {$filename == {}} {return}
-#     load-file $filename 2
-#     set directory [split $filename /]
-#     set x [llength $directory]
-#     incr x -1
-#     set shortfilename [lindex $directory $x]
-#     set directory [lreplace $directory $x $x]
-#     set directory [join $directory /]
-#     if {[file exists $filename.rst]} {
-# 	set currentfile $filename
-# 	set savenum 0
-# 	undo_by_reload 2;
-#     }
-#     set currentfile {}
-#     set-mode nothing
-# }
-
-$File add command -label "Save     Ctrl-S" -command save-raw
-# $Save add command -label "lisp format" -command {save-lisp}
-# $Save add command -label "sgml format" -command {save-sgml}
-
-$File add command -label "Quit      Ctrl-Q" -command {
+$File add command -label "Save    Ctrl-S" -command save-raw
+$File add command -label "Quit    Ctrl-Q" -command {
     if {$currentfile != {}} {
 	$save_func
     }
@@ -2065,6 +2023,7 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
     # puts stderr "autolink_nodes: clicked_node = $clicked_node"
     # puts stderr "autolink_nodes: dragged_node = $dragged_node"
     # puts stderr "autolink_nodes: type = $type"
+
     set dragged_msgid $nid2msgid($dragged_node)
     set dragged_prnt $node($dragged_node,parent)
     if {$dragged_prnt != {} && [info exists visible_nodes($dragged_prnt)]} {return}
@@ -2073,6 +2032,8 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
     set clicked_prnt $node($clicked_node,parent)
     if {$clicked_prnt != {} && [info exists visible_nodes($clicked_prnt)] && \
 	$dragged_msgid != $clicked_msgid} {return}
+
+    if {[llength $clicked_msgid] > 1 || [llength $dragged_msgid] > 1} {return}
 
     if {$type == {} && $clicked_node == $dragged_node} {return}
     # check that clicked and dragged node are not already
@@ -2095,7 +2056,6 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
     }
 
     # obtain message id's of dragged and clicked nodes
-    set clicked_msgid $nid2msgid($clicked_node)
     set clicked_is_prnt 0
     set ext_connection 0
     if {$dragged_msgid != $clicked_msgid} { set ext_connection 1 }
