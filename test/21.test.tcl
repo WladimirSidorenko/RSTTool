@@ -5,11 +5,12 @@ reset-rst
 set disco_node {}
 set last_group_node_id 5001
 
-array unset visible_nodes
-array set visible_nodes {1 1 2 1 3 1 5001 1}
 array unset nid2msgid
-array set nid2msgid {1 404262465166639104 2 404262465166639104 \
-			 3 404262465166639104 5001 404262465166639104}
+array unset visible_nodes
+
+array set visible_nodes {1 1 2 1 3 1 5001 1}
+array set nid2msgid {1 404262465166639114 2 404262465166639114 \
+			 5001 404262465166639114 3 404262465166639115}
 
 set node(1,arrowwgt) 97
 set node(1,children) {2}
@@ -43,6 +44,20 @@ set node(2,type) text
 set node(2,xpos) 410
 set node(2,ypos) 122
 
+set node(5001,arrowwgt) {}
+set node(5001,children) {1}
+set node(5001,constit) {}
+set node(5001,labelwgt) 324
+set node(5001,parent) {}
+set node(5001,relname) {}
+set node(5001,span) {1 2}
+set node(5001,spanwgt) 40
+set node(5001,text) {1-2}
+set node(5001,textwgt) 93
+set node(5001,type) span
+set node(5001,xpos) 300
+set node(5001,ypos) 30
+
 set node(3,arrowwgt) 108
 set node(3,children) {}
 set node(3,constit) {}
@@ -58,23 +73,8 @@ set node(3,type) text
 set node(3,xpos) 520
 set node(3,ypos) 122
 
-set node(5001,arrowwgt) {}
-set node(5001,children) {1}
-set node(5001,constit) {}
-set node(5001,labelwgt) 324
-set node(5001,parent) {}
-set node(5001,relname) {}
-set node(5001,span) {1 2}
-set node(5001,spanwgt) 40
-set node(5001,text) {1-2}
-set node(5001,textwgt) 93
-set node(5001,type) span
-set node(5001,xpos) 300
-set node(5001,ypos) 30
+autolink_nodes 1 3 "multinuclear" "list"
 
-autolink_nodes 2 3 "multinuclear" "list"
-
-if {$node(2,parent) == 1 || [lindex $node(1,children) 2] != {}} {
-    error "Linking node to an existing satellite with multinuclear relation should\
- introduce new abstract node and set this node as satellite's parent."
+if {$node(3,parent) != {}} {
+    error "Linking satellite node to node from another message is not allowed."
 }
