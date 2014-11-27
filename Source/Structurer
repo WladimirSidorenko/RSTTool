@@ -403,9 +403,9 @@ proc unlink-node {sat {redraw 1}} {
     if {[info exists node($nuc,parent)] && $node($nuc,relname) == "span"} {
 	set spannid $node($nuc,parent)
     }
-    # puts stderr "unlink-node: sat = $sat"
-    # puts stderr "unlink-node: nuc = $nuc"
-    # puts stderr "unlink-node: spannid = $spannid"
+    # puts stderr "unlink-node: sat = $sat (children: $node($sat,children))"
+    # puts stderr "unlink-node: nuc = $nuc (children: $node($nuc,children))"
+    # if {$spannid != {}} {puts stderr "unlink-node: spannid = $spannid  (children: $node($spannid,children))"}
 
     # 2. Redraw satellite substructure
     if {$redraw} {y-layout-subtree $sat}
@@ -415,16 +415,12 @@ proc unlink-node {sat {redraw 1}} {
     set dgn 0
     if {$node($nuc,children) == {}} {
 	set dgn 1
-	# puts stderr "unlink-node: node($nuc,children) = {}"
     } elseif [group-node-p $nuc] {
 	set dgn 1
-	# puts stderr "unlink-node: $nuc is group node"
 	# here, we have to differentiate between cases where `nuc` and
 	# `sat` belong to same or to different messages
 	if {$nid2msgid($nuc) == $nid2msgid($sat)} {
 	    foreach chnid $node($nuc,children) {
-		# puts stderr "unlink-node: chnid = $chnid"
-		# puts stderr "unlink-node: node($chnid,relname) = $node($chnid,relname)"
 		if {$node($chnid,relname) != "span"} {
 		    destroy-node $nuc
 		    set dgn 0
@@ -436,7 +432,6 @@ proc unlink-node {sat {redraw 1}} {
 
     if {$dgn} {
 	if {$spannid != {}} {
-	    # puts stderr "destroy-group-node $spannid $nuc $redraw"
 	    destroy-group-node $spannid $nuc $redraw
 	} elseif [group-node-p $nuc] {
 	    destroy-node $nuc $redraw
@@ -494,7 +489,6 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
 	    set node($replnid,relname) $node($gnid,relname)
 	}
     }
-
     foreach chnid $node($gnid,children) {
 	set node($chnid,parent) $replnid
 	set chld_msg_id $nid2msgid($chnid)
@@ -511,7 +505,7 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
 		# update children in external nodes that connect
 		# multiple messages
 		foreach {prntid chldid relname} $msgs2extnid($msgkey) {
-		    if {$chldid == $replnid} {
+		    if {$chldid == $replnid && $prntid != $gprnt} {
 			set idx [lsearch -exact $node($prntid,children) $gnid]
 			set node($prntid,children) [lreplace $node($prntid,children) \
 							$idx $idx $replnid]
