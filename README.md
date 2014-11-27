@@ -24,14 +24,14 @@ reference message and also allows you to annotate boundaries of
 elementary discourse units in that answer.
 
 After loading an input file with discussions (cf. Section [Input
-Format]()), you should see the first message of the first discussion
+Format][]), you should see the first message of the first discussion
 in <tt>Answer Text Editor</tt>.  There you can annotate the boundaries
 of its discourse segments.  Since this message is typically not an
 answer to any other message in your file, <tt>Refererence Text
 Viewer</tt> will remain empty by that time.
 
 Once you have annotated the segments of the message in <tt>Answer Text
-Editor</tt> (cf. Section [Answer Text Editor]() for description), you
+Editor</tt> (cf. Section [Answer Text Editor][] for description), you
 can construct an RST tree of these segments using <tt>RST Editor</tt>.
 In order to link two nodes, you simply need to click one of them, and
 then make a second click on the node which you are going to connect
