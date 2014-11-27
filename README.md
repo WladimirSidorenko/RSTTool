@@ -24,22 +24,22 @@ reference message and also allows you to annotate boundaries of
 elementary discourse units in that answer.
 
 After loading an input file with discussions (cf. Section [Input
-Format][]), you should see the first message of the first discussion
-in <tt>Answer Text Editor</tt>.  There you can annotate the boundaries
-of its discourse segments.  Since this message is typically not an
-answer to any other message in your file, <tt>Refererence Text
+Format](#input-format)), you should see the first message of the first
+discussion in <tt>Answer Text Editor</tt>.  There you can annotate the
+boundaries of its discourse segments.  Since this message is typically
+not an answer to any other message in your file, <tt>Refererence Text
 Viewer</tt> will remain empty by that time.
 
 Once you have annotated the segments of the message in <tt>Answer Text
-Editor</tt> (cf. Section [Answer Text Editor][] for description), you
-can construct an RST tree of these segments using <tt>RST Editor</tt>.
-In order to link two nodes, you simply need to click one of them, and
-then make a second click on the node which you are going to connect
-to.  After that, a context menu will be offered asking you whether the
-first node should be linked as a nucleus or a satellite, or, probably,
-as a part of a multinucleus relation.  Once you have chosen the
-linkage type, you can choose a particular relation for that link in
-another menu.
+Editor</tt> (cf. Section [Answer Text Editor](#answer-text-editor) for
+description), you can construct an RST tree of these segments using
+<tt>RST Editor</tt>.  In order to link two nodes, you simply need to
+click one of them, and then make a second click on the node which you
+are going to connect to.  After that, a context menu will be offered
+asking you whether the first node should be linked as a nucleus or a
+satellite, or, probably, as a part of a multinucleus relation.  Once
+you have chosen the linkage type, you can choose a particular relation
+for that link in another menu.
 
 To proceed to the next message, you simply need to click the button
 <tt>Next Message</tt> in the middle part of the window.  If your
