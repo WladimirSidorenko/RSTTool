@@ -14,9 +14,7 @@ evaluation-s	rst
 evidence	rst
 hashtag	rst
 interpretation	rst
-joint	rst
 justify	rst
-list	rst
 means	rst
 motivation	rst
 otherwise	rst
@@ -33,7 +31,6 @@ OTHER	rst
 -
 Comparison multinuc
 Contrast multinuc
-Disjunction multinuc
 Joint multinuc
 List multinuc
 Sequence multinuc
