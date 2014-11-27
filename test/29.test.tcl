@@ -5,9 +5,10 @@ reset-rst
 set disco_node {}
 set last_group_node_id 5001
 
-array unset visible_nodes
-array set visible_nodes {1 1 2 1 3 1 5001 1}
 array unset nid2msgid
+array unset visible_nodes
+
+array set visible_nodes {1 1 2 1 3 1 5001 1}
 array set nid2msgid {1 404262465166639104 2 404262465166639104 \
 			 3 404262465166639104 5001 404262465166639104}
 

@@ -3,8 +3,12 @@
 set disco_node {}
 set last_group_node_id 5000
 set relations(rst) {antithesis}
-array set visible_nodes {1 1 2 1 3 1}
+
+array unset nid2msgid
+array unset visible_nodes
+
 array set nid2msgid {1 1 2 1 3 1}
+array set visible_nodes {1 1 2 1 3 1}
 
 set node(1,arrowwgt) 325
 set node(1,children) {}

@@ -1,5 +1,8 @@
 # -*- mode: tcl; -*-
 
+array unset nid2msgid
+array unset visible_nodes
+
 array set visible_nodes {1 1 2 1 3 1 5001 1 5002 1}
 array set nid2msgid {1 1 2 1 3 1 5001 1 5002 1}
 

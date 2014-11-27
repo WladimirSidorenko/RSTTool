@@ -5,9 +5,11 @@ reset-rst
 set disco_node {}
 set last_group_node_id 5027
 set relations(rst) {antithesis}
-array unset visible_nodes
-array set visible_nodes {1 1 2 1}
+
 array unset nid2msgid
+array unset visible_nodes
+
+array set visible_nodes {1 1 2 1}
 array set nid2msgid {1 1 2 2}
 
 set node(1,arrowwgt) 325
