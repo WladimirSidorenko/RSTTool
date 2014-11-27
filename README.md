@@ -24,7 +24,7 @@ reference message and also allows you to annotate boundaries of
 elementary discourse units in that answer.
 
 After loading an input file with discussions (cf. Section [Input
-Format][]), you should see the first message of the first discussion
+Format]()), you should see the first message of the first discussion
 in <tt>Answer Text Editor</tt>.  There you can annotate the boundaries
 of its discourse segments.  Since this message is typically not an
 answer to any other message in your file, <tt>Refererence Text
@@ -95,7 +95,7 @@ to other formats like (RST Treebank Lisp Format or RS3).
 Particular bindings apply for particular parts of the program window.
 Below you can see a summary of binding for each of the sub-frames.
 
-### All windows:
+### All windows
 
 `Ctrl-O` or `Cmd-O` on Mac -- open new file
 
@@ -103,7 +103,7 @@ Below you can see a summary of binding for each of the sub-frames.
 
 `Ctrl-C` or `Cmd-C` on Mac -- copy selection
 
-### Answer Text Editor:
+### Answer Text Editor
 
 `LeftMouseClick` on unannotated text area - set new segment boundary
 
@@ -111,12 +111,16 @@ Below you can see a summary of binding for each of the sub-frames.
 
 `Ctrl-Alt-RightMouseClick` on segment boundary - delete segment boundary
 
+---
+
 ## License
 
 This program is based on the RSTTool version developed by Daniel Marcu
 and is subject to the same [license agreement
 terms](http://www.isi.edu/publications/licensed-sw/RSTTool/) as the
 original program.
+
+---
 
 ## Contact
 
