@@ -113,7 +113,7 @@ Click \"Open\" to select another file or \"New\" to create a new one.\n" info 0 
 	    sgml {}
 	    default {
 		set fmt [tk_dialog .d1 {Format selection} \
-			     "Select format for saving annotation:" \
+			     "Select format for saving annotation:" info 0 \
 			     "Raw" "Lisp" "SGML" "Cancel"]
 		switch -- $fmt {
 		    0 {set itype raw}
