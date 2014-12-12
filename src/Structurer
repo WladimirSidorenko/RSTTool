@@ -367,7 +367,6 @@ proc unlink-node {sat {redraw 1}} {
 
     # 2. Redraw satellite substructure
     if {$redraw} {y-layout-subtree $sat}
-
     # 3. If parent has no more children, delete span node and shift
     # the parent up the structure
     set dgn 0
@@ -380,14 +379,18 @@ proc unlink-node {sat {redraw 1}} {
 	if {$nid2msgid($nuc) == $nid2msgid($sat)} {
 	    foreach chnid $node($nuc,children) {
 		if {$node($chnid,relname) != "span"} {
-		    destroy-node $nuc
 		    set dgn 0
 		    break
 		}
 	    }
+	    if {[llength $node($nuc,children)] == 1} {
+		set dgn 1
+		destroy-node $nuc
+	    }
 	}
     }
 
+    # puts stderr "unlink-node: dgn = $dgn"
     if {$dgn} {
 	if {$spannid != {}} {
 	    destroy-group-node $spannid $nuc $redraw
