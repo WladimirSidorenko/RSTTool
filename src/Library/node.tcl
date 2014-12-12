@@ -202,13 +202,17 @@ proc make-node {text type {start_pos {}} {end_pos {}}} {
 proc move-node {a_path x y} {
     global node seg_mrk_x seg_mrk_y
 
+    # puts stderr "move-node: x = $x, y = $y"
+
     if {$seg_mrk_x == {} || $seg_mrk_y == {}} {return}
     set old_idx "@$seg_mrk_x,$seg_mrk_y wordstart"
     set new_idx "@$x,$y"
 
     # puts stderr "move-node: old_idx = $old_idx ('[$a_path get $old_idx]')"
-    # puts stderr "move-node: new_idx = $new_idx ('[$a_path get $new_idx]')"
-    if {[string is space [$a_path get $new_idx]] &&  [$a_path compare $new_idx != "end -1 chars"]} {
+    # puts stderr "move-node: new_idx = $new_idx is space ('[$a_path get $new_idx]')"
+    # puts stderr "move-node: new_idx is space? [string is space [$a_path get $new_idx]])"
+    # puts stderr "move-node: new_idx is end -1? [$a_path compare $new_idx == {end -1 chars}])"
+    if {[string is space [$a_path get $new_idx]] &&  [$a_path compare $new_idx >= "end -1 chars"]} {
 	while {[$a_path compare 1.0 < $new_idx] && \
 		   [string is space [$a_path get $new_idx]]} {
 	    set new_idx "$new_idx -1 chars"
@@ -255,10 +259,14 @@ proc move-node {a_path x y} {
 	# puts stderr "move-node: 1.0) istart = $istart;, delta_txt = '$delta_txt'; delta = $delta"
     	# append delta text to adjacent node, if one exists, or simply
     	# remove `old` tags otherwise
+	# puts stderr "move-node: 1.1) node($inid,text) before = $node($inid,text)"
+	# puts stderr "move-node: 1.1) node($inid,text) before = $node($inid,offsets)"
     	set node($inid,text) [string range $node($inid,text) 0 \
 				  [expr [string length "$node($inid,text)"] - \
 				       $delta - 1]]
     	set node($inid,offsets) [subtract-points $node($inid,offsets) [list 0 $delta]]
+	# puts stderr "move-node: 1.2) node($inid,text) after = $node($inid,text)"
+	# puts stderr "move-node: 1.2) node($inid,text) after = $node($inid,offsets)"
 	# puts stderr "move-node: 1.2) node(inid = $inid,offsets) = $node($inid,offsets)"
     	if {$nxt_nid == {}} {
 	    $a_path tag remove my_sel "$new_idx" "end"
@@ -292,9 +300,14 @@ proc move-node {a_path x y} {
 	set delta [string length "$delta_txt"]
 	# append delta text to adjacent node, if one exists, or simply
 	# remove `old` tags otherwise
+	# puts stderr "move-node: 2.0) delta_txt = '$delta_txt'; delta = $delta"
+	# puts stderr "move-node: 2.1) node($inid,text) before = $node($inid,text)"
+	# puts stderr "move-node: 2.1) node($inid,text) before = $node($inid,offsets)"
 	set node($inid,text) "$node($inid,text)$delta_txt"
 	# puts stderr "move-node: 2.1) node(inid = $inid,offsets) = $node($inid,offsets)"
 	set node($inid,offsets) [add-points $node($inid,offsets) [list 0 $delta]]
+	# puts stderr "move-node: 2.2) node($inid,text) after = $node($inid,text)"
+	# puts stderr "move-node: 2.2) node($inid,text) after = $node($inid,offsets)"
 	# puts stderr "move-node: 2.2) node(inid = $inid,offsets) = $node($inid,offsets)"
 	if {$nxt_nid == {}} {
 	    # puts stderr "move-node: 2.1) tag ranges old [$a_path tag ranges old]"
