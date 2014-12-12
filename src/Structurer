@@ -370,10 +370,13 @@ proc unlink-node {sat {redraw 1}} {
     # 3. If parent has no more children, delete span node and shift
     # the parent up the structure
     set dgn 0
+    # puts stderr "unlink-node: node($nuc,children) = $node($nuc,children)"
     if {$node($nuc,children) == {}} {
 	set dgn 1
+	# puts stderr "unlink-node: 1) set dgn 1"
     } elseif [group-node-p $nuc] {
 	set dgn 1
+	# puts stderr "unlink-node: 2) set dgn 1"
 	# here, we have to differentiate between cases where `nuc` and
 	# `sat` belong to same or to different messages
 	if {$nid2msgid($nuc) == $nid2msgid($sat)} {
@@ -386,18 +389,22 @@ proc unlink-node {sat {redraw 1}} {
 	    if {[llength $node($nuc,children)] == 1} {
 		set dgn 1
 		destroy-node $nuc
+		# puts stderr "unlink-node: calling destroy-node $nuc"
 	    }
 	}
     }
 
     # puts stderr "unlink-node: dgn = $dgn"
     if {$dgn} {
-	if {$spannid != {}} {
+	if {$spannid != {} && [info exists nid2msgid($spannid)]} {
+	    # puts stderr "unlink-node: destroy-group-node spannid = $spannid nuc = $nuc redraw = $redraw"
 	    destroy-group-node $spannid $nuc $redraw
 	} elseif [group-node-p $nuc] {
+	    # puts stderr "unlink-node: destroy-node nuc = $nuc redraw = $redraw"
 	    destroy-node $nuc $redraw
 	}
     }
+    # puts stderr "unlink-node: restructure-upwards nuc = $nuc redraw = $redraw"
     restructure-upwards $nuc $redraw
 }
 
