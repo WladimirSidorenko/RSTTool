@@ -104,7 +104,7 @@ set LIBRARY [file join $SRC Library]
 set HELP    [file join $DIR Help]
 set LIB_FILES {delete.tcl dialog1.tcl draw.tcl node.tcl tcl-extens.tcl tkfbox.tcl \
 		   time.tcl toolbar.tcl}
-set SRC_FILES {Segmenter Structurer Draw EditRelations Layout Make Print Helper}
+set SRC_FILES {File Segmenter Structurer Draw EditRelations Layout Make Print Helper}
 set EDITOR_FILES {new.tcl lifo.tcl textundo.tcl Editor1.tcl}
 
 load-module $LIBRARY $LIB_FILES

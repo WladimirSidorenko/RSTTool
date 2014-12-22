@@ -1,0 +1,543 @@
+#!/usr/bin/env wish
+# -*- mode: tcl; coding: utf-8; -*-
+
+##################################################################
+# Description:
+#
+# This module provides operations for storing annotations to files and
+# reading them from file again.
+
+##################################################################
+# General open/read operations
+proc new-file {{filename {} }} {
+    global currentfile
+
+    # Clear the current file?
+    if {[clear-current-file] == 0} {return}
+
+    # make a new buffer
+    if { $filename ==  {} } {
+	set filename [get-new-file-name]
+	#  check for cancel
+	if { $filename ==  {} } {return}
+    }
+
+    # set the filename
+    set currentfile $filename
+
+    editor-message "created file: $filename"
+}
+
+proc load-file {filename {really {1}}} {
+    global currentfile undoer collapsed_nodes
+    global theRootIdx msgQueue
+    global step_file
+
+    set last_element [llength $collapsed_nodes]
+    incr last_element -1
+    if { $last_element > -1 } {
+	set collapsed_nodes [lreplace $collapsed_nodes 0 $last_element]
+    }
+    if {$step_file != {}} { close-step-file }
+    if {$filename == {}} {return}
+
+    # 2. Load named file
+    set f [open $filename]
+    read-file $f
+    close $f
+
+    # 3. Stop undo past installation
+    textUndoer:reset $undoer
+
+    set currentfile $filename
+
+    editor-message "opened file:  $filename"
+    # .editor.text insert end "\n"
+    .editor.text tag add old 1.0 1.0
+    .editor.text tag add new 1.0 end
+    #  save-step "load-file $filename"
+    next-message $really
+}
+
+# load RST tree from file
+proc load-rst { {filenum {}} } {
+    global rstfile node text_nodes currentfile group_nodes \
+	last_text_node_id last_group_node_id
+    set last_text_node_id 0
+    set last_group_node_id 5000
+    if {"$filenum" == {} } {
+	set rstfile [fileselect]
+    } else {
+	set junk [string last / $currentfile]
+	set junkplus [expr $junk + 1]
+	set rstfile [file dirname $currentfile]/rst/[file tail [file rootname $currentfile]].$filenum
+    }
+    if {$rstfile == {}} {return}
+    set f [open $rstfile r]
+    set segs {}
+    reset-rst
+    while {[gets $f nid] >= 0} {
+	clear-node $nid
+	gets $f node($nid,text)
+	gets $f node($nid,parent)
+	gets $f node($nid,relname)
+	gets $f node($nid,constit)
+	if { $node($nid,relname) != {}
+	     && [relation-type $node($nid,relname) ] == 0 } {
+	    puts "Load-RST: Unknown relation: $node($nid,relname) - ignoring."
+	    set node($nid,relname) {}
+	    set node($nid,parent) {}
+	}
+
+	# set the type
+	if { [member  $node($nid,text) {span multinuc constit embedded}] } {
+	    set node($nid,type) $node($nid,text)
+	    if ![member $nid $group_nodes] {add-group-node $nid}
+	} else {
+	    set node($nid,type) "text"
+	    add-text-node $nid
+	    set node($nid,span) "$nid $nid"
+	}
+    }
+    close $f
+
+    # Establish child field
+    foreach nid $text_nodes {
+	set last_text_node_id [max $last_text_node_id $nid]
+	if { $node($nid,parent) != {} } {
+	    lappend node($node($nid,parent),children) $nid
+	}
+    }
+    foreach nid $group_nodes {
+	set last_group_node_id [max $last_group_node_id $nid]
+	if { $node($nid,parent) != {} } {
+	    lappend node($node($nid,parent),children) $nid
+	}
+    }
+
+    # Establish span field, start at any top nodes
+    foreach nid  $group_nodes {
+	if {$node($nid,span) == {} } {
+	    set-subtree-node-span $nid
+	}
+    }
+
+    # Layou/Draw the net
+    redisplay-net
+}
+
+# load list of relations from file
+proc load-relations {{file {}} {extrel 0}} {
+    global relationfile relations extRelations schemas schema_elements
+    if {$file == {}} {
+	set file [fileselect "Specify Relations File" {}]
+    }
+
+    if {$file == {}} {return}; # cancelled
+    set relationstream [open $file]
+
+    if {$extrel} {
+	foreach rel [split [read $relationstream] \n] {
+	    switch -- [lindex $rel 0] {
+		{}      {}
+		-       {}
+		default {
+		    lappend extRelations [lindex $rel 0]
+		}
+	    }
+	}
+    } else {
+	set relationfile $file
+	set relations(rst) {}
+	set relations(multinuc) {}
+	set relations(constit) {}
+	set relations(embedded) {}
+	set schemas {}
+	if [info exists schema_elements] {
+	    unset schema_elements
+	}
+	foreach rel [split [read $relationstream] \n] {
+	    switch -- [lindex $rel 0] {
+		{}      {}
+		-       {}
+		default {
+		    set type [lindex $rel 1]
+		    if { $type == {} } { set type rst }
+		    lappend relations($type) [lindex $rel 0]
+
+		    # store the elements of each schema
+		    if { $type == "constit" } {
+			set schema [lindex $rel 2]
+			if ![member $schema $schemas] {
+			    lappend schemas $schema
+			}
+			lappend schema_elements($schema)\
+			    [lindex $rel 0]
+		    }
+		}
+	    }
+	}
+    }
+    close $relationstream
+}
+
+##################################################################
+# General save operations
+proc save-rst { {filenum {}} } {
+    global currentfile rstw node text_nodes group_nodes
+    if {"$filenum" == {} } {
+	set rstfile [fileselect "Save RST File" [file dirname $currentfile]/rst [file tail [file rootname $currentfile]].0]
+    } else {
+	set junk [string last / $currentfile]
+	set junkplus [expr $junk + 1]
+	set rstfile [file dirname $currentfile]/rst/[file tail [file rootname $currentfile]].$filenum
+    }
+    if {$rstfile == {}} {return}
+
+    # Now save the file
+    set f [open $rstfile w 0644]
+    foreach itm [concat $text_nodes $group_nodes] {
+	puts $f $itm
+	if [group-node-p $itm] {
+	    puts $f $node($itm,type)
+	} else {
+	    puts $f $node($itm,text)
+	}
+	puts $f $node($itm,parent)
+	puts $f $node($itm,relname)
+	puts $f $node($itm,constit)
+    }
+    close $f
+}
+
+proc save-file {{filename {}}} {
+    global currentfile
+
+    if { $filename ==  {} } {set filename $currentfile}
+
+    # 1. Save the file
+    set f [open $filename w 0600]
+    puts $f  [.editor.text get 1.0 end]
+    close $f
+
+    editor-message "saved $filename"
+}
+
+proc save-file-as {{filename {}}} {
+    global currentfile
+    set oldfilename currentfile
+    if { $filename ==  {} } {
+	set filename [get-new-file-name]
+	#    check for cancel
+	if { $filename ==  {} } {return}
+    }
+    save-file $filename
+    set currentfile {}
+    load-file $filename
+
+    editor-message "saved as $filename"
+}
+
+##################################################################
+# Open/Save Raw
+proc save-raw {} {
+    global trgfname
+    global node nid2msgid msgs2extnid
+
+    set trgfile [open $trgfname w 0644]
+    # output child/parent pair mapping specific to particular messages
+    foreach ikey [array names msgs2extnid] {
+	puts $trgfile [join [list "msgs2extnid" "$ikey" \
+				 [join $msgs2extnid($ikey) "\034"]] "\t"]
+    }
+    # output information about nodes
+    foreach nid [array names nid2msgid] {
+	puts $trgfile [join [list "nid" "$nid" [join $nid2msgid($nid) "\034"] \
+				 "text\034[string trimright $node($nid,text) \n]" \
+				 "type\034$node($nid,type)" \
+				 "textwgt\034$node($nid,textwgt)" \
+				 "labelwgt\034$node($nid,labelwgt)" \
+				 "arrowwgt\034$node($nid,arrowwgt)" \
+				 "spanwgt\034$node($nid,spanwgt)" \
+				 "relname\034$node($nid,relname)" \
+				 "children\034[join $node($nid,children) \034]" \
+				 "parent\034$node($nid,parent)" \
+				 "constituents\034[join $node($nid,constituents) \034]" \
+				 "visible\034$node($nid,visible)" \
+				 "span\034[join $node($nid,span) \034]" \
+				 "offsets\034[join $node($nid,offsets) \034]" \
+				 "xpos\034$node($nid,xpos)" \
+				 "ypos\034$node($nid,ypos)" \
+				 "oldindex\034$node($nid,oldindex)" \
+				 "newindex\034$node($nid,newindex)" \
+				 "constit\034$node($nid,constit)" \
+				 "promotion\034$node($nid,promotion)"] "\t"]
+    }
+    close $trgfile
+}
+
+proc load-raw {} {
+    global trgfname
+    global node msgid2nid nid2msgid msgs2extnid group_nodes
+    global last_text_node_id last_group_node_id
+
+    # open annotation file for reading
+    set srcfile [open $trgfname r 0444]
+
+    set nid {}
+    set iline {}
+    set f {}
+    set field {}
+    set fields {}
+    # process annotation line by line
+    while {[gets $srcfile iline] >= 0} {
+	# puts stderr "iline = '$iline'"
+	set fields [split $iline "\t"]
+	if {[lindex $fields 0] == "msgs2extnid"} {
+	    set msgs2extnid([lindex $fields 1]) [split [lindex $fields 2] "\034"]
+	} elseif {[lindex $fields 0] == "nid"} {
+	    set nid [lindex $fields 1]
+	    if {$nid > 5000} {
+		if {$nid > $last_group_node_id} {
+		    set last_group_node_id $nid
+		}
+	    } elseif {$nid > $last_text_node_id} {
+		set last_text_node_id $nid;
+	    }
+	    set nid2msgid($nid) [split [lindex $fields 2] "\034"]
+	    # add reverse mapping from message id to its corresponding node ids
+	    if {[llength $nid2msgid($nid)] == 1} {
+		set msgid [lindex $nid2msgid($nid) 0]
+		if {! [info exists msgid2nid($msgid)] } {
+		    set msgid2nid($msgid) {}
+		}
+		lappend msgid2nid($msgid) $nid
+	    }
+	    # populate nodes
+	    foreach field [lrange $fields 3 end] {
+		set f [split $field "\034"]
+		set f_id [lindex $f 0]
+
+		# perform consistency check on children
+		if {$f_id == "children"} {
+		    foreach ch_id [lrange $f 1 end] {
+			if {[info exists nid2msgid($ch_id)] && \
+				$nid2msgid($ch_id) == $nid2msgid($nid)} {
+			    if {$node($ch_id,parent) != $nid} {
+				error "Invalid discourse tree: parent of the child node\
+ $ch_id of node $nid is not $nid but $node($ch_id,parent)"
+			    }
+			}
+			set node($ch_id,parent) $nid
+		    }
+		} elseif {$f_id == "parent" && [set prnt_id [lindex $f 1]] != {}} {
+		    if {[info exists nid2msgid($prnt_id)] && \
+			    $nid2msgid($nid) == $nid2msgid($prnt_id) && \
+			    [info exists node($nid,parent)]} {
+			if {$node($nid,parent) != $prnt_id} {
+			    error "Invalid discourse tree: different parents defined for node\
+ $nid ($node($nid,parent) vs. $prnt_id)"
+			}
+		    }
+		}
+
+		if {[llength $f] > 2} {
+		    set node($nid,$f_id) [lrange $f 1 end]
+		} else {
+		    if {$f_id == "type" && [lindex $f 1] == "span"} {
+			lappend group_nodes $nid
+		    } elseif {$f_id == "parent"} {
+
+		    }
+		    set node($nid,$f_id) [lindex $f 1]
+		}
+	    }
+	} elseif {[llength $fields] > 0} {
+	    error "Unrecognized line format: '$iline'"
+	}
+    }
+    # sort node ids stored in msgid2nid in topological order
+    foreach msgid [array names msgid2nid] {
+	set msgid2nid($msgid) [lsort -integer $msgid2nid($msgid)]
+    }
+    close $srcfile
+}
+
+##################################################################
+# Open/Save Lisp
+proc save-lisp {} {
+    global trgfname
+    global node last_text_node_id currentfile used_nodes
+
+    update_promotion
+
+    set trgfile [open $trgfname w 0644]
+
+    set used_nodes {}
+
+    for {set i 1} {$i <= $last_text_node_id} {incr i} {
+	if {[lsearch -exact $used_nodes $i] == -1} {
+	    set j $i
+	    while {$node($j,parent) != {} } {
+		set j $node($j,parent)
+	    }
+	    save-lisp_recursion $j 0
+	}
+    }
+    close $trgfile
+}
+
+proc save-lisp_recursion {nid depth} {
+    global node lispfile used_nodes
+
+    if {[group-relation-p $node($nid,relname)]} {
+	incr depth
+    }
+
+    append used_nodes " $nid"
+
+    #  print all the junk
+    set to_print {}
+    for {set i 0} {$i < $depth} {incr i} {
+	append to_print "   "
+    }
+    append to_print "( "
+
+    set nid_parent $node($nid,parent)
+    if {$nid_parent == {}} {
+	append to_print "Root"
+    } elseif {[group-relation-p $node($nid,relname)]} {
+	append to_print "Nucleus"
+    } else {
+	append to_print "Satellite"
+    }
+    if {$node($nid,type) == "text"} {
+	append to_print " (leaf $nid)"
+    } else {
+	append to_print " (span $node($nid,span))"
+    }
+    if {$nid_parent != {}} {
+	append to_print " (rel2par $node($nid,relname))"
+    }
+    append to_print " (prom $node($nid,promotion))"
+    if {$node($nid,constit) != {}} {
+	append to_print " (schema $node($nid,constit))"
+    }
+    if {$node($nid,type) == "text"} {
+	append to_print " (text $node($nid,text))"
+	append to_print " )"
+    }
+    puts $lispfile $to_print
+    flush $lispfile
+
+    #  print the other nodes recursively
+    set prom_list {}
+    foreach child $node($nid,children) {
+	set prom [lindex $node($child,promotion) 0]
+	if {$prom_list == {}} {
+	    append prom_list "$prom"
+	} else {
+	    append prom_list " $prom"
+	}
+	set backreference($prom) $child
+    }
+    set prom_list [lsort -integer $prom_list]
+    foreach prom $prom_list {
+	if {$backreference($prom) != $nid} {
+	    save-lisp_recursion $backreference($prom) $depth
+	}
+    }
+
+    #  print end parentheses, if neccessary
+    if {$node($nid,type) != "text"} {
+	set to_print {}
+	for {set i 0} {$i < $depth} {incr i} {
+	    append to_print "   "
+	}
+	append to_print ")"
+	puts $lispfile $to_print
+	flush $lispfile
+    }
+}
+
+##################################################################
+# Open/Save SGML
+proc save-sgml {} {
+    global currentfile rstw node text_nodes group_nodes
+
+    set rstfile [file dirname $currentfile]/rst/[set-file-name sgml]
+    if {$rstfile == {}} {return}
+
+    # Now save the file
+    set f [open $rstfile w 0644]
+
+    foreach itm $text_nodes {
+	if { $node($itm,parent) != {} } {
+	    set parent " PARENT=$node($itm,parent) RELNAME=$node($itm,relname)"
+	    if {$node($itm,constit) != {}} {
+		set parent "$parent SCHEMA=$node($itm,constit)"
+	    }
+	} else {
+	    set parent ""
+	}
+	puts $f "<node ID=$itm $parent>$node($itm,text)</node>"
+    }
+    foreach itm $group_nodes {
+	if { $node($itm,parent) != {} } {
+	    set parent " PARENT=$node($itm,parent) RELNAME=$node($itm,relname)"
+	    if {$node($itm,constit) != {}} {
+		set parent "$parent SCHEMA=$node($itm,constit)"
+	    }
+	} else {
+	    set parent ""
+	}
+	puts $f "<$node($itm,type) ID=$itm$parent>"
+    }
+    close $f
+}
+
+##################################################################
+# Revert
+proc revert-file {} {
+    global currentfile
+    load-file $currentfile
+}
+
+proc get-new-file-name {} {
+    set filename [fileselect "New File" {} 0]
+    if {[file exists $filename] == 1} {
+	set result [tk_dialog .d {File Already Exists}\
+			"File \"$filename\" already exists."\
+			warning 0 {Overwrite} "Save As..." "Cancel"]
+	switch -- $result {
+	    0 {  }
+	    1 { return [get-new-file-name] }
+	    2 { return {} }
+	}
+    }
+    return $filename
+}
+
+##################################################################
+# Clear
+proc clear-current-file {} {
+    global currentfile
+    ##############################
+    #SHORTCIRCUIT
+    #  set result [tk_dialog .d1 {File Clear} "Save Open File?"\
+	#		  warning 0 {Yes} {No} "Cancel"]
+    #  switch -- $result {
+    #         0 {save-file $currentfile}
+    #         2 {return 0}
+    #  }
+    ################################
+    #NEW
+    set result [tk_dialog .d1 {File Clear} "Save Structure?"\
+		    warning 0 {Yes} {No} "Cancel"]
+    switch -- $result {
+	0 {save-rst}
+	2 {return 0}
+    }
+    reset-rst
+    redisplay-net
+}
