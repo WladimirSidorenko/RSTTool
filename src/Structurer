@@ -497,10 +497,14 @@ proc destroy-group-node {gnid {replnid {}} {redraw 1}} {
 # Graph Change Server
 proc adjust-after-change {nuc sat {redraw 0}} {
     # Adjust nucleus
+    # puts stderr "link-par-to-child: restructure-upwards nuc = $nuc redraw = $redraw"
     restructure-upwards $nuc $redraw
 
     # Ajust satellite
-    if $redraw {y-layout-subtree $sat}
+    if $redraw {
+	# puts stderr "link-par-to-child: y-layout-subtree sat = $sat"
+	y-layout-subtree $sat
+    }
 }
 
 proc restructure-upwards {nid {redraw 0}} {
@@ -2057,7 +2061,7 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
 
     #set par $node($clicked_node,parent)
     set children $node($clicked_node,children)
-    if { $children != {} && ! [info exists visible_nodes([lindex $children 0])]} {
+    if {$children != {} && ! [info exists visible_nodes([lindex $children 0])]} {
 	expand $clicked_node
 	foreach child $children {
 	    collapse $child
@@ -2106,7 +2110,7 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
     append this_step " $type"
 
     # determine if ambiguous
-    if { $type == "satellite" || $type == "satellite-embedded" } {
+    if {$type == "satellite" || $type == "satellite-embedded"} {
 	if { $ambiguity == {} } {
 	    foreach child $node($clicked_node,children) {
 		if { [relation-type $node($child,relname)] == "rst" || \
@@ -2130,19 +2134,19 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
     }
 
     # puts stderr "autolink_nodes: ambiguity = $ambiguity"
-    if { $ambiguity == "unknown" } {
+    if {$ambiguity == "unknown"} {
 	set coords [screen-coords [ntw $clicked_node] $rstw]
 	set ambiguity [popup-choose-from-list {above below}\
 			   [expr int([lindex $coords 0])] [expr int([lindex $coords 1])] NOcancel]
     }
 
-    if { $type == "multinuclear" && $ambiguity == "below" } {
+    if {$type == "multinuclear" && $ambiguity == "below"} {
 	# exception #1
 	set i 0
 	set child 0
 	while { $child != {} } {
 	    set child [lindex $children $i]
-	    if { [relation-type $node($child,relname)] == "multinuc" } {
+	    if {[relation-type $node($child,relname)] == "multinuc"} {
 		set relation $node($child,relname)
 		set child {}
 	    }
@@ -2250,7 +2254,8 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
 		link-par-to-child $last_group_node_id $dragged_node span
 		link-par-to-child $dragged_node $clicked_node $relation
 	    }
-	    fix-children $last_group_node_id $clicked_node $dragged_node
+	    # commented due to bug #35
+	    # fix-children $last_group_node_id $clicked_node $dragged_node
 	}
     }
     append this_step " $relation"
@@ -2265,32 +2270,31 @@ proc autolink_nodes {clicked_node {dragged_node {}} {type {}} {relation {}} \
     set cancelled 0
 }
 
-proc link-par-to-child {par child relation } {
+proc link-par-to-child {par child relation} {
     global node
     # puts stderr "link-par-to-child: Linking child $child to parent $par"
     if {$par == $child} {return;}
     # puts stderr "node($par,children) before: $node($par,children)"
-    lappend node($par,children) $child
-    set node($par,children) [lsort -integer $node($par,children)]
+    set node($par,children) [lsort -integer [list {*}$node($par,children) $child]]
     # puts stderr "node($par,children) after: $node($par,children)"
 
     # puts stderr "node($child,parent) before: $node($child,parent)"
     set node($child,parent) $par
     # puts stderr "node($child,parent) after: $node($child,parent)"
     set node($child,relname) $relation
-    # puts stderr "node($child,relname): $node($child,relname)"
-
+    # puts stderr "link-par-to-child: adjust-after-change par = $par child = $child 1"
     adjust-after-change $par $child 1
 }
 
 proc fix-children {new_node clicked_node dragged_node} {
     global node
+    # puts stderr "fix-children: new_node = $new_node clicked_node = $clicked_node dragged_node = $dragged_node"
     foreach child $node($new_node,children) {
 	if { $child == $clicked_node } {
-	} elseif { $child == $dragged_node } {
-	} elseif { $node($child,relname) == "span" } {
+	} elseif {$child == $dragged_node} {
+	} elseif {$node($child,relname) == "span"} {
 	    link-par-to-child $clicked_node $child span
-	} elseif { [relation-type $node($child,relname)] == "multinuc" } {
+	} elseif {[relation-type $node($child,relname)] == "multinuc"} {
 	    link-par-to-child $clicked_node $child $node($child,relname)
 	}
     }
