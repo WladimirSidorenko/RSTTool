@@ -1,6 +1,5 @@
-r-answer	rst
+r-affirmation	rst
 r-antithesis	rst
-r-address	rst
 r-attribution	rst
 r-background	rst
 r-cause	rst
@@ -20,17 +19,21 @@ r-justify	rst
 r-list	rst
 r-means	rst
 r-motivation	rst
+r-NEI	rst
 r-otherwise	rst
 r-preparation	rst
 r-purpose	rst
-r-question	rst
 r-reason	rst
 r-reason-N	rst
+r-refutation	rst
 r-restatement	rst
 r-result	rst
 r-solutionhood	rst
 r-unless	rst
 r-uri	rst
+r-YesNoQuestion	rst
+r-SetQuestion	rst
+r-AltQuestion	rst
 r-OTHER	rst
 -
 r-Comparison multinuc
@@ -39,3 +42,5 @@ r-Joint multinuc
 r-List multinuc
 r-Sequence multinuc
 r-OTHER-multinuc	multinuc
+
+r-answer	rst
