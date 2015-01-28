@@ -1225,19 +1225,6 @@ proc savepsmode {} {
 }
 
 
-proc reeditaction {} {
-    global text_nodes node undoer
-    .editor.text delete 1.0 end
-    foreach segment $text_nodes {
-	set endpnt [.editor.text index end]
-	.editor.text insert end $node($segment,text) $segment
-	.editor.text insert end "<br>\n"
-    }
-    .editor.text delete "end - 6 char" end
-    textUndoer:reset $undoer
-}
-
-
 #########################
 # logical function
 #########################
