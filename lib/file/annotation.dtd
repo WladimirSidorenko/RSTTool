@@ -1,0 +1,79 @@
+<!-- DTD for Rhethorical Structure Trees in Multilogues -->
+<!-- Based on the URML DTD Version 0.5 Jan05 2002 - by Reitter - reitter@mle.media.mit.edu -->
+<!-- Modified by Uladzimir Sidarenka <sidarenk@uni-potsdam.de> -->
+
+<!ELEMENT annotation (info?,segments,spans,relations)>
+
+<!ATTLIST annotation
+	id	ID	#REQUIRED
+	lang   CDATA   #IMPLIED>
+<!-- language follows the iso639 stanard: en, de, fr, es etc. -->
+
+<!-- Meta Data -->
+<!ELEMENT info (source?, editor*, note?)>
+<!ELEMENT source ANY> <!-- Source of the doc/analysis -->
+<!ELEMENT editor (#PCDATA)>  <!-- Who inserted the doc, created the analysis? -->
+<!ATTLIST editor
+	job	CDATA	#REQUIRED
+	date	CDATA	#IMPLIED>
+<!ELEMENT note ANY> <!-- Any additional notes -->
+
+
+<!-- Segments -->
+<!ELEMENT segments (segment)*>  <!-- EDUs -->
+
+<!ELEMENT segment EMPTY> <!-- A minimal unit of discourse -->
+<!ATTLIST segment
+	  <!-- id of segment -->
+	  id	ID	#REQUIRED
+	  <!-- number of segment -->
+	  name	CDATA	#REQUIRED
+	  <!-- id of the message to which given segment pertains -->
+	  msgid IDREF	#REQUIRED
+	  <!-- start position of segment -->
+	  start CDATA	#REQUIRED
+	  <!-- end position of segment -->
+	  end   CDATA	#REQUIRED>
+
+<!-- Spans -->
+<!ELEMENT spans (span)*>
+<!ATTLIST span
+	  <!-- id of span -->
+	  id	ID	#REQUIRED
+	  <!-- type of span -->
+	  type	(internal|external)	"internal"
+	  <!-- id of the message which given span pertains to -->
+	  msgid1	IDREF	#REQUIRED
+	  <!-- id of the child message -->
+	  msgid2	IDREF	#IMPLIED>
+
+<!-- Relations -->
+<!ELEMENT relations (parRelation|hypRelation)*>  <!-- The text of a document -->
+
+<!-- paratactic (multi-nuclear) relation -->
+<!ELEMENT parRelation (spannode,nucleus,nucleus+)>
+<!ATTLIST parRelation
+	  id	ID	#REQUIRED
+	  type	CDATA	#REQUIRED>
+
+<!-- hypotactic (nucleus-satellite) relation -->
+<!ELEMENT hypRelation (spannode,nucleus,satellite+)>
+<!ATTLIST hypRelation
+	  id	ID	#REQUIRED
+	  type	CDATA	#REQUIRED
+>
+
+<!-- span node -->
+<!ELEMENT spannode EMPTY>
+<!ATTLIST spannode
+	  id	IDREF	#REQUIRED>		<!-- id of span -->
+
+<!-- nucleus node -->
+<!ELEMENT nucleus EMPTY>
+<!ATTLIST nucleus
+	  idref	IDREF	#REQUIRED>		<!-- id of segment or span -->
+
+<!-- satellite node -->
+<!ELEMENT satellite EMPTY>
+<!ATTLIST satellite
+	  idref	IDREF	#REQUIRED>		<!-- id of segment or span -->

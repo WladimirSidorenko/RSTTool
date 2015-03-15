@@ -1,0 +1,7 @@
+<!--
+    abbreviations
+	abbr: PCDATA
+  -->
+
+<! ELEMENT abbreviations (abbr)* >
+<! ELEMENT abbr (#PCDATA) >

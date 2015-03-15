@@ -1,0 +1,13 @@
+<!-- DTD for Multilogues Basedata -->
+<!-- Created by Uladzimir Sidarenka <sidarenk@uni-potsdam.de> -->
+
+<! ELEMENT basedata (thread*)>
+
+<! ELEMENT thread (msg*)>
+<! ATTLIST thread
+   id ID #REQUIRED>
+
+<! ELEMENT msg (#PCDATA) >
+<! ATTLIST msg
+   id ID  #REQUIRED
+   date	CDATA	#IMPLIED>

@@ -1,0 +1,5 @@
+package ifneeded rsttool::treeditor 0.0.1 [list source [file join $dir treeditor.tcl]]
+package ifneeded rsttool::treeditor::layout 0.0.1 [list source [file join $dir layout.tcl]]
+package ifneeded rsttool::treeditor::tree 0.0.1 [list source [file join $dir tree.tcl]]
+package ifneeded rsttool::treeditor::tree::node 0.0.1 [list source [file join $dir node.tcl]]
+package ifneeded rsttool::treeditor::tree::arc 0.0.1 [list source [file join $dir arc.tcl]]
