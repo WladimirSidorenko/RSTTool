@@ -448,6 +448,8 @@ proc ::rsttool::file::save {} {
     if {! $MODIFIED} {
 	::rsttool::segmenter::message {No changes need to be saved};
 	return;
+    } else {
+	set MODIFIED 0;
     }
 }
 

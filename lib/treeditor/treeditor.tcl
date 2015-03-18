@@ -21,6 +21,8 @@ namespace eval ::rsttool::treeditor {
     variable DISCO_NODE {};
     variable USED_NODES {};
 
+    variable WTN;
+    array set WTN {};
     variable VISIBLE_NODES;
     array set VISIBLE_NODES {};
     variable ERASED_NODES;
@@ -52,8 +54,8 @@ proc ::rsttool::treeditor::install {} {
     # 	::rsttool::treeditor::set-mode autolink }
     button $RTBAR.disconnect -text "Disconnect" -command {
 	::rsttool::treeditor::set-mode disconnect }
-    button $RTBAR.modify -text "Modify" -command {
-	::rsttool::treeditor::set-mode modify }
+    # button $RTBAR.modify -text "Modify" -command {
+    # 	::rsttool::treeditor::set-mode modify }
     button $RTBAR.rename -text "Rename" -command {
 	::rsttool::treeditor::set-mode rename }
     button $RTBAR.reduce -text "Reduce" -command {
@@ -65,7 +67,7 @@ proc ::rsttool::treeditor::install {} {
     # button .RTBAR.showtext -text "Show Text" -command {showText really}
 
     pack $RTBAR -side top
-    pack $RTBAR.link $RTBAR.disconnect $RTBAR.modify $RTBAR.rename \
+    pack $RTBAR.link $RTBAR.disconnect $RTBAR.rename \
 	$RTBAR.reduce $RTBAR.enlarge -in $RTBAR -side left -fill y -expand 1
 
     set RSTW [canvas .rstframe.canvas  -bg white -relief sunken\
@@ -74,13 +76,9 @@ proc ::rsttool::treeditor::install {} {
 		  -height [expr [winfo screenheight .] * 0.4] \
 		  -width  [expr [winfo screenwidth .] * 0.8]]
 
-    scrollbar .rstframe.yscroll -orient vertical\
-	-command ".rstframe.canvas yview"
-    scrollbar .rstframe.xscroll -orient horizontal\
-	-command ".rstframe.canvas xview"
+    scrollbar .rstframe.yscroll -orient vertical -command ".rstframe.canvas yview"
+    scrollbar .rstframe.xscroll -orient horizontal -command ".rstframe.canvas xview"
 
-    label .rstframe.msg -textvariable new_node_text
-    pack .rstframe.msg -side bottom -fill x
     pack .rstframe.yscroll -side right -fill y
     pack .rstframe.xscroll -side bottom -fill x
     pack .rstframe.canvas -fill both -expand 1 -side left
@@ -106,7 +104,6 @@ proc ::rsttool::treeditor::toggle-button {mode dir} {
 	link   {$RTBAR.link configure -relief $dir}
 	rename {$RTBAR.rename configure -relief $dir}
 	disconnect {$RTBAR.disconnect configure -relief $dir}
-	modify {$RTBAR.modify configure -relief $dir}
 	autolink {$RTBAR.autolink configure -relief $dir}
 	parenthetical {}
 	nothing {}

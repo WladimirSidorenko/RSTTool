@@ -3,15 +3,17 @@
 
 ##################################################################
 namespace eval ::rsttool::treeditor::tree::node {
-    namespace export make-node;
     namespace export get-ins-index;
     namespace export show-nodes;
     namespace export group-node-p;
+    namespace export set-text;
 }
 
 ##################################################################
-proc ::rsttool::treeditor::tree::node::make-node {type {start_pos {}} {end_pos {}} {name {}}} {
+proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
+						 {name {}} {msgid {}}} {
     variable ::rsttool::NODES;
+    variable ::rsttool::FORREST;
     variable ::rsttool::NAME2NID;
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::MSGID2NID;
@@ -19,8 +21,8 @@ proc ::rsttool::treeditor::tree::node::make-node {type {start_pos {}} {end_pos {
     variable ::rsttool::treeditor::VISIBLE_NODES;
 
     if { $type ==  "text"  } {
-	set nid [unique-text-node-id]
-	clear $nid
+	if {$name == {}} {set name [unique-tnode-name]}
+	set nid [unique-tnode-id]
 	# save mapping from node id to message id
 	set NID2MSGID($nid) [list $CRNT_MSGID]
 	# save mapping from message id to node id
@@ -32,38 +34,98 @@ proc ::rsttool::treeditor::tree::node::make-node {type {start_pos {}} {end_pos {
 	    set MSGID2NID($CRNT_MSGID) [list $nid]
 	}
     } else {
-	set nid [unique-group-node-id]
-	clear $nid
+	if {$name == {}} {set name "$start $end"}
+	set nid [unique-gnode-id]
     }
     set NODES($nid,type) $type
+    set NODES($nid,name) $name
     set NODES($nid,parent) {}
     set NODES($nid,children) {}
+    set NODES($nid,start) $start
+    set NODES($nid,end) $end
     set NAME2NID($CRNT_MSGID,$name) $nid;
-    # puts stderr "make-node: node($nid,offsets) == $node($nid,offsets)"
     set VISIBLE_NODES($nid) 1
-
-    if {$type ==  "text"} {
-	set NODES($nid,name) $name
-	set NODES($nid,start) $start_pos
-	set NODES($nid,end) $end_pos
-	add-text-node $nid
-    } else {
-	set NODES($nid,name) "$start_pos $end_pos"
-	set NODES($nid,start) $start_pos
-	set NODES($nid,end) $end_pos
-	add-group-node $nid
-    }
+    set-text $nid $msgid;
     return $nid
 }
 
-proc ::rsttool::treeditor::tree::node::unique-text-node-id {} {
+proc ::rsttool::treeditor::tree::node::set-text {a_nid {a_msgid {}}} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::FORREST;
+    variable ::rsttool::CRNT_MSGID;
+
+    set start $NODES($a_nid,start);
+    set end $NODES($a_nid,end);
+    if {$NODES($a_nid,type) ==  "text"} {
+	if {$a_msgid == {}} {set a_msgid $CRNT_MSGID;}
+	if {$a_msgid == {}} {error "Empty message id."; return;}
+	set ntext [string range [lindex $FORREST($a_msgid) 0] $start $end];
+	set ntext [::rsttool::utils::strip $ntext];
+	regsub -all "\"" $ntext "" ntext;
+	set NODES($a_nid,text) "$NODES($a_nid,name)\n$ntext";
+    } else {
+	set NODES($a_nid,text) "$NODES($a_nid,name)\n$NODES($start,name)-$NODES($end,name)";
+    }
+}
+
+proc ::rsttool::treeditor::tree::node::unique-tnode-id {} {
     variable TXT_NODE_CNT;
     return [incr TXT_NODE_CNT];
 }
 
-proc ::rsttool::treeditor::tree::node::unique-group-node-id {} {
+proc ::rsttool::treeditor::tree::node::unique-tnode-name {} {
+    variable ::rsttool::MSG_TXT_NODE_CNT;
+    return [incr MSG_TXT_NODE_CNT];
+}
+
+proc ::rsttool::treeditor::tree::node::unique-gnode-id {} {
     variable GROUP_NODE_CNT;
-    return [incr GROUP_NODE_CNT]
+    return [incr GROUP_NODE_CNT];
+}
+
+proc ::rsttool::treeditor::tree::node::unique-gnode-name {} {
+    variable ::rsttool::MSG_GRP_NODE_CNT;
+    return [incr MSG_GRP_NODE_CNT];
+}
+
+proc ::rsttool::treeditor::tree::node::cmp {a_nid1 a_nid2} {
+    variable ::rsttool::NODES;
+
+    if {! [info exists NODES($a_nid1,start)]} {return -1};
+    if {! [info exists NODES($a_nid2,start)]} {return 1};
+    return [expr $NODES($a_nid1,start) - $NODES($a_nid2,start)];
+}
+
+proc ::rsttool::treeditor::tree::node::display {a_nid} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::treeditor::RSTW;
+    variable ::rsttool::treeditor::WTN;
+    variable ::rsttool::treeditor::NODE_WIDTH;
+
+    set text "$NODES($a_nid,text)"
+    set xpos $NODES($a_nid,xpos)
+    set ypos [expr $NODES($a_nid,ypos) + 2]
+    if [group-node-p $a_nid] {
+	set color "green"
+    } else {
+	set color "black"
+    }
+    set wgt [draw-text $RSTW $text $xpos $ypos "-width $NODE_WIDTH -fill $color"]
+
+    set NODES($a_nid,textwgt) $wgt
+    set WTN($wgt) $a_nid
+
+    draw-span $a_nid
+    # display-arc $a_nid
+}
+
+proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
+    variable ::rsttool::NODES;
+
+    if {[info exists NODES($a_nid,textwgt)] && $NODES($a_nid,textwgt) != {} } {
+	erase $a_nid
+    }
+    display $a_nid
 }
 
 proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
@@ -128,7 +190,7 @@ proc ::rsttool::treeditor::tree::node::unlink-node {sat {redraw 1}} {
 	    }
 	    if {[llength $NODES($nuc,children)] == 1} {
 		set dgn 1
-		destroy-node $nuc
+		destroy $nuc
 		# puts stderr "unlink-node: calling destroy-node $nuc"
 	    }
 	}
@@ -141,19 +203,35 @@ proc ::rsttool::treeditor::tree::node::unlink-node {sat {redraw 1}} {
 	    destroy-group-node $spannid $nuc $redraw
 	} elseif [group-node-p $nuc] {
 	    # puts stderr "unlink-node: destroy-node nuc = $nuc redraw = $redraw"
-	    destroy-node $nuc $redraw
+	    destroy $nuc $redraw
 	}
     }
     # puts stderr "unlink-node: restructure-upwards nuc = $nuc redraw = $redraw"
     restructure-upwards $nuc $redraw
 }
 
-proc ::rsttool::treeditor::destroy-node {nid {redraw 1}} {
+proc ::rsttool::treeditor::tree::node::erase {a_nid} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::treeditor::RSTW;
+    variable ::rsttool::treeditor::WTN;
+    variable ::rsttool::treeditor::VISIBLE_NODES;
+    namespace import ::rsttool::treeditor::tree::ntw;
+
+    # puts stderr "erase-node:  erasing nid = $nid"
+    $RSTW delete [ntw $a_nid];
+    $RSTW delete $NODES($a_nid,spanwgt);
+    array unset WTN [::rsttool::treeditor::tree::ntw $a_nid];
+    array unset NODES $a_nid,textwgt;
+    array unset NODES $a_nid,spanwgt;
+    ::rsttool::treeditor::tree::arc::erase $a_nid;
+}
+
+proc ::rsttool::treeditor::tree::node::destroy {nid {redraw 1}} {
     # 1. unlink node if still connected
-    unlink-node $nid 0
+    unlink $nid 0
 
     # 2. delete the graphic presentation
-    erase-node $nid
+    erase $nid
 
     # 3. remove node from visible node list and drop all its
     # structural information
@@ -438,18 +516,6 @@ proc ::rsttool::treeditor::show-node {nid} {
     foreach cid $NODES($nid,children) {
 	show-node $cid
     }
-}
-
-proc ::rsttool::treeditor::add-text-node {nid} {
-    global text_nodes
-
-    # Report error if repeated add
-    if [member $nid $text_nodes] {
-	puts stderr "add-text-node: error: $nid already defined"
-    }
-
-    # add the node
-    lappend text_nodes $nid
 }
 
 proc ::rsttool::treeditor::bottom-point {item} {
@@ -874,17 +940,6 @@ proc ::rsttool::treeditor::tree::node::fix-children {new_node clicked_node dragg
     }
 }
 
-proc ::rsttool::treeditor::tree::node::add-group-node {nid} {
-    variable ::rsttool::NODES;
-    variable ::rsttool::GROUP_NODES;
-
-    # Report error if repeated add
-    if [info exists GROUP_NODES($nid)] {error "add-group-node: error: $nid already defined"}
-
-    # add the node
-    set GROUP_NODES($nid) {};
-}
-
 proc ::rsttool::treeditor::tree::node::group-node-p {nid} {
     variable ::rsttool::NODES;
     if {$NODES($nid,type) == "internal" || $NODES($nid,type) == "external"} {
@@ -898,9 +953,8 @@ proc ::rsttool::treeditor::tree::node::text-node-p {nid} {
     #come back here
     if { $nid == {} || $NODES($nid,type) == "text"} {
 	return 1
-    } else {
-	return 0
     }
+    return 0
 }
 
 # TODO: test
@@ -979,6 +1033,72 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
 
     # remove this node from the set of vible nodes
     array unset VISIBLE_NODES $nid;
+}
+
+proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::treeditor::RSTW;
+    variable ::rsttool::treeditor::VISIBLE_NODES;
+    variable ::rsttool::treeditor::HALF_NODE_WIDTH;
+
+    if { $a_nid == {} } { return;}
+
+    set xpos $NODES($a_nid,xpos)
+    set ypos $NODES($a_nid,ypos)
+    set min $xpos
+    set max $xpos
+
+    if {[group-node-p $a_nid]} {
+	set span ""
+	if {[info exists NODES($a_nid,start)]} {
+	    set start_nid $NODES($a_nid,start);
+	    if {[info exists NODES($start_nid,xpos)]} {
+		set min $NODES($start_nid,xpos)
+	    } else {
+		error "Unknown index: NODES($start_nid,xpos)"
+	    }
+	    if {[info exists NODES($start_nid,name)]} {
+		set span "$NODES($start_nid,name) - "
+	    } else {
+		error "Unknown index: NODES($start_nid,name)"
+	    }
+	} else {
+	    error "Unknown index: NODES($a_nid,start)"
+	}
+
+	if {[info exists NODES($a_nid,end)]} {
+	    set end_nid $NODES($a_nid,end);
+	    if {[info exists NODES($end_nid,xpos)]} {
+		set max $NODES($end_nid,xpos)
+	    } else {
+		error "Unknown index: NODES($end_nid,xpos)"
+	    }
+	    if {[info exists NODES($end_nid,name)]} {
+		set span [string cat $span "$NODES($end_nid,name)"]
+	    } else {
+		error "Unknown index: NODES($start_nid,name)"
+	    }
+	} else {
+	    error "Unknown index: NODES($a_nid,end)"
+	}
+    } else {
+	set span $NODES($a_nid,name)
+    }
+
+    # draw the span-line
+    set NODES($a_nid,spanwgt) [draw-line $RSTW \
+				[expr $min - $HALF_NODE_WIDTH] $ypos\
+				[expr $max + $HALF_NODE_WIDTH] $ypos]
+}
+
+proc ::rsttool::treeditor::tree::node::draw-text {window txt x y {options {}}} {
+    eval {$window create text} $x $y\
+    	{-text $txt -anchor n -justify center}\
+    	$options
+}
+
+proc ::rsttool::treeditor::tree::node::draw-line {window x1 y1 x2 y2} {
+    $window create line $x1 $y1  $x2 $y2
 }
 
 ##################################################################

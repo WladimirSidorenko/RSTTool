@@ -7,16 +7,31 @@ namespace eval ::rsttool::treeditor::layout {
 }
 
 ##################################################################
-proc ::rsttool::treeditor::layout::adjust-after-change {nuc sat {redraw 0}} {
-    # Adjust nucleus
-    # puts stderr "link-par-to-child: restructure-upwards nuc = $nuc redraw = $redraw"
-    restructure-upwards $nuc $redraw
+proc ::rsttool::treeditor::layout::redisplay-net {} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::treeditor::RSTW;
+    variable ::rsttool::treeditor::NODE_WIDTH;
+    variable ::rsttool::treeditor::VISIBLE_NODES;
+    namespace import ::rsttool::utils::max;
 
-    # Ajust satellite
-    if $redraw {
-	# puts stderr "link-par-to-child: y-layout-subtree sat = $sat"
-	y-layout-subtree $sat
+    # 1. Clean up from earlier structures
+    $RSTW delete all
+    if [info exists wtn] {unset wtn}
+    if [info exists ntw] {unset ntw}
+
+    # 2. layout and draw the new
+    x-layout
+    y-layout
+
+    set ymax 0
+    set xmax 0
+    foreach nid [array names VISIBLE_NODES] {
+    	set ymax [max $ymax $NODES($nid,ypos)]
+    	set xmax [max $xmax $NODES($nid,xpos)]
     }
+
+    $RSTW configure -scrollregion "0 1 [expr  $xmax + $NODE_WIDTH]\
+          [expr $ymax + 130]"
 }
 
 proc ::rsttool::treeditor::layout::x-layout {} {
@@ -54,6 +69,8 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {nid} {
     variable ::rsttool::NODES;
     variable ::rsttool::treeditor::NODE_WIDTH;
     variable ::rsttool::treeditor::VISIBLE_NODES;
+    namespace import ::rsttool::utils::max;
+    namespace import ::rsttool::utils::min;
 
     # only position nodes which are not yet positioned
     if {$nid == 0 || $NODES($nid,xpos)} {return}
@@ -84,9 +101,9 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {nid} {
 	    set node($nid,xpos) [expr $NODE_WIDTH + 10]
 	}
     } else {
-	set min [eval min $x_coords]
-	set max [eval max $x_coords]
-	set node($nid,xpos) [expr $min + ($max - $min) / 2]
+	set imin [eval min $x_coords]
+	set imax [eval max $x_coords]
+	set node($nid,xpos) [expr $imin + ($imax - $imin) / 2]
     }
 }
 
@@ -141,7 +158,19 @@ proc ::rsttool::treeditor::layout::y-layout-node {nid} {
 	# puts stderr "y-layout-node: set node($nid,ypos)  $node($nuc,ypos)"
 	set NODES($nid,ypos) $node($nuc,ypos)
     }
-    redisplay-node $nid
+    ::rsttool::treeditor::tree::node::redisplay $nid
+}
+
+proc ::rsttool::treeditor::layout::adjust-after-change {nuc sat {redraw 0}} {
+    # Adjust nucleus
+    # puts stderr "link-par-to-child: restructure-upwards nuc = $nuc redraw = $redraw"
+    restructure-upwards $nuc $redraw
+
+    # Ajust satellite
+    if $redraw {
+	# puts stderr "link-par-to-child: y-layout-subtree sat = $sat"
+	y-layout-subtree $sat
+    }
 }
 
 proc ::rsttool::treeditor::layout::resize-display {change} {
@@ -160,32 +189,6 @@ proc ::rsttool::treeditor::layout::resize-display {change} {
     }
     $RSTW configure -scrollregion "0 1 [expr $xmax + $NODE_WIDTH]\
 	     [expr $ymax + $SIZE_FACTOR]"
-}
-
-proc ::rsttool::treeditor::layout::redisplay-net {} {
-    variable ::rsttool::NODES;
-    variable ::rsttool::treeditor::RSTW;
-    variable ::rsttool::treeditor::NODE_WIDTH;
-    variable ::rsttool::treeditor::VISIBLE_NODES;
-
-    # 1. Clean up from earlier structures
-    $RSTW delete all
-    if [info exists wtn] {unset wtn}
-    if [info exists ntw] {unset ntw}
-
-    # 2. layout and draw the new
-    x-layout
-    y-layout
-
-    set ymax 0
-    set xmax 0
-    foreach nid [array names VISIBLE_NODES] {
-    	set ymax [max $ymax $node($nid,ypos)]
-    	set xmax [max $xmax $node($nid,xpos)]
-    }
-
-    $RSTW configure -scrollregion "0 1 [expr  $xmax + $NODE_WIDTH]\
-          [expr $ymax + 130]"
 }
 
 proc ::rsttool::treeditor::layout::find-first-text-node {nid} {
@@ -288,8 +291,9 @@ proc ::rsttool::treeditor::layout::sort-vi-nodes {} {
     set ret {}
     array set vicopy [array get VISIBLE_NODES]
     # append node id's from parent message
-    if [info exists msgid2nid($PRNT_MSGID)] {
-	foreach inid [lsort -integer $MSGID2NID($PRNT_MSGID)] {
+    if [info exists MSGID2NID($PRNT_MSGID)] {
+	foreach inid [lsort -command ::rsttool::treeditor::tree::node::cmp \
+			  $MSGID2NID($PRNT_MSGID)] {
 	    if [info exists vicopy($inid)] {
 		lappend ret $inid
 		unset vicopy($inid)
@@ -298,7 +302,8 @@ proc ::rsttool::treeditor::layout::sort-vi-nodes {} {
     }
     # append node id's from child message
     if [info exists MSGID2NID($CRNT_MSGID)] {
-	foreach inid [lsort -integer $MSGID2NID($CRNT_MSGID)] {
+	foreach inid [lsort -command ::rsttool::treeditor::tree::node::cmp \
+			  $MSGID2NID($CRNT_MSGID)] {
 	    if [info exists vicopy($inid)] {
 		lappend ret $inid
 		unset vicopy($inid)

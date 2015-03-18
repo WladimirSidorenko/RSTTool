@@ -273,21 +273,6 @@ proc redraw-subtree {nid} {
     }
 }
 
-proc redisplay-node {nid} {
-    # wipes the old version before drawing
-    global node
-
-    # puts stderr "redisplay-node: nid = $nid; node($nid,textwgt) = $node($nid,textwgt)"
-    if { $node($nid,textwgt) != {} } {
-	# puts stderr "redisplay-node: calling erase-node $nid"
-	erase-node $nid
-	# puts stderr "redisplay-node: erase-node $nid done"
-    }
-    # puts stderr "redisplay-node: calling display-node $nid"
-    # puts stderr "redisplay-node: display-node $nid"
-    display-node $nid
-    # puts stderr "redisplay-node: display-node $nid done"
-}
 
 proc redraw-child-arcs {nid} {
     # redraws the child-arcs pointing at this node

@@ -49,6 +49,8 @@ namespace eval ::rsttool {
     array set ROOTS {};
     variable TXT_NODE_CNT -1;
     variable GROUP_NODE_CNT -1;
+    variable MSG_TXT_NODE_CNT -1;
+    variable MSG_GRP_NODE_CNT -1;
 
     variable NID2MSGID;
     array set NID2MSGID {};
@@ -76,8 +78,7 @@ proc ::rsttool::check_state {{a_msg {Proceed}}} {
 		      [format "%s" $a_msg] {Cancel}]
 	if {$save == 0} {
 	    file::save;
-	    set MODIFIED 0;
-	} else if {$save == 2} {
+	} elseif {$save == 2} {
 	    return 1;
 	}
     }

@@ -6,7 +6,9 @@ package require rsttool::treeditor::tree::arc
 package require rsttool::treeditor::tree::node
 
 ##################################################################
-namespace eval ::rsttool::treeditor::tree { }
+namespace eval ::rsttool::treeditor::tree {
+    namespace export ntw;
+}
 
 ##################################################################
 proc ::rsttool::treeditor::tree::wtn {wdgt} {
@@ -18,9 +20,13 @@ proc ::rsttool::treeditor::tree::wtn {wdgt} {
     return 0;
 }
 
-proc ::rsttool::treeditor::tree::ntw {nid} {
-    global node
-    return $NODES($nid,textwgt)
+proc ::rsttool::treeditor::tree::ntw {a_nid} {
+    variable ::rsttool::NODES;
+
+    if {[info exists NODES($a_nid,textwgt)]} {
+	return $NODES($a_nid,textwgt);
+    }
+    return {};
 }
 
 proc ::rsttool::treeditor::tree::clicked-widget {x y} {

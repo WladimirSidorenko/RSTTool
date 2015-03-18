@@ -36,6 +36,20 @@ proc ::rsttool::treeditor::tree::arc::constit-relation-p {rel} {
     return [$rtype == relations::CONSTIT]
 }
 
+proc ::rsttool::treeditor::tree::arc::erase {a_nid} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::treeditor::RSTW;
+
+    if {[info exists NODES($a_nid,arrowwgt)] && $NODES($a_nid,arrowwgt) != {} } {
+	$RSTW delete $NODES($a_nid,arrowwgt)
+	array unset NODES  $a_nid,arrowwgt;
+    }
+    if {[info exists NODES($a_nid,arrowwgt)] && $NODES($a_nid,labelwgt) != {} } {
+	$RSTW delete $NODES($a_nid,labelwgt)
+	array unset NODES  $a_nid,labelwgt;
+    }
+}
+
 proc ::rsttool::treeditor::tree::arc::change_rel {nid {relname {}} } {
     variable ::rsttool::NODES;
     variable ::rsttool::relations::RELATIONS;

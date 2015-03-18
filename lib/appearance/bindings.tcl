@@ -48,14 +48,14 @@ proc ::rsttool::appearance::bindings::set_default {{text_w .editor.text}} {
     $TXTW tag bind bmarker <Control-ButtonPress-1> {
 	set ::rsttool::segmenter::SEG_MRK_X %x
 	set ::rsttool::segmenter::SEG_MRK_Y %y
-	set ::rsttool::TXT_CURSOR [lindex [$text_w configure -cursor] end]
-	$TXTW configure -cursor question_arrow
+	set ::rsttool::TXT_CURSOR [lindex [.editor.text configure -cursor] end]
+	$::rsttool::segmenter::TXTW configure -cursor question_arrow
 	break
     }
 
     $TXTW tag bind bmarker <Control-ButtonRelease-1> {
-	$TXTW configure -cursor $::rsttool::TXT_CURSOR
-	move-node $TXTW %x %y
+	$::rsttool::segmenter::TXTW configure -cursor $::rsttool::TXT_CURSOR
+	::rsttool::segmenter::move-boundary $::rsttool::segmenter::TXTW %x %y
 	set ::rsttool::segmenter::SEG_MRK_X {}
 	set ::rsttool::segmenter::SEG_MRK_Y {}
 	break
