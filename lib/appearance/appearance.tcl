@@ -3,27 +3,29 @@ namespace eval ::rsttool::appearance {}
 
 proc ::rsttool::appearance::set_default {{text_w .editor.text} \
 					     {prnt_text_w .editor.textPrnt}} {
+    variable ::rsttool::treeditor::RSTW;
+    variable ::rsttool::segmenter::TXTW;
+    variable ::rsttool::segmenter::PRNT_TXTW;
     # default appearance
-    tk_setPalette background gray35 foreground white activebackground white activeforeground red
+    tk_setPalette background gray69 foreground black activebackground white activeforeground red;
     # apply special default appearance settings for aqua
     if {[tk windowingsystem] == "aqua"} {
-	tk_setPalette background gray85 foreground black
+	tk_setPalette background gray85 foreground black;
     }
 
-    $text_w configure -fg black -bg white -selectbackground gray85
-    $prnt_text_w configure -fg black -bg white -selectbackground gray85
-    $rstw configure -bg white
+    $TXTW configure -fg black -bg white -selectbackground gray85;
+    $PRNT_TXTW configure -fg black -bg white -selectbackground gray85;
+    $RSTW configure -bg white;
 
-    set old_clr purple;
-    $text_w tag configure old -foreground $old_clr
-    $text_w tag configure next -foreground black
-    $text_w tag configure new -foreground DimGray
-    $text_w tag lower new
-    $text_w tag configure notes -foreground black
-    $text_w tag configure my_sel -background yellow
+    set color purple;
+    $TXTW tag configure old -foreground $color;
+    $TXTW tag configure next -foreground black;
+    $TXTW tag configure new -foreground DimGray;
+    $TXTW tag lower new
+    $TXTW tag configure notes -foreground black;
+    $TXTW tag configure my_sel -background yellow;
 
-    $prnt_text_w tag configure old -foreground $old_clr
-
+    $PRNT_TXTW tag configure old -foreground $color;
 }
 
 ##################################################################

@@ -118,10 +118,6 @@ proc reset-rst {} {
 }
 
 
-proc unique-text-node-id {} {
-    global last_text_node_id
-    return [incr last_text_node_id]
-}
 
 proc unique-group-node-id {} {
     global last_group_node_id

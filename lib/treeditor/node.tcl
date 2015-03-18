@@ -6,11 +6,13 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export make-node;
     namespace export get-ins-index;
     namespace export show-nodes;
+    namespace export group-node-p;
 }
 
 ##################################################################
-proc ::rsttool::treeditor::tree::node::make-node {text type {start_pos {}} {end_pos {}}} {
+proc ::rsttool::treeditor::tree::node::make-node {type {start_pos {}} {end_pos {}} {name {}}} {
     variable ::rsttool::NODES;
+    variable ::rsttool::NAME2NID;
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::MSGID2NID;
     variable ::rsttool::NID2MSGID;
@@ -18,34 +20,50 @@ proc ::rsttool::treeditor::tree::node::make-node {text type {start_pos {}} {end_
 
     if { $type ==  "text"  } {
 	set nid [unique-text-node-id]
-	clear-node $nid
+	clear $nid
 	# save mapping from node id to message id
-	set nid2msgid($nid) [list $crntMsgId]
+	set NID2MSGID($nid) [list $CRNT_MSGID]
 	# save mapping from message id to node id
-	if {[info exists msgid2nid($crntMsgId)]} {
+	if {[info exists MSGID2NID($CRNT_MSGID)]} {
 	    # since we might add node after some group nodes were
 	    # created, we need to re-sort the node list
-	    set msgid2nid($crntMsgId) [lsort -integer [concat $msgid2nid($crntMsgId) $nid]]
+	    set MSGID2NID($CRNT_MSGID) [lsort -integer [concat $MSGID2NID($CRNT_MSGID) $nid]]
 	} else {
-	    set msgid2nid($crntMsgId) [list $nid]
+	    set MSGID2NID($CRNT_MSGID) [list $nid]
 	}
     } else {
 	set nid [unique-group-node-id]
-	clear-node $nid
+	clear $nid
     }
-    set node($nid,text) $text
-    set node($nid,type) $type
-    set node($nid,offsets) [list $start_pos $end_pos]
+    set NODES($nid,type) $type
+    set NODES($nid,parent) {}
+    set NODES($nid,children) {}
+    set NAME2NID($CRNT_MSGID,$name) $nid;
     # puts stderr "make-node: node($nid,offsets) == $node($nid,offsets)"
-    set visible_nodes($nid) 1
+    set VISIBLE_NODES($nid) 1
 
     if {$type ==  "text"} {
-	set node($nid,span) "$nid $nid"
+	set NODES($nid,name) $name
+	set NODES($nid,start) $start_pos
+	set NODES($nid,end) $end_pos
 	add-text-node $nid
     } else {
+	set NODES($nid,name) "$start_pos $end_pos"
+	set NODES($nid,start) $start_pos
+	set NODES($nid,end) $end_pos
 	add-group-node $nid
     }
     return $nid
+}
+
+proc ::rsttool::treeditor::tree::node::unique-text-node-id {} {
+    variable TXT_NODE_CNT;
+    return [incr TXT_NODE_CNT];
+}
+
+proc ::rsttool::treeditor::tree::node::unique-group-node-id {} {
+    variable GROUP_NODE_CNT;
+    return [incr GROUP_NODE_CNT]
 }
 
 proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
@@ -139,7 +157,7 @@ proc ::rsttool::treeditor::destroy-node {nid {redraw 1}} {
 
     # 3. remove node from visible node list and drop all its
     # structural information
-    clear-node $nid
+    clear $nid
 }
 
 proc ::rsttool::treeditor::clicked-node {x y} {
@@ -524,7 +542,7 @@ proc ::rsttool::treeditor::tree::node::disconnect_node {clicked_node method} {
 			[lreplace $NODES($greatgrand,children) $index $index $par]
 		}
 		#eliminate grandpar
-		clear-node $grandpar
+		clear $grandpar
 		set node($grandpar,type) span
 		lappend erased_nodes $grandpar
 		adjust-after-change $par $par 1
@@ -559,7 +577,7 @@ proc ::rsttool::treeditor::tree::node::disconnect_node {clicked_node method} {
 			[lreplace $NODES($grandpar,children) $index $index $sibling]
 		}
 		#eliminate par
-		clear-node $par
+		clear $par
 		set node($par,type) span
 		lappend erased_nodes $par
 		adjust-after-change $sibling $sibling 1
@@ -736,7 +754,7 @@ proc ::rsttool::treeditor::autolink_nodes {clicked_node {dragged_node {}} {type 
 	if {$ambiguity == {}} {
 	    incr last_group_node_id
 	    add-group-node $last_group_node_id
-	    clear-node $last_group_node_id
+	    clear $last_group_node_id
 	    set visible_nodes($last_group_node_id) 1
 	}
 
@@ -869,7 +887,10 @@ proc ::rsttool::treeditor::tree::node::add-group-node {nid} {
 
 proc ::rsttool::treeditor::tree::node::group-node-p {nid} {
     variable ::rsttool::NODES;
-    member $NODES($nid,type) {span multinuc multinuclear constit embedded}
+    if {$NODES($nid,type) == "internal" || $NODES($nid,type) == "external"} {
+	return 1;
+    }
+    return 0;
 }
 
 proc ::rsttool::treeditor::tree::node::text-node-p {nid} {
@@ -901,6 +922,63 @@ proc ::rsttool::treeditor::tree::node::get-ins-index {a_list a_start} {
 	}
     }
     return $ins_idx;
+}
+
+proc ::rsttool::treeditor::tree::node::clear {nid} {
+    variable ::rsttool::NODES
+    variable ::rsttool::ROOTS
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::MSGID2NID;
+    variable ::rsttool::NID2ENID;
+    variable ::rsttool::MSGID2ENID;
+    variable ::rsttool::NAME2NID;
+    variable VISIBLE_NODES;
+
+    # clear NODES
+    array unset NODES $nid;
+    array unset NODES $nid,type;
+    array unset NODES $nid,start;
+    array unset NODES $nid,end;
+    array unset NODES $nid,relname;
+
+    if [info exists NODES($nid,name)] {
+	array unset NAME2NID $NODES($nid,name);
+    }
+    array unset NODES $nid,name;
+
+    # clean-up parent
+    if {[info exists NODES($nid,parent)] && $NODES($nid,parent) != {}} {
+	set NODES($NODES($nid,parent),children) \
+	    [ldelete $NODES($NODES($nid,parent),children) $nid]
+    }
+    array unset NODES $nid,parent;
+
+    # clean-up children
+    # variable ::rsttool::NID2MSGID;
+    # variable ::rsttool::MSGID2NID;
+    if [info exists NID2ENID($nid)] {
+	clear $NID2ENID($nid);
+	array unset NID2ENID $nid;
+	array unset MSGID2ENID $NID2MSGID($nid);
+    }
+
+    if {[info exists NODES($nid,children)] && $NODES($nid,children) != {}} {
+	foreach child_nid $NODES($nid,children) {
+	    if {$NODES($child_nid,parent) == $nid} {
+		array unset NODES $child_nid,parent;
+	    }
+	}
+    }
+    array unset NODES $nid,children;
+
+    # remove this node from MSGID's
+    if [info exists MSGID2NID(msgid)] {
+	set MSGID2NID(msgid) [ldelete $MSGID2NID(msgid) $nid]
+    }
+    array unset NID2MSGID $nid;
+
+    # remove this node from the set of vible nodes
+    array unset VISIBLE_NODES $nid;
 }
 
 ##################################################################

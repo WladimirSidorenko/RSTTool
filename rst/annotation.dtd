@@ -28,22 +28,24 @@
 	  id	ID	#REQUIRED
 	  <!-- number of segment -->
 	  name	CDATA	#REQUIRED
-	  <!-- id of the message to which given segment pertains -->
-	  msgid IDREF	#REQUIRED
 	  <!-- start position of segment -->
 	  start CDATA	#REQUIRED
 	  <!-- end position of segment -->
-	  end   CDATA	#REQUIRED>
+	  end   CDATA	#REQUIRED
+	  <!-- id of the message to which given segment pertains -->
+	  msgid IDREF	#REQUIRED>
 
 <!-- Spans -->
 <!ELEMENT spans (span)*>
 <!ATTLIST span
 	  <!-- id of span -->
 	  id	ID	#REQUIRED
-	  <!-- name of the span -->
-	  name	CDATA	#REQUIRED
 	  <!-- type of span -->
 	  type	(internal|external)	"internal"
+	  <!-- left-most span of segment -->
+	  start IDREF	#REQUIRED
+	  <!-- right-most span of segment -->
+	  end IDREF	#REQUIRED
 	  <!-- id of the message which given span pertains to -->
 	  msgid1	IDREF	#REQUIRED
 	  <!-- id of the child message -->

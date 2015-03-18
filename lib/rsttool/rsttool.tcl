@@ -155,8 +155,8 @@ proc ::rsttool::main {{argv {}}} {
     segmenter::install
 
     # helper::init
-    # appearance::set_default
-    # appearance::bindings::set_default
+    appearance::set_default
+    appearance::bindings::set_default
 
     catch {source $env(HOME)/.wishrc}
 }

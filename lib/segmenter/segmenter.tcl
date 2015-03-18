@@ -7,91 +7,70 @@ package require rsttool::utils
 ##################################################################
 namespace eval ::rsttool::segmenter {
     variable OFFSET_SHIFT 0;
+    variable TXTW {};
+    variable PRNT_TXTW {};
     variable SEG_MRK_X {};
     variable SEG_MRK_Y {};
 }
 
 ##################################################################
 proc ::rsttool::segmenter::install {} {
-    if {![winfo exists .editor]} {
-	scrolled-text .editor -height [expr [winfo screenheight .] * 0.4] \
-	    -titlevar currentfile \
-	    -font -*-Courier-Medium-R-Normal--16-140-*-*-*-*-*-* \
-	    -messagebar t
-    }
+    variable TXTW;
+    variable PRNT_TXTW;
 
-    pack .editor -side bottom  -pady 0.1c -padx 0.1c -anchor sw -expand 1 -fill both
-    # .editor.text config -height [expr [winfo screenheight .] * 0.4]
+    set w_name .editor;
+    if [winfo exists $w_name] {return;}
+
+    set bg white;
+    set font {-*-Courier-Medium-R-Normal--16-140-*-*-*-*-*-*};
+
+    # establish text window for the message
+    frame $w_name;
+    grid columnconfigure $w_name 0 -weight 1
+    # grid rowconfigure $w_name 1 -weight 2
+    grid rowconfigure $w_name 2 -weight 1
+    grid rowconfigure $w_name 3 -weight 1
+    # grid rowconfigure $w_name 4 -weight 1
+    # establish title bar
+    label $w_name.title -textvariable ::rsttool::CRNT_PRJ_FILE;
+    grid $w_name.title -row 0  -sticky "ew"
+    # add buttons for navigating around discussions
+    set navibar [frame $w_name.navibar]
+    set btnNext [button $w_name.btnNextMsg -text "Next Message" -command {
+	::rsttool::segmenter::next-message}];
+    set btnPrev [button $w_name.btnPrevMsg -text "Previous Message" -command {
+	::rsttool::segmenter::next-message backward}];
+    pack $btnPrev $btnNext -in $navibar -side left -expand true -fill x;
+    grid config $navibar -in $w_name -sticky "ew" -row 1;
+    # actually draw the window for the text of the parent message
+    frame $w_name.textWindowPrnt;
+    set PRNT_TXTW $w_name.textPrnt
+    text  $PRNT_TXTW -relief sunken -yscrollcommand "$w_name.scrollPrnt set";
+    grid $PRNT_TXTW -in $w_name.textWindowPrnt -column 0 -row 0 -sticky "ew";
+    scrollbar $w_name.scrollPrnt -command "$w_name.textPrnt yview";
+    grid $w_name.scrollPrnt -in $w_name.textWindowPrnt -column 1 -row 0 -sticky "ns";
+    grid columnconfigure $w_name.textWindowPrnt 0 -weight 2;
+    grid config $w_name.textWindowPrnt -in $w_name -column 0 -row 2 -sticky "ewns";
+    # actually draw the window for the text of the message
+    frame $w_name.textWindow;
+    set TXTW $w_name.text
+    text  $TXTW -relief sunken -yscrollcommand "$w_name.scrollPrnt set"
+    grid $TXTW -in $w_name.textWindow -column 0 -row 0 -sticky "ew"
+    scrollbar $w_name.scroll -command "$w_name.textPrnt yview"
+    grid $w_name.scroll -in $w_name.textWindow -column 1 -row 0 -sticky "ns"
+    grid columnconfigure $w_name.textWindow 0 -weight 2;
+    grid config $w_name.textWindow -column 0 -row 3 -sticky "ewns";
+    # draw message bar
+    frame $w_name.msgbar
+    text  $w_name.msg -bg gray84 -relief flat -height 1.2;
+    grid $w_name.msg -in $w_name.msgbar -row 0 -column 0 -sticky "ew"
+    grid columnconfigure $w_name.msgbar 0 -weight 1
+    grid config $w_name.msgbar -column 0 -row 4 -sticky "ew"
+    pack $w_name -side bottom -pady 0.1c -padx 0.1c -anchor sw -expand 1 -fill both;
 }
 
 proc ::rsttool::segmenter::uninstall {} {
     pack forget .editor
-}
-
-proc ::rsttool::segmenter::scrolled-text {name args} {
-    namespace import ::rsttool::utils::getarg
-    # Returns a scrollable text widget
-    # $name.text is the actual text widger
-    # $name.title is the title
-    #
-    # Args: (all optional)
-    # -height <integer>
-    # -font <font-spec>
-    # -titlevar varname : variable containing the name of the frame title
-    set bg [getarg -b $args]
-    if {$bg == {}} {set bg white}
-    set height [getarg -height $args]
-    if { $height == {} } {set height 40}
-
-    frame $name -height $height
-    grid columnconfigure $name 0 -weight 1
-    grid rowconfigure $name 2 -weight 1
-    grid rowconfigure $name 3 -weight 1
-    # add title bar
-    label $name.title -textvariable [getarg -titlevar $args]
-    grid $name.title -row 0  -sticky "ew"
-    # add buttons for navigating around discussions
-    set navibar [frame $name.navibar]
-    set btnNext [button $name.btnNextMsg -text "Next Message" -command {
-	::rsttool::segmenter::next-message}];
-    set btnPrev [button $name.btnPrevMsg -text "Previous Message" -command {
-	::rsttool::segmenter::next-message backward}];
-    # set btnNextSent [button $name.nextsent -text "Next Sentence" -command {next-sentence really}];
-    # grid $btnPrev $btnNext $btnNextSent -in $navibar;
-    grid $navibar -sticky "ew" -row 1;
-    pack $btnPrev $btnNext -in $navibar -side left -expand true -fill x;
-
-    frame $name.textWindow
-    text  $name.text  -bg $bg -relief sunken -yscrollcommand "$name.scroll set"
-    scrollbar $name.scroll -command "$name.text yview"
-    grid $name.text -in $name.textWindow -column 0 -row 0 -sticky "ew"
-    grid $name.scroll -in $name.textWindow -column 1 -row 0 -sticky "ns"
-    grid columnconfigure $name.textWindow 0 -weight 1
-    grid $name.textWindow -row 3 -column 0 -sticky "ew"
-
-    frame $name.textWindowPrnt
-    text  $name.textPrnt  -bg $bg -relief sunken -yscrollcommand "$name.scrollPrnt set"
-    scrollbar $name.scrollPrnt -command "$name.textPrnt yview"
-    grid $name.textPrnt -in $name.textWindowPrnt -column 0 -row 0 -sticky "ew"
-    grid $name.scrollPrnt -in $name.textWindowPrnt -column 1 -row 0 -sticky "ns"
-    grid columnconfigure $name.textWindowPrnt 0 -weight 1
-    grid $name.textWindowPrnt -row 2 -column 0 -sticky "ew"
-
-    set font [getarg -font $args]
-    if {$font != {}} {
-	$name.textPrnt configure -font $font;
-	$name.text configure -font $font;
-    }
-
-    set messagebar [getarg -messagebar $args]
-    if {$messagebar == "t"} {
-	frame $name.msgbar
-	# the value of bg color is a hard code here
-	text  $name.msg -bg gray84 -relief flat -height 1.2;
-	grid columnconfigure $name.msgbar 0 -weight 1
-    	grid $name.msg -in $name.msgbar -row 0 -column 0 -sticky "ew"
-    	grid $name.msgbar -column 0 -row 4 -sticky "ew"
-    }
 }
 
 proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
@@ -99,6 +78,7 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
     variable ::rsttool::FORREST;
     variable ::rsttool::MSGID2NID;
     variable ::rsttool::NODES;
+    variable OFFSET_SHIFT;
 
     # obtain annotated EDUs for given message
     if {! [info exists FORREST($msg_id)]} {
@@ -117,7 +97,7 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
     # for each node, obtain its number and span
     set prev_nid -1
     set offsets {}
-    set offset_shift 0
+    set OFFSET_SHIFT 0
     set start 0
     set end 0
     set bmarker ""
@@ -143,7 +123,7 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
 	set bmarker [make-boundary-marker $nid]
 	$path_name insert end $bmarker bmarker
 	# update counter of artificial characters
-	incr offset_shift [string length $bmarker]
+	incr OFFSET_SHIFT [string length $bmarker]
     }
     # put `old` tag for the case when no previos segments were
     # annotated
@@ -158,7 +138,7 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
     }
     # return position of the last annotated character and the number
     # of inserted artificial characters
-    return $offset_shift
+    return $OFFSET_SHIFT
 }
 
 proc ::rsttool::segmenter::next-sentence {{trgframe .editor.text}} {
@@ -247,7 +227,7 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     variable ::rsttool::MSGID2ENID;
     variable ::rsttool::treeditor::VISIBLE_NODES;
 
-    variable ::rsttool::segmenter::OFFSET_SHIFT;
+    variable OFFSET_SHIFT;
 
     namespace import ::rsttool::treeditor::tree::node::show-nodes;
     # puts stderr "next-mesage called"
@@ -419,8 +399,8 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     regsub -all "\"" $new_node_text "" new_node_text
 
 
-    set start_pos [expr [.editor.text count -chars 1.0 sel.first] - $offsetShift]
-    set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $offsetShift]
+    set start_pos [expr [.editor.text count -chars 1.0 sel.first] - $OFFSET_SHIFT]
+    set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $OFFSET_SHIFT]
     namespace import ::rsttool::treeditor::tree::node::make-node;
     set newest_node [make-node $new_node_text "text" $start_pos $end_pos]
     ::rsttool::treeditor::layout::redisplay-net;
@@ -434,7 +414,7 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     .editor.text tag remove new new.first last_sel
 
     set boundary_marker [make-bmarker $last_text_node_id]
-    set offsetShift [expr $offsetShift + [string length $boundary_marker]]
+    set OFFSET_SHIFT [expr $OFFSET_SHIFT + [string length $boundary_marker]]
     .editor.text insert my_sel.last "$boundary_marker" bmarker
     # call next-sentence() if suggested EDU span was completely covered
     if {[.editor.text tag ranges next] == {} || \

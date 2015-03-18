@@ -147,7 +147,7 @@ proc ::rsttool::file::open {} {
 	::rsttool::reset;
 	return;
     }
-
+    ::rsttool::segmenter::message "Loaded file $CRNT_PRJ_FILE"
     ::rsttool::segmenter::next-message
 }
 
@@ -214,7 +214,7 @@ proc ::rsttool::file::_read_segments {a_segments} {
     namespace import ::rsttool::treeditor::tree::node::get-ins-index;
 
     if {$a_segments == {}} {return 0;}
-    set nid {}; set name {}; set msgid {}; set start -1; set end -1;
+    set nid {}; set name {}; set msgid {}; set span {}; set start -1; set end -1;
     foreach child [$a_segments childNodes] {
 	if {[string tolower [$child nodeName]] != "segment"} {
 	    error "Incorrect file format: expected <segment>.";
@@ -276,7 +276,8 @@ proc ::rsttool::file::_read_spans {a_spans} {
     variable ::rsttool::GROUP_NODE_CNT;
 
     if {$a_spans == {}} {return 0;}
-    set nid {}; set name {}; set type {}; set msgid1 {}; set msgid2 {};
+    set nid {}; set start {}; set end {};
+    set type {}; set msgid1 {}; set msgid2 {};
     foreach child [$a_spans childNodes] {
 	if {[string tolower [$child nodeName]] != "span"} {
 	    error "Incorrect file format: expected <span>.";
@@ -285,23 +286,27 @@ proc ::rsttool::file::_read_spans {a_spans} {
 	if {[set nid [xml-get-attr $child {id}]] == {}} {
 	    return -2;
 	}
-	if {[set name [xml-get-attr $child {name}]] == {}} {
+	if {[set type [xml-get-attr $child {type}]] == {}} {
 	    return -3;
 	}
-	if {[set type [xml-get-attr $child {type}]] == {}} {
+	if {[set start [xml-get-attr $child {start}]] == {}} {
 	    return -4;
 	}
-	if {[set msgid1 [xml-get-attr $child {msgid1}]] == {}} {
+	if {[set end [xml-get-attr $child {end}]] == {}} {
 	    return -5;
+	}
+	if {[set msgid1 [xml-get-attr $child {msgid1}]] == {}} {
+	    return -6;
 	}
 
 	if {[info exists NODES($nid)]} {
 	    error "Duplicate node id $nid."
-	    return -8;
+	    return -7;
 	} else {
 	    set NODES($nid) {};
-	    set NODES($nid,type)  {span};
-	    set NODES($nid,name)  $name;
+	    set NODES($nid,type)  $type;
+	    set NODES($nid,start) $start;
+	    set NODES($nid,end)   $end;
 	    set NODES($nid,parent)   {};
 	    set NODES($nid,relname)  {};
 	    set NODES($nid,children) {};
@@ -309,23 +314,23 @@ proc ::rsttool::file::_read_spans {a_spans} {
 
 	if {$type == "external"} {
 	    if {[set msgid2 [xml-get-attr $child {msgid2}]] == {}} {
-		return -6;
+		return -8;
 	    }
-	    if {[info exists MSGID2ENID($msgid1,$msgid2)]} {
-		lappend MSGID2ENID($msgid1,$msgid2) $nid
-	    } else {
-		set MSGID2ENID($msgid1,$msgid2) [list $nid]
+	    if {[info exists MSGID2ENID($msgid1)]} {
+		error "Duplicate external node for message $msgid1."
+		return -7;
 	    }
+	    set MSGID2ENID($msgid1) [list $nid]
 	    set NID2MSGID($nid) [list $msgid1  $msgid2]
 	} else {
 	    set NID2MSGID($nid) [list $msgid1]
 	}
 
-	if {[info exists MSGID2NID($nid)]} {
-	    set idx [get-ins-index $MSGID2NID($msgid) $start]
-	    set MSGID2NID($msgid) [linsert $MSGID2NID($msgid) $idx $nid]
+	if {[info exists MSGID2NID($msgid1)]} {
+	    set idx [get-ins-index $MSGID2NID($msgid1) $start]
+	    set MSGID2NID($msgid1) [linsert $MSGID2NID($msgid1) $idx $nid]
 	} else {
-	    set MSGID2NID($msgid) [list $nid]
+	    set MSGID2NID($msgid1) [list $nid]
 	}
 
 	if {$nid > $GROUP_NODE_CNT} {

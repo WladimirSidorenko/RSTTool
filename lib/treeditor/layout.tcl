@@ -23,6 +23,7 @@ proc ::rsttool::treeditor::layout::x-layout {} {
     variable ::rsttool::NODES;
     variable ::rsttool::treeditor::CURRENT_XPOS;
     variable ::rsttool::treeditor::NODE_WIDTH;
+    namespace import ::rsttool::treeditor::tree::node::group-node-p;
 
     set vsorted [sort-vi-nodes]
     set xinc [expr $NODE_WIDTH + 10]

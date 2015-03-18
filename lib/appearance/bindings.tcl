@@ -10,6 +10,8 @@ namespace eval ::rsttool::appearance::bindings {
 
 proc ::rsttool::appearance::bindings::set_default {{text_w .editor.text}} {
     variable ::rsttool::appearance::bindings::MODKEY;
+    variable ::rsttool::segmenter::TXTW;
+    variable ::rsttool::segmenter::PRNT_TXTW;
 
     if {[tk windowingsystem] == "aqua"} {
 	$text_w tag bind bmarker <Control-Option-ButtonRelease-2> {
@@ -26,13 +28,13 @@ proc ::rsttool::appearance::bindings::set_default {{text_w .editor.text}} {
     bind all <$MODKEY-s> {::rsttool::file::save}
     bind all <$MODKEY-q> {::rsttool::quit}
 
-    bindtags $text_w {all $text_w Text . UndoBindings(1)}
-    bind $text_w <Any-Key> {break}
-    bind $text_w <ButtonRelease-2> {break}
-    bind $text_w <$MODKEY-c> {continue}
+    bindtags $TXTW {all $TXTW Text . UndoBindings(1)}
+    bind $TXTW <Any-Key> {break}
+    bind $TXTW <ButtonRelease-2> {break}
+    bind $TXTW <$MODKEY-c> {continue}
 
     # node creation functions
-    $text_w tag bind new <ButtonRelease-1> {
+    $TXTW tag bind new <ButtonRelease-1> {
 	::rsttool::segmenter::segment
 	break;
     }
@@ -43,17 +45,17 @@ proc ::rsttool::appearance::bindings::set_default {{text_w .editor.text}} {
     }
 
     # node modification operations
-    $text_w tag bind bmarker <Control-ButtonPress-1> {
+    $TXTW tag bind bmarker <Control-ButtonPress-1> {
 	set ::rsttool::segmenter::SEG_MRK_X %x
 	set ::rsttool::segmenter::SEG_MRK_Y %y
 	set ::rsttool::TXT_CURSOR [lindex [$text_w configure -cursor] end]
-	$text_w configure -cursor question_arrow
+	$TXTW configure -cursor question_arrow
 	break
     }
 
-    $text_w tag bind bmarker <Control-ButtonRelease-1> {
-	$text_w configure -cursor $::rsttool::TXT_CURSOR
-	move-node $text_w %x %y
+    $TXTW tag bind bmarker <Control-ButtonRelease-1> {
+	$TXTW configure -cursor $::rsttool::TXT_CURSOR
+	move-node $TXTW %x %y
 	set ::rsttool::segmenter::SEG_MRK_X {}
 	set ::rsttool::segmenter::SEG_MRK_Y {}
 	break

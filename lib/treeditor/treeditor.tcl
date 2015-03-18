@@ -14,11 +14,15 @@ namespace eval ::rsttool::treeditor {
     variable CURRENTSAT {};
     variable CURRENTMODE link;
     variable CURRENT_XPOS 0;
+    variable RTBAR {};
     variable RSTW {};
     variable NEWEST_NODE;
     variable WAITED_NID;
     variable DISCO_NODE {};
     variable USED_NODES {};
+
+    variable VISIBLE_NODES;
+    array set VISIBLE_NODES {};
     variable ERASED_NODES;
     array set ERASED_NODES {};
     variable COLLAPSED_NODES;
@@ -32,38 +36,39 @@ proc ::rsttool::treeditor::update_menu {a_menu} {
 }
 
 proc ::rsttool::treeditor::install {} {
+    variable RTBAR;
     variable RSTW;
 
     uninstall-structurer;
 
-    # draw toolbar for tree editor
-    set rtbar [frame .rtbar]
-    button .rtbar.link -text "Link" -command {
-	::rsttool::treeditor::set-mode link }
-    button .rtbar.autolink -text "Auto" -command {
-	::rsttool::treeditor::set-mode autolink }
-    button .rtbar.disconnect -text "Disconnect" -command {
-	::rsttool::treeditor::set-mode disconnect }
-    button .rtbar.modify -text "Modify" -command {
-	::rsttool::treeditor::set-mode modify }
-    button .rtbar.rename -text "Rename" -command {
-	::rsttool::treeditor::set-mode rename }
-    button .rtbar.reduce -text "Reduce" -command {
-	::rsttool::treeditor::layout::resize-display -50 }
-    button .rtbar.enlarge -text "Enlarge" -command {
-	::rsttool::treeditor::layout::resize-display 50 }
-    # button .rtbar.undo_by_reload -text "Undo" -command {undo_by_reload}
-    # button .rtbar.undo_by_redo -text "Don't Touch" -command {undo_by_redo}
-    # button .rtbar.showtext -text "Show Text" -command {showText really}
-
-    pack .rtbar -side left
-    pack .rtbar.link .rtbar.autolink .rtbar.disconnect .rtbar.modify .rtbar.rename \
-	.rtbar.reduce .rtbar.enlarge -in $rtbar -side top -fill x -expand 1
-
     # draw tree editor
     frame .rstframe
 
-    set RSTW [canvas  .rstframe.canvas  -bg white -relief sunken\
+    # draw toolbar for tree editor
+    set RTBAR [frame .rstframe.rtbar]
+    button $RTBAR.link -text "Link" -command {
+	::rsttool::treeditor::set-mode link }
+    # button $RTBAR.autolink -text "Auto" -command {
+    # 	::rsttool::treeditor::set-mode autolink }
+    button $RTBAR.disconnect -text "Disconnect" -command {
+	::rsttool::treeditor::set-mode disconnect }
+    button $RTBAR.modify -text "Modify" -command {
+	::rsttool::treeditor::set-mode modify }
+    button $RTBAR.rename -text "Rename" -command {
+	::rsttool::treeditor::set-mode rename }
+    button $RTBAR.reduce -text "Reduce" -command {
+	::rsttool::treeditor::layout::resize-display -50 }
+    button $RTBAR.enlarge -text "Enlarge" -command {
+	::rsttool::treeditor::layout::resize-display 50 }
+    # button .RTBAR.undo_by_reload -text "Undo" -command {undo_by_reload}
+    # button .RTBAR.undo_by_redo -text "Don't Touch" -command {undo_by_redo}
+    # button .RTBAR.showtext -text "Show Text" -command {showText really}
+
+    pack $RTBAR -side top
+    pack $RTBAR.link $RTBAR.disconnect $RTBAR.modify $RTBAR.rename \
+	$RTBAR.reduce $RTBAR.enlarge -in $RTBAR -side left -fill y -expand 1
+
+    set RSTW [canvas .rstframe.canvas  -bg white -relief sunken\
 		  -yscrollcommand ".rstframe.yscroll set"\
 		  -xscrollcommand ".rstframe.xscroll set"\
 		  -height [expr [winfo screenheight .] * 0.4] \
@@ -79,24 +84,30 @@ proc ::rsttool::treeditor::install {} {
     pack .rstframe.yscroll -side right -fill y
     pack .rstframe.xscroll -side bottom -fill x
     pack .rstframe.canvas -fill both -expand 1 -side left
+
     install-structurer
 }
 
 proc ::rsttool::treeditor::install-structurer {} {
-    pack .rstframe -side top -fill both -expand true
+    pack .rstframe -side top -fill both -expand true;
+    set-mode link;
 }
 
 proc ::rsttool::treeditor::uninstall-structurer {} {
-    pack forget .rtbar .rstframe
+    variable RTBAR;
+    variable RSTW;
+
+    pack forget $RTBAR $RSTW;
 }
 
 proc ::rsttool::treeditor::toggle-button {mode dir} {
+    variable RTBAR;
     switch -- $mode {
-	link   {.rtbar.link configure -relief $dir}
-	rename {.rtbar.rename configure -relief $dir}
-	disconnect {.rtbar.disconnect configure -relief $dir}
-	modify {.rtbar.modify configure -relief $dir}
-	autolink {.rtbar.autolink configure -relief $dir}
+	link   {$RTBAR.link configure -relief $dir}
+	rename {$RTBAR.rename configure -relief $dir}
+	disconnect {$RTBAR.disconnect configure -relief $dir}
+	modify {$RTBAR.modify configure -relief $dir}
+	autolink {$RTBAR.autolink configure -relief $dir}
 	parenthetical {}
 	nothing {}
     }
