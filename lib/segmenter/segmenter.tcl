@@ -84,13 +84,14 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
     if {! [info exists FORREST($msg_id)]} {
 	return {0 0};
     } elseif {[info exists MSGID2NID($msg_id)]} {
-	# puts stderr "show-sentences: MSGID2NID($msg_id) == $MSGID2NID($msg_id)"
+	puts stderr "show-sentences: MSGID2NID($msg_id) == $MSGID2NID($msg_id)"
 	set nids $MSGID2NID($msg_id);
     } elseif {$show_rest} {
 	set nids {};
     } else {
 	return {0 0};
     }
+    puts stderr "show-sentences: nids == $nids"
     # obtain text of the message to be displayed
     set msg $FORREST($msg_id);
     set txt [lindex $msg 0];
@@ -109,10 +110,12 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
 	    error "Error while loading message $msg_id (EDU nodes for this message are\
  not ordered topologically; prev_nid = $prev_nid, nid = $nid)"
 	}
-	if {$NODES($nid,type) != "text"} {break;}
+	if {! [::rsttool::treeditor::tree::node::text-node-p $nid]} {continue;}
 
+	set start $NODES($nid,start)
+	set end $NODES($nid,end)
 	# puts stderr "show-sentences: node(nid = $nid,offsets) = $node($nid,offsets)"
-	if {$start == {}} {error "node $nid does not have valid offsets"}
+	if {$start == {} || $end == {}} {error "node $nid does not have valid offsets"}
 	incr end -1
 	# obtain text span between offsets
 	set itext [string range $txt $start $end]

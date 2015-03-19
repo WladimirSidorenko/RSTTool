@@ -5,6 +5,7 @@
 namespace eval ::rsttool::treeditor::tree::node {
     namespace export get-ins-index;
     namespace export show-nodes;
+    namespace export text-node-p;
     namespace export group-node-p;
     namespace export set-text;
 }

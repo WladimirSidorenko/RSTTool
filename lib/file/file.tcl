@@ -21,10 +21,10 @@ proc ::rsttool::file::update_menu {a_menu} {
 	{::rsttool::file::open}
     # $a_menu add command -label [format "New %s-N" $MKEY] -command \
     # 	{::rsttool::file::open}
-    # $a_menu add command -label [format "Save %s-S" $MKEY] -command \
-    # 	{::rsttool::file::save}
-    # $a_menu add command -label [format "Quit %s-Q" $MKEY] -command \
-    # 	{::rsttool::quit}
+    $a_menu add command -label [format "Save %s-S" $MKEY] -command \
+    	{::rsttool::file::save}
+    $a_menu add command -label [format "Quit %s-Q" $MKEY] -command \
+    	{::rsttool::quit}
     # $a_menu add command -label "Clear" -command {::rsttool::clear}
 }
 
@@ -191,21 +191,34 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
     }
 
     # read segments
-    if {[set ret [_read_segments [$root selectNodes /segments]]]} {
+    if {[set ret [read-tnode [$root selectNodes segments]]]} {
 	return $ret;}
 
     # read spans
-    if {[set ret [_read_spans [$root selectNodes /spans]]]} {
+    if {[set ret [read-gnode [$root selectNodes spans]]]} {
 	return $ret;}
 
     # read relations
-    if {[set ret [_read_relations [$root selectNodes /relations]]]} {
+    if {[set ret [read-relations [$root selectNodes relations]]]} {
 	return $ret;}
 
     return 0;
 }
 
-proc ::rsttool::file::_read_segments {a_segments} {
+proc ::rsttool::file::write-tnode {a_nid a_prnt_elem a_xml_doc} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
+
+    set node [$a_xml_doc createElement {segment}];
+    $node setAttribute {id} $a_nid;
+    $node setAttribute {name} $NODES($a_nid,name);
+    $node setAttribute {msgid} $NID2MSGID($a_nid);
+    $node setAttribute {start} $NODES($a_nid,start);
+    $node setAttribute {end} $NODES($a_nid,end);
+    $a_prnt_elem appendChild $node;
+}
+
+proc ::rsttool::file::read-tnode {a_segments} {
     variable ::rsttool::NODES;
     variable ::rsttool::NAME2NID;
     variable ::rsttool::MSGID2NID;
@@ -213,6 +226,7 @@ proc ::rsttool::file::_read_segments {a_segments} {
     variable ::rsttool::TXT_NODE_CNT;
     namespace import ::rsttool::treeditor::tree::node::get-ins-index;
 
+    puts stderr "read-tnode: a_segments = $a_segments"
     if {$a_segments == {}} {return 0;}
     set nid {}; set name {}; set msgid {}; set span {}; set start -1; set end -1;
     foreach child [$a_segments childNodes] {
@@ -226,29 +240,33 @@ proc ::rsttool::file::_read_segments {a_segments} {
 	if {[set name [xml-get-attr $child {name}]] == {}} {
 	    return -3;
 	}
-	if {[set start [xml-get-attr $child {start}]] == {}} {
+	if {[set msgid [xml-get-attr $child {msgid}]] == {}} {
 	    return -4;
 	}
-	if {[set end [xml-get-attr $child {end}]] == {}} {
+	if {[set start [xml-get-attr $child {start}]] == {}} {
 	    return -5;
+	}
+	if {[set end [xml-get-attr $child {end}]] == {}} {
+	    return -6;
 	}
 	# check if this node has not already been defined
 	if {[info exists NODES($nid)]} {
 	    error "Duplicate node id $nid."
-	    return -6;
+	    return -7;
 	} else {
 	    set NODES($nid) {};
 	    set NODES($nid,type)  {text};
 	    set NODES($nid,name)  $name;
 	    set NODES($nid,start) $start;
 	    set NODES($nid,end)   $end;
+	    set NODES($nid,text)  [::rsttool::treeditor::tree::node::set-text $nid $msgid];
 	    set NODES($nid,parent)   {};
 	    set NODES($nid,relname)  {};
 	    set NODES($nid,children) {};
 	}
 	if {[info exists NAME2NID($msgid,$nid)]} {
 	    error "Duplicate node name '$name'."
-	    return -7;
+	    return -8;
 	} else {
 	    set NAME2NID($msgid,$nid) $name
 	}
@@ -258,8 +276,8 @@ proc ::rsttool::file::_read_segments {a_segments} {
 	}
 	# update dictionaries
 	if {[info exists MSGID2NID($nid)]} {
-	    set idx [get-ins-index $MSGID2NID($msgid) $start]
-	    set MSGID2NID($msgid) [linsert $MSGID2NID($msgid) $idx $nid]
+	    set idx [get-ins-index $MSGID2NID($msgid) $start];
+	    set MSGID2NID($msgid) [linsert $MSGID2NID($msgid) $idx $nid];
 	} else {
 	    set MSGID2NID($msgid) [list $nid]
 	}
@@ -268,7 +286,20 @@ proc ::rsttool::file::_read_segments {a_segments} {
     return 0;
 }
 
-proc ::rsttool::file::_read_spans {a_spans} {
+proc ::rsttool::file::write-gnode {a_nid a_prnt_elem a_xml_doc} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
+
+    set node [$a_xml_doc createElement {span}];
+    $node setAttribute {id} $a_nid;
+    $node setAttribute {type} $NODES($a_nid,type);
+    $node setAttribute {start} $NODES($a_nid,start);
+    $node setAttribute {end} $NODES($a_nid,end);
+    $node setAttribute {msgid} $NID2MSGID($a_nid);
+    $a_prnt_elem appendChild $node;
+}
+
+proc ::rsttool::file::read-gnode {a_spans} {
     variable ::rsttool::NODES;
     variable ::rsttool::MSGID2NID;
     variable ::rsttool::MSGID2ENID;
@@ -295,7 +326,7 @@ proc ::rsttool::file::_read_spans {a_spans} {
 	if {[set end [xml-get-attr $child {end}]] == {}} {
 	    return -5;
 	}
-	if {[set msgid1 [xml-get-attr $child {msgid1}]] == {}} {
+	if {[set msgid1 [xml-get-attr $child {msgid}]] == {}} {
 	    return -6;
 	}
 
@@ -313,18 +344,13 @@ proc ::rsttool::file::_read_spans {a_spans} {
 	}
 
 	if {$type == "external"} {
-	    if {[set msgid2 [xml-get-attr $child {msgid2}]] == {}} {
-		return -8;
-	    }
 	    if {[info exists MSGID2ENID($msgid1)]} {
 		error "Duplicate external node for message $msgid1."
 		return -7;
 	    }
 	    set MSGID2ENID($msgid1) [list $nid]
-	    set NID2MSGID($nid) [list $msgid1  $msgid2]
-	} else {
-	    set NID2MSGID($nid) [list $msgid1]
 	}
+	set NID2MSGID($nid) [list $msgid1]
 
 	if {[info exists MSGID2NID($msgid1)]} {
 	    set idx [get-ins-index $MSGID2NID($msgid1) $start]
@@ -340,7 +366,7 @@ proc ::rsttool::file::_read_spans {a_spans} {
     return 0;
 }
 
-proc ::rsttool::file::_read_relations {a_relations} {
+proc ::rsttool::file::read-relations {a_relations} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2ENID;
     if {$a_relations == {}} {return 0;}
@@ -443,12 +469,58 @@ proc ::rsttool::file::_read_message {a_msg {a_prnt_id {}}} {
 }
 
 proc ::rsttool::file::save {} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
     variable ::rsttool::MODIFIED;
+    variable ::rsttool::CRNT_ANNO_FILE;
+    namespace import ::rsttool::treeditor::tree::node::group-node-p;
+    namespace import ::rsttool::treeditor::tree::node::text-node-p;
+
+    # we don't write to the annotation file directly, but instead
+    # first generate an XML file, then write it to a temporary
+    # location, and if everything succeeds, move this temporary file
+    # to the required location
 
     if {! $MODIFIED} {
 	::rsttool::segmenter::message {No changes need to be saved};
 	return;
     } else {
+	# create XML document
+	set xmldoc [dom createDocument annotation]
+	set root [$xmldoc documentElement]
+	set tnodes [$xmldoc createElement segments]
+	set gnodes [$xmldoc createElement spans]
+	# save nodes
+	foreach nid [array names NID2MSGID] {
+	    if {[text-node-p $nid]} {
+		write-tnode $nid $tnodes $xmldoc;
+	    } else {
+		write-gnode $nid $gnodes $xmldoc;
+	    }
+	}
+	$root appendChild $tnodes
+	$root appendChild $gnodes
+
+	set relations [$xmldoc createElement relations]
+	$root appendChild $relations
+	# create temporary file
+	set tmpdir [file dirname $CRNT_ANNO_FILE]
+	if {![file exists $tmpdir] || ![file isdirectory $tmpdir] || ![file writable $tmpdir]} {
+	    error "Cannot write to file in directory $tmpdir";
+	    return;
+	}
+	set tmpfname [file join $tmpdir "[file tail $CRNT_ANNO_FILE].[pid].tmp"]
+	if {[catch {set tmpfile [::open $tmpfname w 0644]}]} {
+	    error "Could not create temporary file $tmpfname";
+	    return;
+	}
+	if {[catch {puts $tmpfile [$root asXML]}]} {
+	    error "Could not write XML document to temporary file $tmpfname";
+	    ::close $tmpfile;
+	    return;
+	}
+	::close $tmpfile;
+	file rename -force $tmpfname $CRNT_ANNO_FILE;
 	set MODIFIED 0;
     }
 }
