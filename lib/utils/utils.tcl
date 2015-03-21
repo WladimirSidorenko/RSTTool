@@ -3,6 +3,7 @@
 ##################################################################
 namespace eval ::rsttool::utils {
     namespace export getarg;
+    namespace export ldelete;
     namespace export max;
     namespace export min;
     namespace export strip;
@@ -20,18 +21,6 @@ proc ::rsttool::utils::getarg {key list} {
     return {}
 }
 
-proc ::rsttool::utils::strip {a_string} {
-    regsub -all "\n" $a_string " " a_string
-    regsub -all "\t" $a_string " " a_string
-    regsub -all "  +" $a_string " " a_string
-    return [string trim $a_string];
-}
-
-proc ::rsttool::utils::reset-array {a_arr} {
-    array unset $a_arr;
-    array set $a_arr {};
-}
-
 proc ::rsttool::utils::max {args} {
     if {[llength $args] == 0} {
 	return {};
@@ -45,6 +34,15 @@ proc ::rsttool::utils::max {args} {
     return $max
 }
 
+proc ::rsttool::utils::ldelete { list value } {
+    set ix [lsearch -exact $list $value]
+    if {$ix >= 0} {
+	return [lreplace $list $ix $ix]
+    } else {
+	return $list
+    }
+}
+
 proc ::rsttool::utils::min {args} {
     if {[llength $args] == 0} {
 	return {};
@@ -56,6 +54,18 @@ proc ::rsttool::utils::min {args} {
 	if {$arg < $min} {set min $arg}
     }
     return $min
+}
+
+proc ::rsttool::utils::reset-array {a_arr} {
+    array unset $a_arr;
+    array set $a_arr {};
+}
+
+proc ::rsttool::utils::strip {a_string} {
+    regsub -all "\n" $a_string " " a_string
+    regsub -all "\t" $a_string " " a_string
+    regsub -all "  +" $a_string " " a_string
+    return [string trim $a_string];
 }
 
 ##################################################################

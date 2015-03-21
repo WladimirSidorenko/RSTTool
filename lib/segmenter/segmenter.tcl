@@ -76,16 +76,16 @@ proc ::rsttool::segmenter::uninstall {} {
 proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
     # display already EDU segements in widget `path_name`
     variable ::rsttool::FORREST;
-    variable ::rsttool::MSGID2NID;
+    variable ::rsttool::MSGID2TNODES;
     variable ::rsttool::NODES;
+    variable ::rsttool::MSG_TXT_NODE_CNT;
     variable OFFSET_SHIFT;
 
     # obtain annotated EDUs for given message
     if {! [info exists FORREST($msg_id)]} {
 	return {0 0};
-    } elseif {[info exists MSGID2NID($msg_id)]} {
-	puts stderr "show-sentences: MSGID2NID($msg_id) == $MSGID2NID($msg_id)"
-	set nids $MSGID2NID($msg_id);
+    } elseif {[info exists MSGID2TNODES($msg_id)]} {
+	set nids $MSGID2TNODES($msg_id);
     } elseif {$show_rest} {
 	set nids {};
     } else {
@@ -107,7 +107,7 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
 	if {$nid > $prev_nid } {
 	    set prev_nid $nid
 	} else {
-	    error "Error while loading message $msg_id (EDU nodes for this message are\
+	    error "Error while loading message $msg_id\n(EDU nodes for this message are\
  not ordered topologically; prev_nid = $prev_nid, nid = $nid)"
 	}
 	if {! [::rsttool::treeditor::tree::node::text-node-p $nid]} {continue;}
@@ -126,6 +126,7 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
 	$path_name insert end $bmarker bmarker
 	# update counter of artificial characters
 	incr OFFSET_SHIFT [string length $bmarker]
+	incr MSG_TXT_NODE_CNT;
     }
     # put `old` tag for the case when no previos segments were
     # annotated
@@ -240,8 +241,6 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     set prev_msg_id $CRNT_MSGID
     # remember the old parent
     set prev_prnt_msg_id $PRNT_MSGID;
-    set MSG_TXT_NODE_CNT -1;
-    set MSG_GRP_NODE_CNT -1;
     # check direction to which we should proceed
     if {$direction == {forward}} {
 	# if we have exhausted the queue of messages for current
@@ -339,6 +338,8 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     .editor.text tag add new 1.0 end
     # show already annotated segments for current message and make the
     # rest of the text appear in grayscale
+    set MSG_TXT_NODE_CNT -1;
+    set MSG_GRP_NODE_CNT -1;
     set OFFSET_SHIFT [show-sentences .editor.text $CRNT_MSGID 1]
     # make suggestion for the boundary of the next segment
     next-sentence
@@ -350,7 +351,6 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 
 proc ::rsttool::segmenter::segment {{my_current {}}} {
     variable ::rsttool::NODES;
-    variable ::rsttool::MODIFIED;
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::segmenter::OFFSET_SHIFT;
 
@@ -429,21 +429,76 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     .editor.text yview [expr int($line_no)]
     .editor.text tag add notes my_sel.last new.first
 
-    set MODIFIED 1;
+    ::rsttool::set-state {changed} "Created segment $NODES($inid,name)";
 }
 
-proc ::rsttool::segmenter::move-boundary {a_path x y} {
+proc ::rsttool::segmenter::delete {a_path x y} {
+    variable OFFSET_SHIFT;
+    variable ::rsttool::NODES;
+    variable ::rsttool::CRNT_MSGID;
+    variable ::rsttool::TXT_NODE_CNT;
+
+    # obtain number of node located at coordinates (x, y)
+    lassign [get-seg-nid $a_path $x $y {} $CRNT_MSGID] inid istart iend;
+
+    # puts stderr "delete-node: inid = $inid"
+    if {$istart == {}} {
+	return
+    } elseif {$inid == $TXT_NODE_CNT} {
+	set text_nodes [ldelete $text_nodes $inid];
+	incr TXT_NODE_CNT -1;
+    }
+    # find next node in text
+    set nxtstart [lindex [$a_path tag nextrange bmarker $iend] 0]
+    if {$nxtstart == {}} {
+	# obtain range of previous node, if any exists
+	set prevend [lindex [$a_path tag prevrange bmarker "$istart -1 char"] end];
+	# remove tag `old` from the text span covered by the node which should
+	# be deleted
+	if {$prevend == {}} {set prevend 1.0}
+	$a_path tag remove my_sel $prevend $istart;
+	$a_path tag remove old $prevend $istart;
+	$a_path tag remove next $prevend end;
+	$a_path tag add new $prevend $istart;
+	next-sentence;
+    } else {
+	# if next node exists, append text from deleted node to this next node
+	set nxtnid [lindex [get-seg-nid $a_path {} {} $nxtstart] 0];
+	set NODES($nxtnid,text) "$NODES($inid,text)$NODES($nxtnid,text)";
+	set NODES($nxtnid,start) $NODES($inid,start);
+    }
+    # adjust offset shifts of offsets of all successive nodes
+    set delta [string length [$a_path get $istart $iend]];
+    if {[string length [$a_path get $iend end]] > 0} {
+	set OFFSET_SHIFT [expr $OFFSET_SHIFT - $delta];
+    }
+    # delete node marker
+    set iname $NODES($inid,name);
+    $a_path delete $istart $iend;
+    ::rsttool::treeditor::tree::node::destroy $inid;
+    if {$nxtstart != {}} {
+	rename-segments $nxtnid $CRNT_MSGID [expr $iname - $NODES($nxtnid,name)];
+	$a_path delete 0.0 end;
+	show-sentences $a_path $CRNT_MSGID 1;
+    }
+    ::rsttool::treeditor::layout::redisplay-net;
+    ::rsttool::set-state {changed} "Deleted segment $iname";
+}
+
+proc ::rsttool::segmenter::move {a_path x y} {
     variable SEG_MRK_X;
     variable SEG_MRK_Y;
     variable ::rsttool::NODES;
     variable ::rsttool::CRNT_MSGID;
     namespace import ::rsttool::treeditor::tree::node::set-text;
 
+    parray ::rsttool::treeditor::VISIBLE_NODES;
+
     if {$SEG_MRK_X == {} || $SEG_MRK_Y == {}} {return}
     set old_idx "@$SEG_MRK_X,$SEG_MRK_Y wordstart"
     set new_idx "@$x,$y"
 
-    if {[string is space [$a_path get $new_idx]] &&  [$a_path compare $new_idx >= "end -1 chars"]} {
+    if {[string is space [$a_path get $new_idx]] &&  [$a_path compare $new_idx <= "end -1 chars"]} {
 	while {[$a_path compare 1.0 < $new_idx] && \
 		   [string is space [$a_path get $new_idx]]} {
 	    set new_idx "$new_idx -1 chars"
@@ -484,7 +539,7 @@ proc ::rsttool::segmenter::move-boundary {a_path x y} {
 	    set new_idx "end -1 chars"
 	}
 
-    	set delta_txt [$a_path get "$new_idx" "$old_idx -1 chars"]
+    	set delta_txt [$a_path get "$new_idx +1 chars" "$old_idx"]
 	set delta [string length "$delta_txt"]
     	set NODES($inid,end) [expr $NODES($inid,end) - $delta]
     	if {$nxt_nid == {}} {
@@ -505,15 +560,15 @@ proc ::rsttool::segmenter::move-boundary {a_path x y} {
 	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
     	}
     } else {
-    	# if node has shrinked, set the minimum possible index of the
-    	# new shrinked node to the end of the first word in the
+    	# if the node has shrunk, set the minimum possible index of
+    	# the new shrunk node to the end of the first word in the
     	# original span
     	if {$nxt_nid != {} && [$a_path compare "$new_idx" >= "$nxt_start"]} {
-	    set new_idx $nxt_start
-    	    while {[$a_path compare 1.0 < $new_idx] && ! [string is space [$a_path get $new_idx]]} {
+	    set new_idx "$nxt_start -1 chars wordstart -1 chars"
+    	    while {[$a_path compare 1.0 < $new_idx] && [string is space [$a_path get $new_idx]]} {
 		set new_idx "$new_idx -1 chars"
 	    }
-	    set new_idx "$new_idx wordend"
+	    set new_idx "$new_idx +1 chars"
 	}
 	set delta_txt [$a_path get "$iend" "$new_idx"]
 	set delta [string length "$delta_txt"]
@@ -538,12 +593,37 @@ proc ::rsttool::segmenter::move-boundary {a_path x y} {
     }
     set-text $inid;
     ::rsttool::treeditor::layout::redisplay-net;
+    puts stderr "2) move: VISIBLE_NODES =";
+    parray ::rsttool::treeditor::VISIBLE_NODES;
+    ::rsttool::set-state {changed} "Moved boundary of segment $NODES($inid,name)";
+}
+
+proc ::rsttool::segmenter::rename-segments {a_nid a_msgid a_diff} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::NAME2NID;
+    variable ::rsttool::MSGID2TNODES;
+    namespace import ::rsttool::treeditor::tree::node::bisearch;
+
+    set tnodes $MSGID2TNODES($a_msgid);
+    set idx [bisearch $a_nid $tnodes];
+    if {$idx < 0} {return;}
+    set maxidx [llength $tnodes];
+
+    for {} {$idx < $maxidx} {incr idx} {
+	set inid [lindex $tnodes $idx];
+	set oname $NODES($inid,name);
+	array unset NAME2NID $a_msgid,$oname;
+
+	set nname [expr $oname + $a_diff];
+	set NAME2NID($a_msgid,$nname) $inid;
+	set NODES($inid,name) $nname;
+    }
 }
 
 proc ::rsttool::segmenter::get-seg-nid {a_path x y {start {}} \
-					    {msgid $::rsttool::CRNT_MSGID}} {
+					    {msgid {}}} {
     variable ::rsttool::NAME2NID;
-
+    if {$msgid == {}} {set msgid $::rsttool::CRNT_MSGID;}
     # set default return values
     set nnumber {}
     # set auxiliary variables

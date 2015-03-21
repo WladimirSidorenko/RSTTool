@@ -14,14 +14,24 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::utils::max;
 
+    puts stderr "1) redisplay-net: VISIBLE_NODES ="
+    parray VISIBLE_NODES;
     # 1. Clean up from earlier structures
-    $RSTW delete all
+    $RSTW delete all;
+    puts stderr "1.5) redisplay-net: VISIBLE_NODES ="
+    parray VISIBLE_NODES;
     if [info exists wtn] {unset wtn}
     if [info exists ntw] {unset ntw}
 
     # 2. layout and draw the new
     x-layout
+    puts stderr "2) redisplay-net: VISIBLE_NODES ="
+    parray VISIBLE_NODES;
+
     y-layout
+    puts stderr "3) redisplay-net: VISIBLE_NODES ="
+    parray VISIBLE_NODES;
+
 
     set ymax 0
     set xmax 0
@@ -36,11 +46,15 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
 
 proc ::rsttool::treeditor::layout::x-layout {} {
     variable ::rsttool::NODES;
-    variable ::rsttool::treeditor::CURRENT_XPOS;
+    variable ::rsttool::CRNT_MSGID;
+    variable ::rsttool::PRNT_MSGID;
     variable ::rsttool::treeditor::NODE_WIDTH;
+    variable ::rsttool::treeditor::CURRENT_XPOS;
+    variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::treeditor::tree::node::group-node-p;
 
-    set vsorted [sort-vi-nodes]
+    set vsorted [sort-nodes [array names VISIBLE_NODES]]
+    puts stderr "vsorted = $vsorted"
     set xinc [expr $NODE_WIDTH + 10]
     set xpos [expr $NODE_WIDTH / 2 + 30]
     foreach nid $vsorted {
@@ -280,39 +294,24 @@ proc ::rsttool::treeditor::layout::visible-children-p {nid} {
     return 0
 }
 
-proc ::rsttool::treeditor::layout::sort-vi-nodes {} {
-    variable ::rsttool::MSGID2NID;
-    variable ::rsttool::CRNT_MSGID;
-    variable ::rsttool::PRNT_MSGID;
-    variable ::rsttool::treeditor::VISIBLE_NODES;
-    # sort visible nodes so that nodes of the parent appear first to
-    # the nodes of the child but otherwise are sorted numerically
-
-    set ret {}
-    array set vicopy [array get VISIBLE_NODES]
-    # append node id's from parent message
-    if [info exists MSGID2NID($PRNT_MSGID)] {
-	foreach inid [lsort -command ::rsttool::treeditor::tree::node::cmp \
-			  $MSGID2NID($PRNT_MSGID)] {
-	    if [info exists vicopy($inid)] {
-		lappend ret $inid
-		unset vicopy($inid)
-	    }
+proc ::rsttool::treeditor::layout::sort-nodes {a_list} {
+    puts stderr "sort-nodes: 1) a_list = $a_list"
+    # create custom comparison function
+    proc vsort {a_nid1 a_nid2} {
+	variable ::rsttool::NID2MSGID;
+	variable ::rsttool::PRNT_MSGID;
+	if {$NID2MSGID($a_nid1) == $NID2MSGID($a_nid2)} {
+	    puts stderr "vsort: comparing nodes $a_nid1 $a_nid2 = [::rsttool::treeditor::tree::node::cmp $a_nid1 $a_nid2]"
+	    return [::rsttool::treeditor::tree::node::cmp $a_nid1 $a_nid2];
+	} elseif {$NID2MSGID($a_nid1) == $PRNT_MSGID} {
+	    return -1;
+	} else {
+	    return 1;
 	}
     }
-    # append node id's from child message
-    if [info exists MSGID2NID($CRNT_MSGID)] {
-	foreach inid [lsort -command ::rsttool::treeditor::tree::node::cmp \
-			  $MSGID2NID($CRNT_MSGID)] {
-	    if [info exists vicopy($inid)] {
-		lappend ret $inid
-		unset vicopy($inid)
-	    }
-	}
-    }
-    # append any other node id's present in visible nodes
-    set ret [list {*}$ret {*}[array names vicopy]]
-    return $ret
+    set a_list [lsort -command vsort $a_list];
+    puts stderr "sort-nodes: 2) a_list = $a_list"
+    return $a_list;
 }
 
 ##################################################################

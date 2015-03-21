@@ -14,6 +14,9 @@ package require rsttool::treeditor
 ######################################
 # Variables
 namespace eval ::rsttool {
+    variable TITLE "RST-Tool"
+    variable MTITLE "*$TITLE"
+
     variable VERSION 0.0.1
     variable PLATFORM $::tcl_platform(platform)
 
@@ -45,8 +48,6 @@ namespace eval ::rsttool {
     array set FORREST {};
     variable NODES;
     array set NODES {};
-    variable ROOTS;
-    array set ROOTS {};
     variable TXT_NODE_CNT -1;
     variable GROUP_NODE_CNT -1;
     variable MSG_TXT_NODE_CNT -1;
@@ -56,23 +57,41 @@ namespace eval ::rsttool {
     array set NID2MSGID {};
     variable NID2ENID;
     array set NID2ENID {};
-    variable NAME2NID;
-    array set NAME2NID {};
     variable MSGID2ENID;
     array set MSGID2ENID {};
-    variable MSGID2NID;
-    array set MSGID2NID {};
+    variable NAME2NID;
+    array set NAME2NID {};
+
+    variable MSGID2ROOTS;
+    array set MSGID2ROOTS {};
+    variable MSGID2TNODES;
+    array set MSGID2TNODES {};
 }
 
 ######################################
 # Methods
 ######################################
 # Methods
-proc ::rsttool::check_state {{a_msg {Proceed}}} {
+proc ::rsttool::set-state {{a_state {unchanged}} {a_msg {}}} {
+    variable TITLE;
+    variable MTITLE;
+    variable MODIFIED;
+
+    if {$a_state == {unchanged}} {
+        wm title . "$TITLE";
+	set MODIFIED 0;
+    } else {
+        wm title . "$MTITLE"
+	set MODIFIED 1;
+	::rsttool::segmenter::message $a_msg;
+    }
+}
+
+proc ::rsttool::check-state {{a_msg {Proceed}}} {
     variable MODIFIED;
 
     if {$MODIFIED} {
-	set save [tk_dialog .check_state [format "%s" $a_msg] \
+	set save [tk_dialog .check-state [format "%s" $a_msg] \
 		      [format "Modified buffer exists.  %s anyway?" $a_msg] \
 		      warning 0 [format "Save and %s" $a_msg] \
 		      [format "%s" $a_msg] {Cancel}]
@@ -101,7 +120,7 @@ proc ::rsttool::reset {} {
 
 
     if {$CRNT_PRJ_FILE == {}} {return;}
-    if {[check_state "Reset"]} {return;}
+    if {[check-state "Reset"]} {return;}
 
     # reset variables
     set CRNT_ANNO_FILE {};
@@ -120,7 +139,7 @@ proc ::rsttool::reset {} {
 
     utils::reset-array ::rsttool::FORREST;
     utils::reset-array ::rsttool::MSGID2ENID;
-    utils::reset-array ::rsttool::MSGID2NID;
+    utils::reset-array ::rsttool::MSGID2ROOTS;
     utils::reset-array ::rsttool::NAME2NID;
     utils::reset-array ::rsttool::NID2ENID;
     utils::reset-array ::rsttool::NID2MSGID;
@@ -138,7 +157,7 @@ proc ::rsttool::reset {} {
 }
 
 proc ::rsttool::quit {} {
-    if {[check_state "Exit"]} {return;}
+    if {[check-state "Exit"]} {return;}
     exit 0
 }
 
@@ -147,7 +166,6 @@ proc ::rsttool::main {{argv {}}} {
     # abbreviations::load abbreviations
     # helper::load
 
-    wm title . "RST-Tool"
     wm protocol . WM_DELETE_WINDOW ::rsttool::quit
     frame .segmentframe
 
@@ -160,6 +178,7 @@ proc ::rsttool::main {{argv {}}} {
     appearance::bindings::set_default
 
     catch {source $env(HOME)/.wishrc}
+    set-state {unchanged};
 }
 
 ##################################################################

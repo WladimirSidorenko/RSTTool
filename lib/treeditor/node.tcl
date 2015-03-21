@@ -3,7 +3,8 @@
 
 ##################################################################
 namespace eval ::rsttool::treeditor::tree::node {
-    namespace export get-ins-index;
+    namespace export bisearch;
+    namespace export insort;
     namespace export show-nodes;
     namespace export text-node-p;
     namespace export group-node-p;
@@ -17,7 +18,8 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     variable ::rsttool::FORREST;
     variable ::rsttool::NAME2NID;
     variable ::rsttool::CRNT_MSGID;
-    variable ::rsttool::MSGID2NID;
+    variable ::rsttool::MSGID2ROOTS;
+    variable ::rsttool::MSGID2TNODES;
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::treeditor::VISIBLE_NODES;
 
@@ -27,12 +29,14 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	# save mapping from node id to message id
 	set NID2MSGID($nid) [list $CRNT_MSGID]
 	# save mapping from message id to node id
-	if {[info exists MSGID2NID($CRNT_MSGID)]} {
+	if {[info exists MSGID2ROOTS($CRNT_MSGID)]} {
 	    # since we might add node after some group nodes were
 	    # created, we need to re-sort the node list
-	    set MSGID2NID($CRNT_MSGID) [lsort -integer [concat $MSGID2NID($CRNT_MSGID) $nid]]
+	    set MSGID2ROOTS($CRNT_MSGID) [lsort -integer [concat $MSGID2ROOTS($CRNT_MSGID) $nid]]
+	    set MSGID2TNODES($CRNT_MSGID) [lsort -integer [concat $MSGID2TNODES($CRNT_MSGID) $nid]]
 	} else {
-	    set MSGID2NID($CRNT_MSGID) [list $nid]
+	    set MSGID2ROOTS($CRNT_MSGID) [list $nid]
+	    set MSGID2TNODES($CRNT_MSGID) [list $nid]
 	}
     } else {
 	if {$name == {}} {set name "$start $end"}
@@ -63,14 +67,14 @@ proc ::rsttool::treeditor::tree::node::set-text {a_nid {a_msgid {}}} {
 	set ntext [string range [lindex $FORREST($a_msgid) 0] $start $end];
 	set ntext [::rsttool::utils::strip $ntext];
 	regsub -all "\"" $ntext "" ntext;
-	set NODES($a_nid,text) "$NODES($a_nid,name)\n$ntext";
+	set NODES($a_nid,text) "$ntext";
     } else {
-	set NODES($a_nid,text) "$NODES($a_nid,name)\n$NODES($start,name)-$NODES($end,name)";
+	set NODES($a_nid,text) "$NODES($start,name)-$NODES($end,name)";
     }
 }
 
 proc ::rsttool::treeditor::tree::node::unique-tnode-id {} {
-    variable TXT_NODE_CNT;
+    variable ::rsttool::TXT_NODE_CNT;
     return [incr TXT_NODE_CNT];
 }
 
@@ -103,7 +107,7 @@ proc ::rsttool::treeditor::tree::node::display {a_nid} {
     variable ::rsttool::treeditor::WTN;
     variable ::rsttool::treeditor::NODE_WIDTH;
 
-    set text "$NODES($a_nid,text)"
+    set text "$NODES($a_nid,name)\n$NODES($a_nid,text)"
     set xpos $NODES($a_nid,xpos)
     set ypos [expr $NODES($a_nid,ypos) + 2]
     if [group-node-p $a_nid] {
@@ -132,25 +136,27 @@ proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
 proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
     # set visibility status for all internal nodes belonging to the message
     # `$msg_id` to $show
-    variable ::rsttool::MSGID2NID;
+    variable ::rsttool::MSGID2ROOTS;
     variable ::rsttool::treeditor::VISIBLE_NODES;
 
-    if {! [info exists MSGID2NID($msg_id)]} {return}
+    if {! [info exists MSGID2ROOTS($msg_id)]} {return}
 
     # show/hide internal nodes pertaining to message `msg_id`
     if {$show} {
-	foreach nid $MSGID2NID($msg_id) {
+	foreach nid $MSGID2ROOTS($msg_id) {
 	    set VISIBLE_NODES($nid) 1
 	}
     } else {
-	foreach nid $MSGID2NID($msg_id) {
+	foreach nid $MSGID2ROOTS($msg_id) {
 	    if {[info exists VISIBLE_NODES($nid)]} {unset VISIBLE_NODES($nid)}
 	}
     }
 }
 
-proc ::rsttool::treeditor::tree::node::unlink-node {sat {redraw 1}} {
-    global node nid2msgid group_nodes currentmode
+proc ::rsttool::treeditor::tree::node::unlink {sat {redraw 1}} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
+    namespace import ::rsttool::utils::ldelete;
 
     # 1. handle missed clicks
     if {$sat == {} || $NODES($sat,parent) == {}} {return}
@@ -381,7 +387,7 @@ proc ::rsttool::treeditor::set-subtree-node-span {nid} {
 }
 
 proc ::rsttool::treeditor::make-span-label {span} {
-    # returns a text-lable for the span
+    # returns a text-label for the span
     if { [lindex $span 0] == [lindex $span 1] } {
 	return "[lindex $span 0]"
     } else {
@@ -958,36 +964,73 @@ proc ::rsttool::treeditor::tree::node::text-node-p {nid} {
     return 0
 }
 
-# TODO: test
-proc ::rsttool::treeditor::tree::node::get-ins-index {a_list a_start} {
+proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list} {
+    variable ::rsttool::NODES;
+
+    set ret -1;
+    set lstart 0;
+    set jstart 0;
+    set llen [llength $a_list];
+    set orig_len $llen;
+    set start $NODES($a_nid,start);
+
+    while {$llen > 0} {
+	set llen [expr $llen / 2];
+	set idx [expr $lstart + $llen];
+	if {$idx >= $orig_len} {break;}
+	set jstart [lindex $NODES([lindex $a_list $idx],start)];
+
+	if {$start == $jstart} {
+	    return $idx;
+	} elseif {$start > $jstart} {
+	    set ins_idx [expr $ins_idx + ($llen > 1? 0: 1)]
+	    set lstart $ins_idx;
+	}
+    }
+    return ret;
+}
+
+proc ::rsttool::treeditor::tree::node::insort {a_list a_start a_nid} {
     variable ::rsttool::NODES;
 
     set jstart {};
     set lstart 0;
     set llen [llength $a_list];
+    set orig_len $llen;
 
     while {$llen > 0} {
 	set llen [expr $llen / 2];
 	set ins_idx [expr $lstart + $llen];
+	if {$ins_idx >= $orig_len} {break;}
 	set jstart [lindex $NODES([lindex $a_list $ins_idx],start)];
-	if {$jstart > $a_start} {
-	    continue;
-	} else {
+
+	if {$a_start > $jstart} {
+	    set ins_idx [expr $ins_idx + ($llen > 1? 0: 1)]
 	    set lstart $ins_idx;
 	}
     }
-    return $ins_idx;
+    return [linsert $a_list $ins_idx $a_nid];
 }
 
 proc ::rsttool::treeditor::tree::node::clear {nid} {
     variable ::rsttool::NODES
     variable ::rsttool::ROOTS
     variable ::rsttool::NID2MSGID;
-    variable ::rsttool::MSGID2NID;
+    variable ::rsttool::MSGID2ROOTS;
+    variable ::rsttool::MSGID2TNODES;
     variable ::rsttool::NID2ENID;
     variable ::rsttool::MSGID2ENID;
     variable ::rsttool::NAME2NID;
-    variable VISIBLE_NODES;
+    variable ::rsttool::treeditor::VISIBLE_NODES;
+
+    # remove this node from MSGID's
+    set msgid $NID2MSGID($nid);
+    if [info exists MSGID2ROOTS($msgid)] {
+	set MSGID2ROOTS($msgid) [ldelete $MSGID2ROOTS($msgid) $nid];
+	if [text-node-p $nid] {
+	    set MSGID2TNODES($msgid) [ldelete $MSGID2TNODES($msgid) $nid];
+	}
+    }
 
     # clear NODES
     array unset NODES $nid;
@@ -1010,7 +1053,7 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
 
     # clean-up children
     # variable ::rsttool::NID2MSGID;
-    # variable ::rsttool::MSGID2NID;
+    # variable ::rsttool::MSGID2ROOTS;
     if [info exists NID2ENID($nid)] {
 	clear $NID2ENID($nid);
 	array unset NID2ENID $nid;
@@ -1025,14 +1068,9 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
 	}
     }
     array unset NODES $nid,children;
-
-    # remove this node from MSGID's
-    if [info exists MSGID2NID(msgid)] {
-	set MSGID2NID(msgid) [ldelete $MSGID2NID(msgid) $nid]
-    }
     array unset NID2MSGID $nid;
 
-    # remove this node from the set of vible nodes
+    # remove this node from the set of visible nodes
     array unset VISIBLE_NODES $nid;
 }
 

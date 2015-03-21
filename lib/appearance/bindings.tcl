@@ -14,12 +14,12 @@ proc ::rsttool::appearance::bindings::set_default {{text_w .editor.text}} {
     variable ::rsttool::segmenter::PRNT_TXTW;
 
     if {[tk windowingsystem] == "aqua"} {
-	$text_w tag bind bmarker <Control-Option-ButtonRelease-2> {
-	    delete-node $text_w %x %y
+	$TXTW tag bind bmarker <Control-Option-ButtonRelease-2> {
+	    ::rsttool::segmenter::delete $::rsttool::segmenter::TXTW %x %y
 	}
     } else {
-	$text_w tag bind bmarker <Control-Alt-ButtonRelease-3> {
-	    delete-node $text_w %x %y
+	$TXTW tag bind bmarker <Control-Alt-ButtonRelease-3> {
+	    ::rsttool::segmenter::delete $::rsttool::segmenter::TXTW %x %y
 	}
     }
 
@@ -39,7 +39,7 @@ proc ::rsttool::appearance::bindings::set_default {{text_w .editor.text}} {
 	break;
     }
 
-    $text_w tag bind next <ButtonRelease-1> {
+    $TXTW tag bind next <ButtonRelease-1> {
 	::rsttool::segmenter::segment
 	break;
     }
@@ -55,10 +55,10 @@ proc ::rsttool::appearance::bindings::set_default {{text_w .editor.text}} {
 
     $TXTW tag bind bmarker <Control-ButtonRelease-1> {
 	$::rsttool::segmenter::TXTW configure -cursor $::rsttool::TXT_CURSOR
-	::rsttool::segmenter::move-boundary $::rsttool::segmenter::TXTW %x %y
+	::rsttool::segmenter::move $::rsttool::segmenter::TXTW %x %y
 	set ::rsttool::segmenter::SEG_MRK_X {}
 	set ::rsttool::segmenter::SEG_MRK_Y {}
-	break
+	break;
     }
 }
 

@@ -42,7 +42,7 @@ proc ::rsttool::file::open {} {
     variable ::rsttool::relations::ERELATIONS;
 
     # clear current data
-    ::rsttool::check_state "Open"
+    ::rsttool::check-state "Open"
 
     # set up initial directory
     set idir $HOME;
@@ -82,8 +82,10 @@ proc ::rsttool::file::open {} {
 		parray ::rsttool::NID2MSGID;
 		puts stderr "NID2ENID = ";
 		parray ::rsttool::NID2ENID;
-		puts stderr "MSGID2NID = ";
-		parray ::rsttool::MSGID2NID;
+		puts stderr "MSGID2ROOTS = ";
+		parray ::rsttool::MSGID2ROOTS;
+		puts stderr "MSGID2TNODES = ";
+		parray ::rsttool::MSGID2TNODES;
 		puts stderr "MSGID2ENID = ";
 		parray ::rsttool::MSGID2ENID;
 		puts stderr "TXT_NODE_CNT = $::rsttool::TXT_NODE_CNT"
@@ -221,10 +223,11 @@ proc ::rsttool::file::write-tnode {a_nid a_prnt_elem a_xml_doc} {
 proc ::rsttool::file::read-tnode {a_segments} {
     variable ::rsttool::NODES;
     variable ::rsttool::NAME2NID;
-    variable ::rsttool::MSGID2NID;
+    variable ::rsttool::MSGID2ROOTS;
+    variable ::rsttool::MSGID2TNODES;
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::TXT_NODE_CNT;
-    namespace import ::rsttool::treeditor::tree::node::get-ins-index;
+    namespace import ::rsttool::treeditor::tree::node::insort;
 
     puts stderr "read-tnode: a_segments = $a_segments"
     if {$a_segments == {}} {return 0;}
@@ -264,22 +267,24 @@ proc ::rsttool::file::read-tnode {a_segments} {
 	    set NODES($nid,relname)  {};
 	    set NODES($nid,children) {};
 	}
+
 	if {[info exists NAME2NID($msgid,$nid)]} {
 	    error "Duplicate node name '$name'."
 	    return -8;
 	} else {
-	    set NAME2NID($msgid,$nid) $name
+	    set NAME2NID($msgid,$name) $nid
 	}
 	# update counter of text nodes
 	if {$nid > $TXT_NODE_CNT} {
 	    set TXT_NODE_CNT $nid
 	}
 	# update dictionaries
-	if {[info exists MSGID2NID($nid)]} {
-	    set idx [get-ins-index $MSGID2NID($msgid) $start];
-	    set MSGID2NID($msgid) [linsert $MSGID2NID($msgid) $idx $nid];
+	if {[info exists MSGID2ROOTS($msgid)]} {
+	    set MSGID2ROOTS($msgid) [insort $MSGID2ROOTS($msgid) $start $nid];
+	    set MSGID2TNODES($msgid) [insort $MSGID2TNODES($msgid) $start $nid];
 	} else {
-	    set MSGID2NID($msgid) [list $nid]
+	    set MSGID2ROOTS($msgid) [list $nid]
+	    set MSGID2TNODES($msgid) [list $nid]
 	}
 	set NID2MSGID($nid) $msgid
     }
@@ -301,10 +306,11 @@ proc ::rsttool::file::write-gnode {a_nid a_prnt_elem a_xml_doc} {
 
 proc ::rsttool::file::read-gnode {a_spans} {
     variable ::rsttool::NODES;
-    variable ::rsttool::MSGID2NID;
     variable ::rsttool::MSGID2ENID;
+    variable ::rsttool::MSGID2ROOTS;
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::GROUP_NODE_CNT;
+    namespace import ::rsttool::treeditor::tree::node::insort;
 
     if {$a_spans == {}} {return 0;}
     set nid {}; set start {}; set end {};
@@ -352,11 +358,10 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	}
 	set NID2MSGID($nid) [list $msgid1]
 
-	if {[info exists MSGID2NID($msgid1)]} {
-	    set idx [get-ins-index $MSGID2NID($msgid1) $start]
-	    set MSGID2NID($msgid1) [linsert $MSGID2NID($msgid1) $idx $nid]
+	if {[info exists MSGID2ROOTS($msgid1)]} {
+	    set MSGID2ROOTS($msgid1) [insort $MSGID2ROOTS($msgid1) $idx $nid]
 	} else {
-	    set MSGID2NID($msgid1) [list $nid]
+	    error "Non-terminal node ($nid) defined for message without terminal nodes ($msgid1)."
 	}
 
 	if {$nid > $GROUP_NODE_CNT} {
@@ -521,7 +526,7 @@ proc ::rsttool::file::save {} {
 	}
 	::close $tmpfile;
 	file rename -force $tmpfname $CRNT_ANNO_FILE;
-	set MODIFIED 0;
+	::rsttool::set-state {unchanged};
     }
 }
 
