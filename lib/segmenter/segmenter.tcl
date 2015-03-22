@@ -11,6 +11,8 @@ namespace eval ::rsttool::segmenter {
     variable PRNT_TXTW {};
     variable SEG_MRK_X {};
     variable SEG_MRK_Y {};
+
+    namespace export message;
 }
 
 ##################################################################
@@ -75,9 +77,9 @@ proc ::rsttool::segmenter::uninstall {} {
 
 proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
     # display already EDU segements in widget `path_name`
+    variable ::rsttool::NODES;
     variable ::rsttool::FORREST;
     variable ::rsttool::MSGID2TNODES;
-    variable ::rsttool::NODES;
     variable ::rsttool::MSG_TXT_NODE_CNT;
     variable OFFSET_SHIFT;
 
@@ -126,7 +128,7 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
 	$path_name insert end $bmarker bmarker
 	# update counter of artificial characters
 	incr OFFSET_SHIFT [string length $bmarker]
-	incr MSG_TXT_NODE_CNT;
+	set MSG_TXT_NODE_CNT $NODES($nid,name);
     }
     # put `old` tag for the case when no previos segments were
     # annotated
@@ -235,7 +237,7 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     variable OFFSET_SHIFT;
 
     namespace import ::rsttool::treeditor::tree::node::show-nodes;
-    # puts stderr "next-mesage called"
+    puts stderr "next-mesage: direction = $direction;\nMSG_QUEUE = $MSG_QUEUE;\nMSG_PREV_QUEUE = $MSG_PREV_QUEUE"
 
     # remember current message id
     set prev_msg_id $CRNT_MSGID
@@ -437,6 +439,7 @@ proc ::rsttool::segmenter::delete {a_path x y} {
     variable ::rsttool::NODES;
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::TXT_NODE_CNT;
+    variable ::rsttool::MSG_TXT_NODE_CNT;
 
     # obtain number of node located at coordinates (x, y)
     lassign [get-seg-nid $a_path $x $y {} $CRNT_MSGID] inid istart iend;
@@ -445,8 +448,10 @@ proc ::rsttool::segmenter::delete {a_path x y} {
     if {$istart == {}} {
 	return
     } elseif {$inid == $TXT_NODE_CNT} {
-	set text_nodes [ldelete $text_nodes $inid];
 	incr TXT_NODE_CNT -1;
+	incr MSG_TXT_NODE_CNT -1;
+    } elseif {$NODES($inid,name) == $MSG_TXT_NODE_CNT} {
+	incr MSG_TXT_NODE_CNT -1;
     }
     # find next node in text
     set nxtstart [lindex [$a_path tag nextrange bmarker $iend] 0]

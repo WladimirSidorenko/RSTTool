@@ -16,6 +16,7 @@ namespace eval ::rsttool::treeditor {
     variable CURRENT_XPOS 0;
     variable RTBAR {};
     variable RSTW {};
+    variable DRAGGED_NID {};
     variable NEWEST_NODE;
     variable WAITED_NID;
     variable DISCO_NODE {};
@@ -104,8 +105,6 @@ proc ::rsttool::treeditor::toggle-button {mode dir} {
 	link   {$RTBAR.link configure -relief $dir}
 	rename {$RTBAR.rename configure -relief $dir}
 	disconnect {$RTBAR.disconnect configure -relief $dir}
-	autolink {$RTBAR.autolink configure -relief $dir}
-	parenthetical {}
 	nothing {}
     }
 }
@@ -122,71 +121,56 @@ proc ::rsttool::treeditor::set-mode {mode} {
     toggle-button $CURRENTMODE "sunken"
 
     bind $RSTW <Control-ButtonRelease-1> {
-	if {[clicked-node %x %y] != 0} {
-	    collapse [clicked-node %x %y]}
+	set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
+	if {$iclicked != {}} {
+	    ::rsttool::treeditor::tree::node::collapse $iclicked;}
     }
     bind $RSTW <ButtonRelease-2> {
-	if {[clicked-node %x %y] != 0} {
-	    collapse [clicked-node %x %y]}
+	set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
+	if {$iclicked != {}} {
+	    ::rsttool::treeditor::tree::node::collapse $iclicked;}
     }
     bind $RSTW <Shift-Control-ButtonRelease-1> {
-	if {[clicked-node %x %y] != 0} {
-	    expand [clicked-node %x %y]}
+	set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
+	if {$iclicked != {}} {
+	    ::rsttool::treeditor::tree::node::expand $iclicked;}
     }
     bind $RSTW <ButtonRelease-3> {
-	if {[clicked-node %x %y] != 0} {
-	    expand [clicked-node %x %y]}
+	set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
+	if {$iclicked != {}} {
+	    ::rsttool::treeditor::tree::node::expand $iclicked;}
     }
     switch -- $mode {
-	autolink { $RSTW config -cursor hand2
-	    bind $RSTW <ButtonPress-1> {}
-	    bind $RSTW <ButtonRelease-1> {
-		set clicked_node [clicked-node %x %y]
-		if { [legal-node $clicked_node] != 0} {
-		    autolink_nodes $clicked_node
-		}
-	    }
-	}
 	link   { $RSTW config -cursor sb_h_double_arrow
 	    $RSTW bind nodes <Button-1> {}
 	    bind $RSTW <ButtonPress-1> {
-		if {[clicked-node %x %y] != 0} {
-		    set NEWEST_NODE [clicked-node %x %y] } }
+		set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
+		if {$iclicked != {}} {
+		    set ::rsttool::treeditor::DRAGGED_NID $iclicked } }
 	    bind $RSTW <ButtonRelease-1> {
-		if {[clicked-node %x %y] != 0} {
-		    autolink_nodes [clicked-node %x %y] } }
+		set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
+		if {$iclicked != {}} {
+		    ::rsttool::treeditor::tree::link-nodes $iclicked } }
 	}
 	disconnect { $RSTW config -cursor X_cursor
 	    bind $RSTW <ButtonPress-1> {}
 	    $RSTW bind nodes <Button-1> {}
 	    bind $RSTW <ButtonRelease-1> {
-		if {[clicked-node %x %y] != 0} {
-		    unlink-node [clicked-node %x %y]
-		    redisplay-net
+		set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
+		if {$iclicked != {}} {
+		    ::rsttool::treeditor::tree::unlink-nodes $iclicked;
+		    ::rsttool::treeditor::layout::redisplay-net;
 		}
-	    }
-	}
-	modify { $RSTW config -cursor X_cursor
-	    bind $RSTW <ButtonPress-1> {}
-	    $RSTW bind nodes <Button-1> {}
-	    bind $RSTW <ButtonRelease-1> {
-		if {[clicked-node %x %y] != 0} {
-		    disconnect_node [clicked-node %x %y] modify}
 	    }
 	}
 	rename { $RSTW config -cursor hand1
 	    bind $RSTW <ButtonPress-1> {}
 	    bind $RSTW <ButtonRelease-1> {
-		if { [clicked-node %x %y] != 0} {
-		    change_rel [clicked-node %x %y]
+		set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
+		if {$iclicked != {}} {
+		    ::rsttool::treeditor::tree::arc::change $iclicked;
 		}
 	    }
-	}
-	parenthetical { $RSTW config -cursor X_cursor
-	    bind $RSTW <ButtonPress-1> {
-		if {[clicked-node %x %y] != 0} {
-		    set WAITED_NID [clicked-node %x %y] } }
-	    bind $RSTW <ButtonRelease-1> {}
 	}
 	nothing { $RSTW config -cursor X_cursor
 	    bind $RSTW <ButtonPress-1> {}

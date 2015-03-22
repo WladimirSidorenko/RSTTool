@@ -166,18 +166,18 @@ proc ::rsttool::main {{argv {}}} {
     # abbreviations::load abbreviations
     # helper::load
 
-    wm protocol . WM_DELETE_WINDOW ::rsttool::quit
-    frame .segmentframe
+    wm protocol . WM_DELETE_WINDOW ::rsttool::quit;
+    frame .segmentframe;
 
-    toolbar::install
-    treeditor::install
-    segmenter::install
+    toolbar::install;
+    treeditor::install;
+    segmenter::install;
 
     # helper::init
-    appearance::set_default
-    appearance::bindings::set_default
+    appearance::set_default;
+    appearance::bindings::set_default;
 
-    catch {source $env(HOME)/.wishrc}
+    catch {source $env(HOME)/.wishrc};
     set-state {unchanged};
 }
 

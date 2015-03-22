@@ -2,6 +2,12 @@
 
 namespace eval ::rsttool::relations {
     variable DATADIR [file join [pwd] data];
+
+    variable INTERNAL {internal};
+    variable EXTERNAL {external};
+    variable HYPOTACTIC {hyp};
+    variable PARATACTIC {par};
+
     variable RELATIONS;
     array set RELATIONS {};
     variable TYPE2REL;
@@ -25,6 +31,11 @@ proc ::rsttool::relations::reset {} {
 
 proc ::rsttool::relations::load {a_fname {a_dirname {}} {type "internal"}} {
     variable DATADIR;
+    variable INTERNAL;
+    variable EXTERNAL;
+    variable HYPOTACTIC;
+    variable PARATACTIC;
+
     variable ::rsttool::helper::RELHELP;
     namespace import ::rsttool::file::xml-get-attr;
 
@@ -49,20 +60,20 @@ proc ::rsttool::relations::load {a_fname {a_dirname {}} {type "internal"}} {
     # obtain target array
     set relarr {};
     set type2rel {};
-    switch -- $type {
-	"internal" {
+    switch -nocase -- "$type" \
+	$INTERNAL {
 	    set relarr ::rsttool::relations::RELATIONS;
 	    set type2rel ::rsttool::relations::TYPE2REL;
-	}
-	"external" {
+	} \
+	$EXTERNAL {
 	    set relarr ::rsttool::relations::ERELATIONS;
 	    set type2rel ::rsttool::relations::TYPE2EREL;
-	}
+	} \
 	default {
 	    error "Unrecognized relation type '$type'.";
 	    return -3;
 	}
-    }
+
     # populate set of relations
     set relname {}; set reltype {}; set help {}; set elname {};
     foreach ichild [$root childNodes] {
@@ -75,9 +86,19 @@ proc ::rsttool::relations::load {a_fname {a_dirname {}} {type "internal"}} {
 	if {[set relname [xml-get-attr $ichild {name}]] == {}} {
 	    return -5;
 	}
-	if {[set reltype [xml-get-attr $ichild {type}]] == {}} {
-	    return -6;
-	}
+	switch -- [set reltype [xml-get-attr $ichild {type}]] \
+	    $PARATACTIC - \
+	    $HYPOTACTIC {;} \
+	    {} {
+		error "Dependency type not specified for relation '$relname'."
+		return -6;
+	    } \
+	    default {
+		error "Invalid dependency type for relation '$relname' should be\
+ '$PARATACTIC' or '$HYPOTACTIC'."
+		return -6;
+	    }
+
 	if {[info exists [subst $relarr]($relname)]} {
 	    error "Duplicate definition of relation $relname"
 	    return -7;
@@ -86,14 +107,15 @@ proc ::rsttool::relations::load {a_fname {a_dirname {}} {type "internal"}} {
 	    lappend [subst $type2rel]($reltype) $relname;
 
 	    # set help for that relation
-	    set RELHELP($relname,description) [$ichild selectNodes description]
-	    set RELHELP($relname,nucleus) [$ichild selectNodes nucleus]
-	    set RELHELP($relname,satellite) [$ichild selectNodes satellite]
-	    set RELHELP($relname,nucsat) [$ichild selectNodes nucsat]
-	    set RELHELP($relname,effect) [$ichild selectNodes effect]
-	    set RELHELP($relname,connectives) [$ichild selectNodes connectives]
-	    set RELHELP($relname,example) [$ichild selectNodes example]
-	    set RELHELP($relname,comment) [$ichild selectNodes comment]
+	    set RELHELP($relname,$type,comment) [$ichild selectNodes comment];
+	    set RELHELP($relname,$type,connectives) [$ichild selectNodes connectives];
+	    set RELHELP($relname,$type,description) [$ichild selectNodes description];
+	    set RELHELP($relname,$type,effect) [$ichild selectNodes effect];
+	    set RELHELP($relname,$type,example) [$ichild selectNodes example];
+	    set RELHELP($relname,$type,nucleus) [$ichild selectNodes nucleus];
+	    set RELHELP($relname,$type,nucsat) [$ichild selectNodes nucsat];
+	    set RELHELP($relname,$type,satellite) [$ichild selectNodes satellite];
+	    set RELHELP($relname,$type,type) $reltype;
 	}
     }
     return 0;

@@ -50,7 +50,7 @@ proc ::rsttool::treeditor::tree::arc::erase {a_nid} {
     }
 }
 
-proc ::rsttool::treeditor::tree::arc::change_rel {nid {relname {}} } {
+proc ::rsttool::treeditor::tree::arc::change {nid {relname {}} } {
     variable ::rsttool::NODES;
     variable ::rsttool::relations::RELATIONS;
     variable ::rsttool::treeditor::CURRENTMODE;
@@ -87,9 +87,37 @@ proc ::rsttool::treeditor::tree::arc::change_rel {nid {relname {}} } {
     set-mode $cmode
 }
 
-proc ::rsttool::treeditor::choose-label {sat type {external 0}} {
+proc ::rsttool::treeditor::tree::arc::choose-label {sat type {external 0}} {
+    variable ::rsttool::treeditor::RSTW;
+    variable ::rsttool::relations::RELATIONS;
+    variable ::rsttool::relations::ERELATIONS;
+    namespace import ::rsttool::treeditor::tree::popup-choose-from-list;
+
+    set relations {};
+    switch -nocase -- $type {
+	"nucleus" -
+	"satellite" {
+
+	}
+	"nucleus-embedded" -
+	"satellite-embedded" {
+
+	}
+	"multinuclear" {
+
+	}
+	default {
+	    error "Unknown dependency type: '$type'"
+	    return {};
+	}
+    }
+
+    set coords [screen-coords [ntw $sat] $RSTW];
+    return [popup-choose-from-list $relations \
+		[expr int([lindex $coords 0])]\
+		[expr int([lindex $coords 1])] 0 1];
+
     global relations extRelations rstw schemas schema_elements
-    debug "choose-label: $sat $type"
 
     set coords [screen-coords [ntw $sat] $RSTW]
     set conv(satellite) rst
@@ -114,57 +142,6 @@ proc ::rsttool::treeditor::choose-label {sat type {external 0}} {
 	# this must be a schema type, choose from that set
 	set range $schema_elements($type)
     }
-    return [popup-choose-from-list $range\
-		[expr int([lindex $coords 0])]\
-		[expr int([lindex $coords 1])] 0 1]
-}
-
-proc ::rsttool::treeditor::popup-choose-from-list {Items xpos ypos {put_cancel {}} {show_tooltip 0}} {
-    global pcfl_selection
-    set pcfl_selection {}
-    if {[winfo exists .tmpwin]} {destroy .tmpwin}
-    menu .tmpwin -tearoff 0
-    set num_items 0
-    set cancel_exists 0
-    set my_menu .tmpwin
-    if {$show_tooltip} {
-	bind-menu-tooltip $my_menu
-    }
-
-    foreach item $Items {
-	if {$num_items < 33} {
-	    AddMenuItem $my_menu $item "set pcfl_selection $item"
-	} else {
-	    #set underscore ""
-	    #append underscore $item
-	    #set item $underscore
-	    menu $my_menu.$item -tearoff 0
-	    AddMenuCascade $my_menu NEXT $my_menu.$item
-	    if {$show_tooltip} {
-		bind-menu-tooltip $my_menu.$item
-	    }
-	    AddMenuItem $my_menu CANCEL "set pcfl_selection {}"
-	    set cancel_exists 1
-	    set my_menu $my_menu.$item
-	    AddMenuItem $my_menu $item "set pcfl_selection $item"
-	    set num_items 0
-	}
-	incr num_items
-    }
-
-    if { $put_cancel != "NOcancel" && $cancel_exists == 0 } {
-	AddMenuItem .tmpwin CANCEL "set pcfl_selection {}"
-    }
-
-    # now make the popup
-    .tmpwin post $xpos $ypos
-    if {[tk windowingsystem] != "aqua"} {
-	tkwait variable pcfl_selection
-    }
-    .tmpwin unpost
-    if [winfo exists .tmpwin.tooltip] {destroy .tmpwin.tooltip}
-
-    return $pcfl_selection
 }
 
 ##################################################################
