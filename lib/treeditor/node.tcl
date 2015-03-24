@@ -43,7 +43,7 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	    set MSGID2TNODES($msgid) [list $nid]
 	}
     } else {
-	if {$name == {}} {set name "$start $end"}
+	if {$name == {}} {set name "$NODES($start,name)-$NODES($end,name)"}
 	set nid [unique-gnode-id]
     }
     set NODES($nid,type) $type
@@ -461,12 +461,6 @@ proc ::rsttool::treeditor::show-node {nid} {
     }
 }
 
-proc ::rsttool::treeditor::bottom-point {item} {
-    variable RSTW
-    list [lindex [$RSTW coords $item] 0]\
-	[lindex [$RSTW bbox $item] 3]
-}
-
 proc ::rsttool::treeditor::describe-node {nid} {
 
     global node
@@ -667,6 +661,7 @@ proc ::rsttool::treeditor::tree::node::insort {a_list a_start a_nid} {
 
     set jstart {};
     set lstart 0;
+    set ins_idx 0;
     set llen [llength $a_list];
     set orig_len $llen;
 

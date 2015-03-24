@@ -206,7 +206,6 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     } else {
 	link-prnt-to-chld $prnt_nid $chld_nid $relation $NODES($prnt_nid,parent);
     }
-    ::rsttool::treeditor::layout::redisplay-net;
     ::rsttool::set-state {changed} \
 	"Linked $NODES($chld_nid,name) to $NODES($prnt_nid,name) as $relation";
     # xscrollto [max $NODES($dragged_nid,xpos) $NODES($clicked_nid,xpos)]
@@ -224,17 +223,31 @@ proc ::rsttool::treeditor::tree::link-prnt-to-chld {a_prnt_nid a_chld_nid a_rela
     variable ::rsttool::NODES;
     variable ::rsttool::NID2ENID;
     variable ::rsttool::MSGID2ROOTS;
+    variable ::rsttool::NID2MSGID;
     namespace import ::rsttool::utils::ldelete;
 
-    set prnt {};
-    # update structure
+    if {$a_ext_rel} {return;}
+
+    set prnt_wdgt [ntw $a_prnt_nid]
+    set chld_wdgt [ntw $a_chld_nid]
+
+    set chld_msgid $NID2MSGID($a_chld_nid);
+    # update parent and relation of the child node
     set NODES($a_chld_nid,parent) $a_prnt_nid;
-    # create a span node for the parent, if necessary
+    set NODES($a_chld_nid,relname) $a_relation;
+    # append child node to the list of the parent's children
+    set NODES($a_prnt_nid,children) [node::insort $NODES($a_prnt_nid,children) \
+					 $NODES($a_chld_nid,start) $a_chld_nid];
+
+    # remove child node from the list of message roots
+    set MSGID2ROOTS($chld_msgid) [ldelete $MSGID2ROOTS($chld_msgid) $a_chld_nid];
+
+    # create a span node for the parent, if it's needed
     if {$a_span_nid == {}} {
-	set a_span_nid [node::make ($a_ext_rel?"external":"internal") \
-			    [expr min($NODES($a_chld_nid,start),$NODES($a_prnt_nid,start))] \
-			    [expr max($NODES($a_chld_nid,end),$NODES($a_prnt_nid,end))] \
-			   $NID2MSGID($a_prnt_nid)];
+	set a_span_nid [node::make {$a_ext_rel?"external":"internal"} \
+			    [expr $NODES($a_chld_nid,start) < $NODES($a_prnt_nid,start) ? $a_chld_nid: $a_prnt_nid] \
+			    [expr $NODES($a_chld_nid,end) < $NODES($a_prnt_nid,end) ? $a_prnt_nid: $a_chld_nid] \
+			    $NID2MSGID($a_prnt_nid)];
 	if {$a_ext_rel} {
 	    set NID2ENID($a_prnt_nid) $a_span_nid;
 	}
@@ -245,34 +258,15 @@ proc ::rsttool::treeditor::tree::link-prnt-to-chld {a_prnt_nid a_chld_nid a_rela
 	lappend NODES($a_prnt_nid,parent) $a_span_nid;
 	set NODES($a_prnt_nid,relname) {span};
 	# remove parent node from the roots
-	set MSGID2ROOTS($a_prnt_nid) [ldelete $MSGID2ROOTS($prnt_msgid) $] $a_prnt_nid;
+	set prnt_msgid $NID2MSGID($a_prnt_nid);
+	set MSGID2ROOTS($a_prnt_nid) [ldelete $MSGID2ROOTS($prnt_msgid) $a_prnt_nid];
+	arc::display $prnt_wdgt [ntw $a_span_nid] ::rsttool::relations::SPAN;
     }
-    # append child node to parent
-    set NODES($a_prnt_nid,children) [node::insort $NODES($a_prnt_nid,children) \
-					 $NODES($a_chld_nid,start) $a_chld_nid];
-    # set parent of the child node
-    lappend NODES($a_chld_nid,parent) $a_prnt_nid;
 
-    # remove child node from the list of message roots
-    if {! $a_ext_rel} {
-	set MSGID2ROOTS($a_chld_nid) [ldelete $MSGID2ROOTS($chld_msgid) $a_chld_nid];
-    }
-}
-
-proc ::rsttool::treeditor::link-par-to-child {par child relation} {
-    global node
-    # puts stderr "link-par-to-child: Linking child $child to parent $par"
-    if {$par == $child} {return;}
-    # puts stderr "node($par,children) before: $NODES($par,children)"
-    set node($par,children) [lsort -integer [list {*}$NODES($par,children) $child]]
-    # puts stderr "node($par,children) after: $NODES($par,children)"
-
-    # puts stderr "node($child,parent) before: $NODES($child,parent)"
-    set node($child,parent) $par
-    # puts stderr "node($child,parent) after: $NODES($child,parent)"
-    set node($child,relname) $relation
-    # puts stderr "link-par-to-child: adjust-after-change par = $par child = $child 1"
-    adjust-after-change $par $child 1
+    # reposition child node at the same height as the parent
+    # draw an arc from child to parent node
+    arc::display $prnt_wdgt $chld_wdgt ::rsttool::relations::HYPOTACTIC;
+    ::rsttool::treeditor::layout::restructure-upwards $a_chld_nid;
 }
 
 proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {

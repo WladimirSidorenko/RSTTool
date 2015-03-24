@@ -4,6 +4,7 @@ namespace eval ::rsttool::relations {
     variable DATADIR [file join [pwd] data];
 
     variable INTERNAL {internal};
+    variable SPAN {span};
     variable EXTERNAL {external};
     variable HYPOTACTIC {hyp};
     variable PARATACTIC {par};
