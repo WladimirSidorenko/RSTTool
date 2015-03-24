@@ -23,20 +23,24 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::treeditor::VISIBLE_NODES;
 
+    if {$msgid == {}} {
+	set msgid $CRNT_MSGID;
+    }
+
     if { $type ==  "text"  } {
 	if {$name == {}} {set name [unique-tnode-name]}
 	set nid [unique-tnode-id]
 	# save mapping from node id to message id
-	set NID2MSGID($nid) [list $CRNT_MSGID]
+	set NID2MSGID($nid) [list $msgid]
 	# save mapping from message id to node id
-	if {[info exists MSGID2ROOTS($CRNT_MSGID)]} {
+	if {[info exists MSGID2ROOTS($msgid)]} {
 	    # since we might add node after some group nodes were
 	    # created, we need to re-sort the node list
-	    set MSGID2ROOTS($CRNT_MSGID) [lsort -integer [concat $MSGID2ROOTS($CRNT_MSGID) $nid]]
-	    set MSGID2TNODES($CRNT_MSGID) [lsort -integer [concat $MSGID2TNODES($CRNT_MSGID) $nid]]
+	    set MSGID2ROOTS($msgid) [insort $MSGID2ROOTS($msgid) $start $nid]
+	    set MSGID2TNODES($msgid) [insort $MSGID2TNODES($msgid) $start $nid]
 	} else {
-	    set MSGID2ROOTS($CRNT_MSGID) [list $nid]
-	    set MSGID2TNODES($CRNT_MSGID) [list $nid]
+	    set MSGID2ROOTS($msgid) [list $nid]
+	    set MSGID2TNODES($msgid) [list $nid]
 	}
     } else {
 	if {$name == {}} {set name "$start $end"}
@@ -48,7 +52,7 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     set NODES($nid,children) {}
     set NODES($nid,start) $start
     set NODES($nid,end) $end
-    set NAME2NID($CRNT_MSGID,$name) $nid;
+    set NAME2NID($msgid,$name) $nid;
     set VISIBLE_NODES($nid) 1
     set-text $nid $msgid;
     return $nid

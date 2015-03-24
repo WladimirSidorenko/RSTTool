@@ -107,22 +107,16 @@ proc ::rsttool::relations::load {a_fname {a_dirname {}} {type "internal"}} {
 	    set [subst $relarr]($relname) $reltype;
 	    lappend [subst $type2rel]($reltype) $relname;
 
-	    puts stderr "ichild name = $elname"
-	    puts stderr "ichild selectNodes description = [$ichild selectNodes .//connectives]"
-	    if {[$ichild selectNodes .//description] != {}} {
-		puts stderr "ichild selectNodes description text = [[$ichild selectNodes ./connectives/text()] nodeValue]"
-	    }
-
 	    # set help for that relation
 	    set RELHELP($relname,$type) {};
-	    set RELHELP($relname,$type,comment) [xml-get-text [$ichild selectNodes .//comment/text()]];
-	    set RELHELP($relname,$type,connectives) [xml-get-text [$ichild selectNodes .//connectives/text()]];
-	    set RELHELP($relname,$type,description) [xml-get-text [$ichild selectNodes .//description/text()]];
-	    set RELHELP($relname,$type,effect) [xml-get-text [$ichild selectNodes .//effect/text()]];
-	    set RELHELP($relname,$type,example) [xml-get-text [$ichild selectNodes .//example/text()]];
-	    set RELHELP($relname,$type,nucleus) [xml-get-text [$ichild selectNodes .//nucleus/text()]];
-	    set RELHELP($relname,$type,nucsat) [xml-get-text [$ichild selectNodes .//nucsat/text()]];
-	    set RELHELP($relname,$type,satellite) [xml-get-text [$ichild selectNodes .//satellite/text()]];
+	    set RELHELP($relname,$type,comment) "[xml-get-text [$ichild selectNodes ./comment/text()]]";
+	    set RELHELP($relname,$type,connectives) "[xml-get-text [$ichild selectNodes ./connectives/text()]]";
+	    set RELHELP($relname,$type,description) "[xml-get-text [$ichild selectNodes ./description/text()]]";
+	    set RELHELP($relname,$type,effect) "[xml-get-text [$ichild selectNodes ./effect/text()]]";
+	    set RELHELP($relname,$type,example) "[xml-get-text [$ichild selectNodes ./example/text()]]";
+	    set RELHELP($relname,$type,nucleus) "[xml-get-text [$ichild selectNodes ./nucleus/text()]]";
+	    set RELHELP($relname,$type,nucsat) "[xml-get-text [$ichild selectNodes ./nucsat/text()]]";
+	    set RELHELP($relname,$type,satellite) "[xml-get-text [$ichild selectNodes ./satellite/text()]]";
 	    set RELHELP($relname,$type,type) $reltype;
 	}
     }

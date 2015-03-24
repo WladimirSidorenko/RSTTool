@@ -116,10 +116,10 @@ proc ::rsttool::file::open {} {
 		if {[::rsttool::relations::load [$child text] $prj_dir "internal"]} {
 		    set error 1; break;
 		};
-		puts stderr "RELATIONS = ";
-		parray ::rsttool::relations::RELATIONS;
-		puts stderr "RELHELP = ";
-		parray ::rsttool::helper::RELHELP;
+		# puts stderr "RELATIONS = ";
+		# parray ::rsttool::relations::RELATIONS;
+		# puts stderr "RELHELP = ";
+		# parray ::rsttool::helper::RELHELP;
 	    }
 	    "#comment" {
 		continue;
@@ -456,7 +456,7 @@ proc ::rsttool::file::_read_message {a_msg {a_prnt_id {}}} {
     }
     # add this message to the FORREST as a 3-tuple of message
     # text, id of its parent, and list of its children
-    set msg_txt [::rsttool::utils::strip [$a_msg text]];
+    set msg_txt [xml-get-text [$a_msg selectNodes ./text/text()]];
     set FORREST($msg_id) [list $msg_txt $a_prnt_id {}]
     # update parent's child list
     if {$a_prnt_id != {}} {
@@ -468,7 +468,8 @@ proc ::rsttool::file::_read_message {a_msg {a_prnt_id {}}} {
     }
     # recurse int children
     foreach child [$a_msg childNodes] {
-	if {[$child nodeName] == "#text"} {continue;}
+	set chname [$child nodeName];
+	if {$chname == "#text" || $chname == "text"} {continue;}
 	if {[set ret [_read_message $child $msg_id]]} {
 	    return $ret;
 	}
@@ -537,6 +538,29 @@ proc ::rsttool::file::revert {} {
     variable ::rsttool::MODIFIED;
 }
 
+# look for file in relative and absolute location and return first
+# file found
+proc ::rsttool::file::search {a_fname a_dirname} {
+    set fname {};
+    foreach ifname [list [file join $a_dirname $a_fname] $a_fname] {
+	if {[file exists $ifname] && [file isfile $ifname]} {
+	    set fname $ifname;
+	    break;
+	}
+    }
+    return [file normalize $fname];
+}
+
+# open file and read XML data
+proc ::rsttool::file::load-xml {a_fname} {
+    namespace import ::rsttool::utils::htmlentities::decode;
+
+    set ifile [::open $a_fname r];
+    set idoc [read $ifile [file size $a_fname]];
+    close $ifile;
+    return [dom parse [decode $idoc]];
+}
+
 # check if given XML element contains requested attribute
 proc ::rsttool::file::xml-get-attr {a_elem a_attr} {
     if {[set ret [$a_elem getAttribute $a_attr]] == {}} {
@@ -553,27 +577,6 @@ proc ::rsttool::file::xml-get-text {a_elem} {
 	return [strip [$a_elem nodeValue]];
     }
     return {};
-}
-
-# open file and read XML data
-proc ::rsttool::file::load-xml {a_fname} {
-    set ifile [::open $a_fname r];
-    set idoc [read $ifile [file size $a_fname]];
-    close $ifile;
-    return [dom parse $idoc];
-}
-
-# look for file in relative and absolute location and return first
-# file found
-proc ::rsttool::file::search {a_fname a_dirname} {
-    set fname {};
-    foreach ifname [list [file join $a_dirname $a_fname] $a_fname] {
-	if {[file exists $ifname] && [file isfile $ifname]} {
-	    set fname $ifname;
-	    break;
-	}
-    }
-    return [file normalize $fname];
 }
 
 ##################################################################

@@ -175,162 +175,88 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     puts stderr "relation = $relation";
     if {$relation == {}} {return;}
 
-    return;
-
-    # determine if ambiguous
-    if {$type == "satellite" || $type == "satellite-embedded"} {
-	if { $ambiguity == {} } {
-	    foreach child $NODES($clicked_nid,children) {
-		if { [relation-type $NODES($child,relname)] == "rst" || \
-			 [relation-type $NODES($child,relname)] == "embedded"} {
-		    # 1) ambiguous
-		    set ambiguity "unknown"
-		}
-	    }
+    set multinuc 0;
+    set prnt_nid $clicked_nid;
+    set chld_nid $dragged_nid;
+    switch -nocase  -- $type {
+	"nucleus" {}
+	"nucleus-embedded" {
+	    set relation "$relation-embedded";
 	}
-    } elseif { $type == "multinuclear" } {
-	if {"$NODES($clicked_nid,type)" == "multinuc"} {
-	    # 1) ambiguous
-	    if { "$ambiguity" == {} } {
-		set ambiguity "unknown"
-	    }
+	"satellite" {
+	    set prnt_nid $clicked_nid;
+	    set chld_nid $dragged_nid;
 	}
-    } elseif {($type == "nucleus" || $type == "nucleus-embedded") && \
-		  $NODES($clicked_nid,parent) != {} && \
-		  [info exists visible_nodes($NODES($clicked_nid,parent))]} {
-	return
+	"satellite-embedded" {
+	    set prnt_nid $clicked_nid;
+	    set chld_nid $dragged_nid;
+	    set relation "$relation-embedded";
+	}
+	"multinuclear" {
+	    set mutinuc 1;
+	}
+	default {
+	    error "Invalid dependecy type: $type";
+	    return;
+	}
     }
 
-    # puts stderr "autolink_nodes: ambiguity = $ambiguity"
-    if {$ambiguity == "unknown"} {
-	set coords [screen-coords [ntw $clicked_nid] $RSTW]
-	set ambiguity [popup-choose-from-list {above below}\
-			   [expr int([lindex $coords 0])] [expr int([lindex $coords 1])] NOcancel]
-    }
-
-    if {$type == "multinuclear" && $ambiguity == "below"} {
-	# exception #1
-	set i 0
-	set child 0
-	while { $child != {} } {
-	    set child [lindex $children $i]
-	    if {[relation-type $NODES($child,relname)] == "multinuc"} {
-		set relation $NODES($child,relname)
-		set child {}
-	    }
-	    incr i
-	}
-	if {$clicked_nid == $dragged_nid} {return}
-	link-par-to-child $clicked_nid $dragged_nid $relation
-    } elseif { ($type == "satellite" || $type == "satellite-embedded") && \
-		   $ambiguity == "above" } {
-	#exception #2
-	set relation [choose-label $clicked_nid $type $ext_connection]
-	if {$relation == {} || $clicked_nid == $dragged_nid} {return}
-	link-par-to-child $clicked_nid $dragged_nid $relation
-    } elseif { $type == "schema" } {
-	# exception #3
-	set relation [choose-label $clicked_nid $type $ext_connection]
-	if {$relation == {}} {return}
-	set node($clicked_nid,constit) $relation
+    if {$multinuc} {
+	link-multinuc $prnt_nid $chld_nid $relation $NODES($prnt_nid,parent);
     } else {
-	# standard algorithm
-	if {$relation == {}} {
-	    set relation [choose-label $clicked_nid $type $ext_connection]
-	}
-	if {$relation == {}} {return}
-
-	if {$ambiguity == {}} {
-	    incr last_group_node_id
-	    add-group-node $last_group_node_id
-	    clear $last_group_node_id
-	    set visible_nodes($last_group_node_id) 1
-	}
-
-	if {$ext_connection} {
-	    # remember ids of messages which the new external node
-	    # connects.  Additionally, if external parent already has an
-	    # ancestor, link the newly create common group node to that
-	    # ancestor.
-	    if {$clicked_is_prnt} {
-		# if dragged and clicked nodes belong to different messages,
-		# remember both messages for the new group node
-		set nid2msgid($last_group_node_id) [list $clicked_msgid $dragged_msgid]
-		# if {[info exists node($clicked_nid,parent)] && \
-		    # 	    $NODES($clicked_nid,parent) != {}} {
-		# 	set $NODES($last_group_node_id,parent) $NODES($clicked_nid,parent)
-		# }
-		set msgs2extnid($clicked_msgid,$dragged_msgid) [list $last_group_node_id $clicked_nid span \
-								    $clicked_nid $dragged_nid $relation]
-	    } else {
-		set nid2msgid($last_group_node_id) [list $dragged_msgid $clicked_msgid]
-		# if {[info exists node($dragged_nid,parent)] && \
-		    # 	    $NODES($dragged_nid,parent) != {}} {
-		# 	set $NODES($last_group_node_id,parent) $NODES($dragged_nid,parent)
-		# }
-		set msgs2extnid($dragged_msgid,$clicked_msgid) [list $last_group_node_id $dragged_nid span \
-								    $dragged_nid $clicked_nid $relation]
-	    }
-	} else {
-	    # if dragged and clicked nodes belong to one message, remember
-	    # that the new group node corresponds to that message id
-	    set nid2msgid($last_group_node_id) [list $clicked_msgid]
-	    # remember to which message the new internal group node belongs
-	    lappend msgid2nid($clicked_msgid) $last_group_node_id
-	}
-
-	if {$type == "multinuclear"} {
-	    set node($last_group_node_id,type) multinuc
-	    # if clicked node is already linked to another node, link
-	    # new group node to this parent
-	    set grnd_prnt $NODES($clicked_nid,parent)
-	    if {$grnd_prnt != {} &&  [info exists visible_nodes($grnd_prnt)]} {
-		link-par-to-child $grnd_prnt $last_group_node_id $NODES($clicked_nid,relname);
-		# unlink clicked node from its previous parent
-		set node($clicked_nid,parent) {}
-		set node($grnd_prnt,children)  [ldelete $NODES($grnd_prnt,children) $clicked_nid]
-	    }
-	    link-par-to-child $last_group_node_id $clicked_nid $relation
-	    link-par-to-child $last_group_node_id $dragged_nid $relation
-	    fix-children $last_group_node_id $clicked_nid $dragged_nid
-	    redisplay-net
-	} else {
-	    # if {$clicked_nid == $dragged_nid} {return;}
-	    set node($last_group_node_id,type) span
-	    if {$type == "satellite" || $type == "satellite-embedded"} {
-		if {$ambiguity == {}} {
-		    # if assumed nucleus already is someone's satellite, we
-		    set grnd_prnt $NODES($clicked_nid,parent)
-		    if {$NODES($clicked_nid,relname) != "span" && \
-			    [info exists visible_nodes($grnd_prnt)]} {
-			set node($clicked_nid,parent) {}
-			set node($grnd_prnt,children)  [ldelete $NODES($grnd_prnt,children) $clicked_nid]
-			set grnd_prnt_msgid $nid2msgid($grnd_prnt)
-			if {$grnd_prnt_msgid != $clicked_msgid && \
-				[info exists msgs2extnid($grnd_prnt_msgid,$clicked_msgid)]} {
-			    set msgs2extnid($grnd_prnt_msgid,$clicked_msgid) \
-				[concat [lrange $msgs2extnid($grnd_prnt_msgid,$clicked_msgid) 0 2] \
-				     [list $grnd_prnt $last_group_node_id $NODES($clicked_nid,relname)]]
-			}
-			link-par-to-child $grnd_prnt $last_group_node_id $NODES($clicked_nid,relname)
-			redisplay-net
-		    }
-		    link-par-to-child $last_group_node_id $clicked_nid span
-		}
-		link-par-to-child $clicked_nid $dragged_nid $relation
-	    } elseif {$type == "nucleus" || $type == "nucleus-embedded"} {
-		link-par-to-child $last_group_node_id $dragged_nid span
-		link-par-to-child $dragged_nid $clicked_nid $relation
-	    }
-	    # commented due to bug #35
-	    # fix-children $last_group_node_id $clicked_nid $dragged_nid
-	}
+	link-prnt-to-chld $prnt_nid $chld_nid $relation $NODES($prnt_nid,parent);
     }
+    ::rsttool::treeditor::layout::redisplay-net;
+    ::rsttool::set-state {changed} \
+	"Linked $NODES($chld_nid,name) to $NODES($prnt_nid,name) as $relation";
+    # xscrollto [max $NODES($dragged_nid,xpos) $NODES($clicked_nid,xpos)]
+    # yscrollto [max $NODES($dragged_nid,ypos) $NODES($clicked_nid,ypos)]
+    return;
+}
 
-    editor-message \
-	"linked $dragged_nid to $clicked_nid as a $relation $type $ambiguity"
-    xscrollto [max $NODES($dragged_nid,xpos) $NODES($clicked_nid,xpos)]
-    yscrollto [max $NODES($dragged_nid,ypos) $NODES($clicked_nid,ypos)]
+proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
+						    {a_span_nid {}} {a_ext_rel 0}} {
+    ;
+}
+
+proc ::rsttool::treeditor::tree::link-prnt-to-chld {a_prnt_nid a_chld_nid a_relation \
+							 {a_span_nid {}} {a_ext_rel 0}} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::NID2ENID;
+    variable ::rsttool::MSGID2ROOTS;
+    namespace import ::rsttool::utils::ldelete;
+
+    set prnt {}
+    # update structure
+    set NODES($a_chld_nid,parent) $a_prnt_nid;
+    # create a span node for the parent, if necessary
+    if {$a_span_nid == {}} {
+	set a_span_nid [node::make ($a_ext_rel?"external":"internal") \
+			    [expr min($NODES($a_chld_nid,start),$NODES($a_prnt_nid,start))] \
+			    [expr max($NODES($a_chld_nid,end),$NODES($a_prnt_nid,end))] \
+			   $NID2MSGID($a_prnt_nid)];
+	if {$a_ext_rel} {
+	    set NID2ENID($a_prnt_nid) $a_span_nid;
+	}
+	# add parent node to the list of span childrens
+	set NODES($a_span_nid,children) [node::insort $NODES($a_span_nid,children) \
+					     $NODES($a_prnt_nid,start) $a_prnt_nid];
+	# set span node as the parent of the parent node
+	lappend NODES($a_prnt_nid,parent) $a_span_nid;
+	set NODES($a_prnt_nid,relname) {span};
+	# remove parent node from the roots
+	set MSGID2ROOTS($a_prnt_nid) [ldelete $MSGID2ROOTS($prnt_msgid) $] $a_prnt_nid;
+    }
+    # append child node to parent
+    set NODES($a_prnt_nid,children) [node::insort $NODES($a_prnt_nid,children) \
+					 $NODES($a_chld_nid,start) $a_chld_nid];
+    # set parent of the child node
+    lappend NODES($a_chld_nid,parent) $a_prnt_nid;
+
+    # remove child node from the list of message roots
+    if {! $a_ext_rel} {
+	set MSGID2ROOTS($a_chld_nid) [ldelete $MSGID2ROOTS($chld_msgid) $a_chld_nid];
+    }
 }
 
 proc ::rsttool::treeditor::link-par-to-child {par child relation} {
@@ -544,7 +470,7 @@ proc ::rsttool::treeditor::tree::relation-tooltip {a_ext_reltype a_wdgt} {
 	foreach idesc {description type nucleus satellite nucsat effect connectives \
 			   example comment} {
 	    if {$RELHELP($mitem,$reltype,$idesc) != {}} {
-		append help "[string totitle $idesc]: $RELHELP($mitem,$reltype,$idesc)\n";
+		append help "\n[string totitle $idesc]: $RELHELP($mitem,$reltype,$idesc)\n";
 	    }
 	}
 	::rsttool::utils::menu::tooltip $a_wdgt $help
