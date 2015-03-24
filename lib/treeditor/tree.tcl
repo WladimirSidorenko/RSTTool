@@ -226,7 +226,7 @@ proc ::rsttool::treeditor::tree::link-prnt-to-chld {a_prnt_nid a_chld_nid a_rela
     variable ::rsttool::MSGID2ROOTS;
     namespace import ::rsttool::utils::ldelete;
 
-    set prnt {}
+    set prnt {};
     # update structure
     set NODES($a_chld_nid,parent) $a_prnt_nid;
     # create a span node for the parent, if necessary
