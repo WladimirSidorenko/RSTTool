@@ -171,7 +171,7 @@ proc ::rsttool::treeditor::tree::node::erase {a_nid} {
 
 proc ::rsttool::treeditor::tree::node::destroy {nid {redraw 1}} {
     # 1. unlink node if still connected
-    unlink $nid 0
+    ::rsttool::treeditor::tree::unlink $nid 0
 
     # 2. delete the graphic presentation
     erase $nid

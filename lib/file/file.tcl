@@ -10,6 +10,7 @@ namespace eval ::rsttool::file {
     variable FTYPES {{{XML Files} {.xml}}};
 
     namespace export xml-get-attr;
+    namespace export xml-get-text;
 }
 
 ##################################################################
@@ -74,22 +75,22 @@ proc ::rsttool::file::open {} {
 		if {[_open_anno [$child text] $prj_dir]} {
 		    set error 1; break;
 		}
-		puts -nonewline stderr "NODES = ";
-		parray ::rsttool::NODES;
-		puts stderr "NAME2NID = ";
-		parray ::rsttool::NAME2NID;
-		puts stderr "NID2MSGID = ";
-		parray ::rsttool::NID2MSGID;
-		puts stderr "NID2ENID = ";
-		parray ::rsttool::NID2ENID;
-		puts stderr "MSGID2ROOTS = ";
-		parray ::rsttool::MSGID2ROOTS;
-		puts stderr "MSGID2TNODES = ";
-		parray ::rsttool::MSGID2TNODES;
-		puts stderr "MSGID2ENID = ";
-		parray ::rsttool::MSGID2ENID;
-		puts stderr "TXT_NODE_CNT = $::rsttool::TXT_NODE_CNT"
-		puts stderr "GROUP_NODE_CNT = $::rsttool::GROUP_NODE_CNT"
+		# puts -nonewline stderr "NODES = ";
+		# parray ::rsttool::NODES;
+		# puts stderr "NAME2NID = ";
+		# parray ::rsttool::NAME2NID;
+		# puts stderr "NID2MSGID = ";
+		# parray ::rsttool::NID2MSGID;
+		# puts stderr "NID2ENID = ";
+		# parray ::rsttool::NID2ENID;
+		# puts stderr "MSGID2ROOTS = ";
+		# parray ::rsttool::MSGID2ROOTS;
+		# puts stderr "MSGID2TNODES = ";
+		# parray ::rsttool::MSGID2TNODES;
+		# puts stderr "MSGID2ENID = ";
+		# parray ::rsttool::MSGID2ENID;
+		# puts stderr "TXT_NODE_CNT = $::rsttool::TXT_NODE_CNT"
+		# puts stderr "GROUP_NODE_CNT = $::rsttool::GROUP_NODE_CNT"
 	    }
 	    "abbreviations" {
 		if {[abbreviations::load [$child text] $prj_dir]} {
@@ -100,9 +101,9 @@ proc ::rsttool::file::open {} {
 		if {[_open_base [$child text] $prj_dir]} {
 		    set error 1; break;
 		}
-		puts stderr "THREADS = $::rsttool::THREADS";
-		puts -nonewline stderr "FORREST = ";
-		parray ::rsttool::FORREST;
+		# puts stderr "THREADS = $::rsttool::THREADS";
+		# puts -nonewline stderr "FORREST = ";
+		# parray ::rsttool::FORREST;
 	    }
 	    "erelscheme" {
 		if {[::rsttool::relations::load [$child text]  $prj_dir "external"]} {
@@ -117,6 +118,8 @@ proc ::rsttool::file::open {} {
 		};
 		puts stderr "RELATIONS = ";
 		parray ::rsttool::relations::RELATIONS;
+		puts stderr "RELHELP = ";
+		parray ::rsttool::helper::RELHELP;
 	    }
 	    "#comment" {
 		continue;
@@ -540,6 +543,16 @@ proc ::rsttool::file::xml-get-attr {a_elem a_attr} {
 	error "Element [$a_elem nodeName] does not have attribute '$a_attr'.";
     };
     return $ret;
+}
+
+# check if given XML element exists and return its text
+proc ::rsttool::file::xml-get-text {a_elem} {
+    namespace import ::rsttool::utils::strip;
+
+    if {$a_elem != {}} {
+	return [strip [$a_elem nodeValue]];
+    }
+    return {};
 }
 
 # open file and read XML data

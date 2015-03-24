@@ -38,6 +38,7 @@ proc ::rsttool::relations::load {a_fname {a_dirname {}} {type "internal"}} {
 
     variable ::rsttool::helper::RELHELP;
     namespace import ::rsttool::file::xml-get-attr;
+    namespace import ::rsttool::file::xml-get-text;
 
     # find relation file
     if {[set ifname [::rsttool::file::search $a_fname $a_dirname]] == {}} {
@@ -106,18 +107,27 @@ proc ::rsttool::relations::load {a_fname {a_dirname {}} {type "internal"}} {
 	    set [subst $relarr]($relname) $reltype;
 	    lappend [subst $type2rel]($reltype) $relname;
 
+	    puts stderr "ichild name = $elname"
+	    puts stderr "ichild selectNodes description = [$ichild selectNodes .//connectives]"
+	    if {[$ichild selectNodes .//description] != {}} {
+		puts stderr "ichild selectNodes description text = [[$ichild selectNodes ./connectives/text()] nodeValue]"
+	    }
+
 	    # set help for that relation
-	    set RELHELP($relname,$type,comment) [$ichild selectNodes comment];
-	    set RELHELP($relname,$type,connectives) [$ichild selectNodes connectives];
-	    set RELHELP($relname,$type,description) [$ichild selectNodes description];
-	    set RELHELP($relname,$type,effect) [$ichild selectNodes effect];
-	    set RELHELP($relname,$type,example) [$ichild selectNodes example];
-	    set RELHELP($relname,$type,nucleus) [$ichild selectNodes nucleus];
-	    set RELHELP($relname,$type,nucsat) [$ichild selectNodes nucsat];
-	    set RELHELP($relname,$type,satellite) [$ichild selectNodes satellite];
+	    set RELHELP($relname,$type) {};
+	    set RELHELP($relname,$type,comment) [xml-get-text [$ichild selectNodes .//comment/text()]];
+	    set RELHELP($relname,$type,connectives) [xml-get-text [$ichild selectNodes .//connectives/text()]];
+	    set RELHELP($relname,$type,description) [xml-get-text [$ichild selectNodes .//description/text()]];
+	    set RELHELP($relname,$type,effect) [xml-get-text [$ichild selectNodes .//effect/text()]];
+	    set RELHELP($relname,$type,example) [xml-get-text [$ichild selectNodes .//example/text()]];
+	    set RELHELP($relname,$type,nucleus) [xml-get-text [$ichild selectNodes .//nucleus/text()]];
+	    set RELHELP($relname,$type,nucsat) [xml-get-text [$ichild selectNodes .//nucsat/text()]];
+	    set RELHELP($relname,$type,satellite) [xml-get-text [$ichild selectNodes .//satellite/text()]];
 	    set RELHELP($relname,$type,type) $reltype;
 	}
     }
+    # sort the lists of relations
+    set [subst $type2rel]($reltype) [lsort -dictionary -nocase $[subst $type2rel]($reltype)]
     return 0;
 }
 

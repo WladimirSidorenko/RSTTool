@@ -7,6 +7,8 @@ package require rsttool::treeditor::tree
 
 ##################################################################
 namespace eval ::rsttool::treeditor {
+    variable menu_selection {};
+
     variable MAXLEN 20;
     variable NODE_WIDTH 100;
     variable HALF_NODE_WIDTH [expr $NODE_WIDTH / 2];

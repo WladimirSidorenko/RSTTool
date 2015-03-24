@@ -87,63 +87,6 @@ proc ::rsttool::treeditor::tree::arc::change {nid {relname {}} } {
     set-mode $cmode
 }
 
-proc ::rsttool::treeditor::tree::arc::choose-label {sat type {external 0}} {
-    variable ::rsttool::treeditor::RSTW;
-    variable ::rsttool::relations::RELATIONS;
-    variable ::rsttool::relations::ERELATIONS;
-    namespace import ::rsttool::treeditor::tree::popup-choose-from-list;
-
-    set relations {};
-    switch -nocase -- $type {
-	"nucleus" -
-	"satellite" {
-
-	}
-	"nucleus-embedded" -
-	"satellite-embedded" {
-
-	}
-	"multinuclear" {
-
-	}
-	default {
-	    error "Unknown dependency type: '$type'"
-	    return {};
-	}
-    }
-
-    set coords [screen-coords [ntw $sat] $RSTW];
-    return [popup-choose-from-list $relations \
-		[expr int([lindex $coords 0])]\
-		[expr int([lindex $coords 1])] 0 1];
-
-    global relations extRelations rstw schemas schema_elements
-
-    set coords [screen-coords [ntw $sat] $RSTW]
-    set conv(satellite) rst
-    set conv(nucleus) rst
-    set conv(rst) rst
-    set conv(multinuclear) multinuc
-    set conv(multinuc) multinuc
-    set conv(schema) constit
-    set conv(constit) constit
-    set conv(nucleus-embedded) embedded
-    set conv(satellite-embedded) embedded
-    set conv(embedded) embedded
-    set type $conv($type)
-
-    if {$external} {
-	# Choose connection type from a set of external relations
-	set range $extRelations
-    } elseif [member $type {rst constit multinuc embedded}] {
-	# Choose from the defined set
-	set range $relations($type)
-    } else {
-	# this must be a schema type, choose from that set
-	set range $schema_elements($type)
-    }
-}
-
 ##################################################################
 package provide rsttool::treeditor::tree::arc 0.0.1
 return

@@ -12,6 +12,7 @@ proc ::rsttool::appearance::bindings::set_default {{text_w .editor.text}} {
     variable ::rsttool::appearance::bindings::MODKEY;
     variable ::rsttool::segmenter::TXTW;
     variable ::rsttool::segmenter::PRNT_TXTW;
+    variable ::rsttool::treeditor::RSTW;
 
     if {[tk windowingsystem] == "aqua"} {
 	$TXTW tag bind bmarker <Control-Option-ButtonRelease-2> {

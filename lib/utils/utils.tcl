@@ -94,28 +94,47 @@ proc ::rsttool::utils::menu::add-cascade {menu label newmenu} {
     $menu add cascade -label $label -menu $newmenu;
 }
 
-proc ::rsttool::utils::menu::bind-tooltip {a_wdgt} {
-    bind $a_wdgt <<MenuSelect>> {
-    	destroy %W.tooltip;
-    	show-menu-tooltip %W %y;
-    }
+proc ::rsttool::utils::menu::bind-tooltip {a_wdgt {a_cmd {::rsttool::utils::menu::show-tooltip}}} {
+    puts stderr "::rsttool::utils::menu::bind-tooltip: a_wdgt = $a_wdgt, a_cmd = $a_cmd"
+    bind $a_wdgt <<MenuSelect>> [list {*}[subst $a_cmd] %W];
 
-    bind $a_wdgt <Any-Leave> [list destroy %W.tooltip [list continue]];
-    bind $a_wdgt <Any-KeyPress> [list destroy %W.tooltip [list continue]];
-    bind $a_wdgt <Any-Button> [list destroy %W.tooltip [list continue]];
+    bind $a_wdgt <Any-Leave> {destroy %W.tooltip};
+    bind $a_wdgt <Any-KeyPress> {destroy %W.tooltip};
+    bind $a_wdgt <Any-Button> {destroy %W.tooltip};
 }
 
-proc ::rsttool::utils::menu::show-tooltip {a_wdgt a_y} {
-    variable ::rsttool::helper::HELP;
+proc ::rsttool::utils::menu::tooltip {a_wdgt {a_txt {}}} {
+    puts stderr "::rsttool::utils::menu::tooltip: a_txt = $a_txt"
+    if {$a_txt == {}} {return;}
+    if [winfo exists $a_wdgt.tooltip] {destroy $a_wdgt.tooltip}
 
-    # obtain menu entry
-    set mitem [$a_wdgt entrycget active -label]
+    set tooltip [toplevel $a_wdgt.tooltip -bd 1 -bg black]
+    set scrh [winfo screenheight $a_wdgt]; # 1) flashing window fix
+    set scrw [winfo screenwidth $a_wdgt]; # 2) flashing window fix
+    wm geometry $tooltip +$scrh+$scrw; # 3) flashing window fix
+    wm overrideredirect $tooltip 1
+    pack [label $tooltip.label -bg lightyellow -fg black -text $a_txt -justify left]
 
-    # show help tooltip for menu entry
-    if {[info exists help($mitem)] && $help($mitem) != ""} {
-	show-tooltip $a_wdgt $help($mitem)
+    set width [winfo reqwidth $tooltip.label]
+    set height [winfo reqheight $tooltip.label]
+    # a.) Is the pointer in the bottom half of the screen?
+    set pointer_below_midline [expr [winfo pointery .] > [expr [winfo screenheight .] / 2.0]]
+    # b.) Tooltip is centred horizontally on pointer.
+    set positionX [expr [winfo pointerx .] - round($width / -1.5)]
+    # c.) Tooltip is displayed above or below depending on pointer Y position.
+    set positionY [expr [winfo pointery .] + ($pointer_below_midline * -1) * ($height + 35) + \
+		       (35 - (round($height / 2.0) % 35))]
+
+    if  {[expr $positionX + $width] > [winfo screenwidth .]} {
+	set positionX [expr [winfo screenwidth .] - $width]
+    } elseif {$positionX < 0} {
+	set positionX 0
     }
+
+    wm geometry $tooltip [join  "$width x $height + $positionX + $positionY" {}]
+    raise $tooltip
 }
+
 ##################################################################
 package provide rsttool::utils 0.0.1
 return

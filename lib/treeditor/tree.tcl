@@ -9,6 +9,7 @@ package require rsttool::treeditor::tree::node
 namespace eval ::rsttool::treeditor::tree {
     namespace export wtn;
     namespace export ntw;
+    namespace export unlink;
     namespace export clicked-node;
     namespace export clicked-widget;
     namespace export popup-choose-from-list;
@@ -163,12 +164,15 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 	set type [popup-choose-from-list \
 		      [concat $nucleus $satellite $nucleus_embedded $satellite_embedded \
 			   {multinuclear}] \
-		      [expr int([lindex $coords 0])] [expr int([lindex $coords 1])] 1]
+		      [expr int([lindex $coords 0])] [expr int([lindex $coords 1])] 1];
     }
+    puts stderr "type = $type";
     if {$type == {}} {return}
 
     # choose relation according to the specified type
-    set relation [tree::arc::choose-label $clicked_nid $type $ext_connection];
+    set relation [choose-label $clicked_nid $type $ext_connection];
+
+    puts stderr "relation = $relation";
     if {$relation == {}} {return;}
 
     return;
@@ -345,7 +349,7 @@ proc ::rsttool::treeditor::link-par-to-child {par child relation} {
     adjust-after-change $par $child 1
 }
 
-proc ::rsttool::treeditor::tree::unlink-nodes {sat {redraw 1}} {
+proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2MSGID;
     namespace import ::rsttool::utils::ldelete;
@@ -423,10 +427,13 @@ proc rsttool::treeditor::tree::screen-coords {item canvas} {
 }
 
 proc ::rsttool::treeditor::tree::popup-choose-from-list {Items xpos ypos {put_cancel {}} \
-							     {show_tooltip 0}} {
+							     {tooltip_cmd {}}} {
+    variable ::rsttool::treeditor::menu_selection;
+
     namespace import ::rsttool::utils::menu::add-item; # AddMenuItem
     namespace import ::rsttool::utils::menu::add-cascade; # AddMenuCascade
     namespace import ::rsttool::utils::menu::bind-tooltip; # bind-menu-tooltip
+    namespace import ::rsttool::utils::menu::selection; # menu selection
 
     set num_items 0
     set cancel_exists 0
@@ -435,13 +442,13 @@ proc ::rsttool::treeditor::tree::popup-choose-from-list {Items xpos ypos {put_ca
 
     if {[winfo exists $my_menu]} {destroy $my_menu}
     menu $my_menu -tearoff 0
-    if {$show_tooltip} {
-	bind-tooltip $my_menu
+    if {$tooltip_cmd != {}} {
+	bind-tooltip $my_menu $tooltip_cmd;
     }
 
     foreach item $Items {
 	if {$num_items < 33} {
-	    add-item $my_menu $item "set menu_selection $item"
+	    add-item $my_menu $item "set ::rsttool::treeditor::menu_selection $item"
 	} else {
 	    #set underscore ""
 	    #append underscore $item
@@ -449,31 +456,99 @@ proc ::rsttool::treeditor::tree::popup-choose-from-list {Items xpos ypos {put_ca
 	    set icascade "$my_menu.[string tolower $item]";
 	    menu $icascade -tearoff 0;
 	    add-cascade $my_menu NEXT $icascade;
-	    if {$show_tooltip} {bind-tooltip $icascade;}
-	    add-item $my_menu CANCEL "set menu_selection {}"
+	    if {$tooltip_cmd != {}} {
+		bind-tooltip $icascade "$tooltip_cmd";
+	    }
+	    add-item $my_menu CANCEL "set ::rsttool::treeditor::menu_selection {}"
 	    set cancel_exists 1
-	    bind $my_menu <Any-Leave> [list destroy $my_menu [list continue]];
+	    bind $my_menu <Any-Leave> {set ::rsttool::treeditor::menu_selection {}};
 	    set my_menu $icascade
-	    add-item $my_menu $item "set menu_selection $item"
+	    add-item $my_menu $item "set ::rsttool::treeditor::menu_selection $item"
 	    set num_items 0
 	}
 	incr num_items
     }
 
     if { $put_cancel && !$cancel_exists } {
-	add-item $my_menu CANCEL "set menu_selection {}"
+	add-item $my_menu CANCEL "set ::rsttool::treeditor::menu_selection {}"
     }
 
     # now make the menu
-    bind $my_menu <Any-Leave> {set menu_selection {}};
-    .tmpwin post $xpos $ypos
+    bind $my_menu <Any-Leave> {set ::rsttool::treeditor::menu_selection {}};
+    .tmpwin post $xpos $ypos;
     if {[tk windowingsystem] != "aqua"} {
-	tkwait variable menu_selection
+	tkwait variable ::rsttool::treeditor::menu_selection;
     }
-    .tmpwin unpost
+    .tmpwin unpost;
     if [winfo exists .tmpwin.tooltip] {destroy .tmpwin.tooltip}
 
+    puts stderr "popup-choose-from-list: menu_selection = $menu_selection"
     return $menu_selection
+}
+
+proc ::rsttool::treeditor::tree::choose-label {sat type {external 0}} {
+    variable ::rsttool::treeditor::RSTW;
+    variable ::rsttool::relations::RELATIONS;
+    variable ::rsttool::relations::ERELATIONS;
+    variable ::rsttool::relations::PARATACTIC;
+    variable ::rsttool::relations::HYPOTACTIC;
+    variable ::rsttool::relations::TYPE2REL;
+    variable ::rsttool::relations::TYPE2EREL;
+
+    set relations {};
+    switch -nocase -- $type {
+	"nucleus" -
+	"satellite" -
+	"nucleus-embedded" -
+	"satellite-embedded" {
+	    if {$external} {
+		set relations $TYPE2EREL($HYPOTACTIC);
+	    } else {
+		set relations $TYPE2REL($HYPOTACTIC);
+	    }
+	}
+	"multinuclear" {
+	    if {$external} {
+		set relations $TYPE2EREL($PARATACTIC);
+	    } else {
+		set relations $TYPE2EREL($PARATACTIC);
+	    }
+	}
+	default {
+	    error "Unknown dependency type: '$type'"
+	    return {};
+	}
+    }
+
+    set coords [screen-coords [ntw $sat] $RSTW];
+    return [popup-choose-from-list $relations \
+		[expr int([lindex $coords 0])]\
+		[expr int([lindex $coords 1])] 1 \
+		[list ::rsttool::treeditor::tree::relation-tooltip $external]];
+}
+
+proc ::rsttool::treeditor::tree::relation-tooltip {a_ext_reltype a_wdgt} {
+    variable ::rsttool::helper::RELHELP;
+
+    puts stderr "::rsttool::treeditor::tree::relation-tooltip called"
+    # obtain menu entry
+    set mitem [$a_wdgt entrycget active -label];
+    set reltype {internal};
+    if {$a_ext_reltype} {
+	set reltype {external};
+    }
+    # show help tooltip for menu entry
+    if {[info exists RELHELP($mitem,$reltype)]} {
+	# construct help message
+	set help "[string toupper $mitem]\n";
+	foreach idesc {description type nucleus satellite nucsat effect connectives \
+			   example comment} {
+	    if {$RELHELP($mitem,$reltype,$idesc) != {}} {
+		append help "[string totitle $idesc]: $RELHELP($mitem,$reltype,$idesc)\n";
+	    }
+	}
+	::rsttool::utils::menu::tooltip $a_wdgt $help
+    }
 }
 
 ##################################################################
