@@ -27,7 +27,7 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	set msgid $CRNT_MSGID;
     }
 
-    if { $type ==  "text"  } {
+    if {$type ==  "text"} {
 	if {$name == {}} {set name [unique-tnode-name]}
 	set nid [unique-tnode-id]
 	# save mapping from node id to message id
@@ -50,6 +50,8 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     set NODES($nid,name) $name
     set NODES($nid,parent) {}
     set NODES($nid,children) {}
+    set NODES($nid,relname) {}
+    set NODES($nid,reltype) {}
     set NODES($nid,start) $start
     set NODES($nid,end) $end
     set NAME2NID($msgid,$name) $nid;
@@ -73,7 +75,7 @@ proc ::rsttool::treeditor::tree::node::set-text {a_nid {a_msgid {}}} {
 	regsub -all "\"" $ntext "" ntext;
 	set NODES($a_nid,text) "$ntext";
     } else {
-	set NODES($a_nid,text) "$NODES($start,name)-$NODES($end,name)";
+	set NODES($a_nid,text) "";
     }
 }
 
@@ -89,7 +91,7 @@ proc ::rsttool::treeditor::tree::node::unique-tnode-name {} {
 
 proc ::rsttool::treeditor::tree::node::unique-gnode-id {} {
     variable GROUP_NODE_CNT;
-    return [incr GROUP_NODE_CNT];
+    return [incr GROUP_NODE_CNT -1];
 }
 
 proc ::rsttool::treeditor::tree::node::unique-gnode-name {} {
@@ -132,9 +134,10 @@ proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
     variable ::rsttool::NODES;
 
     if {[info exists NODES($a_nid,textwgt)] && $NODES($a_nid,textwgt) != {} } {
+	puts stderr "redisplay: erasing node $a_nid";
 	erase $a_nid
     }
-    display $a_nid
+    display $a_nid;
 }
 
 proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
@@ -164,10 +167,10 @@ proc ::rsttool::treeditor::tree::node::erase {a_nid} {
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::treeditor::tree::ntw;
 
-    # puts stderr "erase-node:  erasing nid = $nid"
+    puts stderr "erase-node:  erasing nid = $a_nid"
     $RSTW delete [ntw $a_nid];
     $RSTW delete $NODES($a_nid,spanwgt);
-    array unset WTN [::rsttool::treeditor::tree::ntw $a_nid];
+    array unset WTN [ntw $a_nid];
     array unset NODES $a_nid,textwgt;
     array unset NODES $a_nid,spanwgt;
     ::rsttool::treeditor::tree::arc::erase $a_nid;
@@ -780,7 +783,7 @@ proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
 		error "Unknown index: NODES($end_nid,xpos)"
 	    }
 	    if {[info exists NODES($end_nid,name)]} {
-		set span [string cat $span "$NODES($end_nid,name)"]
+		set span [concat $span "$NODES($end_nid,name)"]
 	    } else {
 		error "Unknown index: NODES($start_nid,name)"
 	    }

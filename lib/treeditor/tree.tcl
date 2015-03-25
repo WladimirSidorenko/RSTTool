@@ -33,8 +33,10 @@ proc ::rsttool::treeditor::tree::ntw {a_nid} {
     variable ::rsttool::NODES;
 
     if {[info exists NODES($a_nid,textwgt)]} {
+	puts stderr "ntw:  a_nid = $a_nid, textwgt = $NODES($a_nid,textwgt)"
 	return $NODES($a_nid,textwgt);
     }
+    puts stderr "ntw:  a_nid = $a_nid, textwgt = {}"
     return {};
 }
 
@@ -204,7 +206,7 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     if {$multinuc} {
 	link-multinuc $prnt_nid $chld_nid $relation $NODES($prnt_nid,parent);
     } else {
-	link-prnt-to-chld $prnt_nid $chld_nid $relation $NODES($prnt_nid,parent);
+	link-chld-to-prnt $chld_nid $prnt_nid $relation $NODES($prnt_nid,parent);
     }
     ::rsttool::set-state {changed} \
 	"Linked $NODES($chld_nid,name) to $NODES($prnt_nid,name) as $relation";
@@ -218,12 +220,14 @@ proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
     ;
 }
 
-proc ::rsttool::treeditor::tree::link-prnt-to-chld {a_prnt_nid a_chld_nid a_relation \
+proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_relation \
 							 {a_span_nid {}} {a_ext_rel 0}} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2ENID;
     variable ::rsttool::MSGID2ROOTS;
     variable ::rsttool::NID2MSGID;
+    variable ::rsttool::relations::SPAN;
+    variable ::rsttool::relations::HYPOTACTIC;
     namespace import ::rsttool::utils::ldelete;
 
     if {$a_ext_rel} {return;}
@@ -244,29 +248,38 @@ proc ::rsttool::treeditor::tree::link-prnt-to-chld {a_prnt_nid a_chld_nid a_rela
 
     # create a span node for the parent, if it's needed
     if {$a_span_nid == {}} {
-	set a_span_nid [node::make {$a_ext_rel?"external":"internal"} \
+	set a_span_nid [node::make [expr $a_ext_rel ? {{external}} : {{internal}} ] \
 			    [expr $NODES($a_chld_nid,start) < $NODES($a_prnt_nid,start) ? $a_chld_nid: $a_prnt_nid] \
 			    [expr $NODES($a_chld_nid,end) < $NODES($a_prnt_nid,end) ? $a_prnt_nid: $a_chld_nid] \
-			    $NID2MSGID($a_prnt_nid)];
+			    {} $NID2MSGID($a_prnt_nid)];
 	if {$a_ext_rel} {
 	    set NID2ENID($a_prnt_nid) $a_span_nid;
 	}
 	# add parent node to the list of span childrens
-	set NODES($a_span_nid,children) [node::insort $NODES($a_span_nid,children) \
-					     $NODES($a_prnt_nid,start) $a_prnt_nid];
+	set NODES($a_span_nid,children) [list $a_prnt_nid];
 	# set span node as the parent of the parent node
 	lappend NODES($a_prnt_nid,parent) $a_span_nid;
 	set NODES($a_prnt_nid,relname) {span};
+	set NODES($a_prnt_nid,reltype) $SPAN;
 	# remove parent node from the roots
 	set prnt_msgid $NID2MSGID($a_prnt_nid);
 	set MSGID2ROOTS($a_prnt_nid) [ldelete $MSGID2ROOTS($prnt_msgid) $a_prnt_nid];
-	arc::display $prnt_wdgt [ntw $a_span_nid] ::rsttool::relations::SPAN;
+	# position span nid at the previous position of the parent nid
+	# and re-draw the tree
+	set NODES($a_span_nid,xpos) $NODES($a_prnt_nid,xpos);
+	set ypos $NODES($a_prnt_nid,ypos);
+	puts stderr "link-chld-to-prnt: node::erase a_prnt_nid = $a_prnt_nid"
+	node::erase $a_prnt_nid;
+	puts stderr "link-chld-to-prnt: y-layout-subtree span_nid = $a_span_nid $ypos"
+	::rsttool::treeditor::layout::y-layout-subtree $a_span_nid $ypos;
     }
 
     # reposition child node at the same height as the parent
     # draw an arc from child to parent node
-    arc::display $prnt_wdgt $chld_wdgt ::rsttool::relations::HYPOTACTIC;
-    ::rsttool::treeditor::layout::restructure-upwards $a_chld_nid;
+    puts stderr "link-chld-to-prnt: arc::display $a_prnt_nid $a_chld_nid $HYPOTACTIC"
+    ::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
+    arc::display $a_prnt_nid $a_chld_nid $HYPOTACTIC;
+    # ::rsttool::treeditor::layout::restructure-upwards $a_chld_nid;
 }
 
 proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {

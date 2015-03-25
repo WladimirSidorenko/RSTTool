@@ -260,36 +260,17 @@ proc ::rsttool::file::read-tnode {a_segments} {
 	    error "Duplicate node id $nid."
 	    return -7;
 	} else {
-	    set NODES($nid) {};
-	    set NODES($nid,type)  {text};
-	    set NODES($nid,name)  $name;
-	    set NODES($nid,start) $start;
-	    set NODES($nid,end)   $end;
-	    set NODES($nid,text)  [::rsttool::treeditor::tree::node::set-text $nid $msgid];
-	    set NODES($nid,parent)   {};
-	    set NODES($nid,relname)  {};
-	    set NODES($nid,children) {};
+	    if {[info exists NAME2NID($msgid,$name)]} {
+		error "Duplicate node name '$name' for message $msgid."
+		return -8;
+	    }
+	    ::rsttool::treeditor::tree::node::make {text} $start $end $name $msgid;
 	}
 
-	if {[info exists NAME2NID($msgid,$nid)]} {
-	    error "Duplicate node name '$name'."
-	    return -8;
-	} else {
-	    set NAME2NID($msgid,$name) $nid
-	}
 	# update counter of text nodes
 	if {$nid > $TXT_NODE_CNT} {
 	    set TXT_NODE_CNT $nid
 	}
-	# update dictionaries
-	if {[info exists MSGID2ROOTS($msgid)]} {
-	    set MSGID2ROOTS($msgid) [insort $MSGID2ROOTS($msgid) $start $nid];
-	    set MSGID2TNODES($msgid) [insort $MSGID2TNODES($msgid) $start $nid];
-	} else {
-	    set MSGID2ROOTS($msgid) [list $nid]
-	    set MSGID2TNODES($msgid) [list $nid]
-	}
-	set NID2MSGID($nid) $msgid
     }
     return 0;
 }
