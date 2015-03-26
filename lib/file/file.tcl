@@ -226,9 +226,6 @@ proc ::rsttool::file::write-tnode {a_nid a_prnt_elem a_xml_doc} {
 proc ::rsttool::file::read-tnode {a_segments} {
     variable ::rsttool::NODES;
     variable ::rsttool::NAME2NID;
-    variable ::rsttool::MSGID2ROOTS;
-    variable ::rsttool::MSGID2TNODES;
-    variable ::rsttool::NID2MSGID;
     variable ::rsttool::TXT_NODE_CNT;
     namespace import ::rsttool::treeditor::tree::node::insort;
 
@@ -342,7 +339,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	set NID2MSGID($nid) [list $msgid]
 
 	if {[info exists MSGID2ROOTS($msgid)]} {
-	    set MSGID2ROOTS($msgid) [insort $MSGID2ROOTS($msgid) [get-start $nid] $nid]
+	    ::rsttool::treeditor::update-roots $msgid $nid {add}
 	} else {
 	    error "Non-terminal node ($nid) defined for message without terminal nodes ($msgid)."
 	}
@@ -470,8 +467,8 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    set MSGID2ROOTS($nuc_msgid,$sat_msgid) [insort $MSGID2ROOTS($nuc_msgid,$sat_msgid) \
 								[get-start $ispan_id] $ispan_id];
 		} else {
-		    set MSGID2ROOTS($nuc_msgid) [ldelete $MSGID2ROOTS($nuc_msgid) $inuc_id];
-		    set MSGID2ROOTS($nuc_msgid) [ldelete $MSGID2ROOTS($nuc_msgid) $isat_id];
+		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove};
+		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove};
 		    puts stderr "read-relations: MSGID2ROOTS($nuc_msgid) = $MSGID2ROOTS($nuc_msgid)";
 		}
 	    }

@@ -26,6 +26,7 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
     array set WTN {};
     # 2. Create necessary message roots
     if {![info exists MSGID2ROOTS($PRNT_MSGID,$CRNT_MSGID)]} {
+	puts stderr "*** redisplay-net: populating MSGID2ROOTS($PRNT_MSGID,$CRNT_MSGID)";
 	set MSGID2ROOTS($PRNT_MSGID,$CRNT_MSGID) {};
 
 	if [info exists MSGID2ROOTS($PRNT_MSGID)] {
@@ -175,7 +176,7 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
 		y-layout-subtree $cid $a_ypos;
 	    }
 	    puts stderr "y-layout-subtree: display arc between $a_nid and $cid with type $NODES($cid,reltype)";
-	    ::rsttool::treeditor::tree::arc::display $a_nid $cid $NODES($cid,reltype);
+	    # ::rsttool::treeditor::tree::arc::display $a_nid $cid $NODES($cid,reltype);
     	}
     }
 }

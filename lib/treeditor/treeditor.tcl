@@ -181,6 +181,54 @@ proc ::rsttool::treeditor::set-mode {mode} {
     }
 }
 
+# update roots of all message pair involving given message
+proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation} {
+    variable ::rsttool::FORREST;
+    variable ::rsttool::MSGID2ROOTS;
+    namespace import ::rsttool::utils::ldelete;
+
+    # obtain all pairs of messages which the given message pertains to
+    set ichildren [lindex $FORREST($a_msgid) end];
+    set indices [list $a_msgid];
+    foreach chnid $ichildren {
+	lappend indices "$a_msgid,$chnid";
+    }
+    # perform given operation on all messages
+    set op {};
+    switch -nocase --  $a_operation {
+	{remove} {
+	    set op ldelete;
+	}
+	{add} {
+	    proc insort {a_list a_nid} {
+		namespace import ::rsttool::treeditor::tree::node::get-start;
+		return [::rsttool::treeditor::tree::node::insort  $a_list \
+			    [get-start $a_nid] $a_nid];
+	    }
+	    set op insort;
+	}
+	default {
+	    error "Unrecognized update operation: '$a_operation'."
+	    return;
+	}
+    }
+    foreach idx $indices {
+	if {[info exists MSGID2ROOTS($idx)]} {
+	    set MSGID2ROOTS($idx) [$op $MSGID2ROOTS($idx) $a_nid]
+	}
+    }
+    # update roots of the parent,message pair
+    set iprnt [lindex $FORREST($a_msgid) 1];
+    set ikey "$iprnt,$a_msgid";
+    if {[info exists MSGID2ROOTS($ikey)]} {
+	if {$a_operation == {remove}} {
+	    set MSGID2ROOTS($ikey) [$op $MSGID2ROOTS($ikey) $a_nid]
+	} else {
+	    # insert the new node right after the nodes of the parent
+	}
+    }
+}
+
 ##################################################################
 package provide rsttool::treeditor 0.0.1
 return

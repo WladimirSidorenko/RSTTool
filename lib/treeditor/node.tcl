@@ -40,10 +40,9 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	if {[info exists MSGID2ROOTS($msgid)]} {
 	    # since we might add node after some group nodes were
 	    # created, we need to re-sort the node list
-	    set MSGID2ROOTS($msgid) [insort $MSGID2ROOTS($msgid) $start $nid]
 	    set MSGID2TNODES($msgid) [insort $MSGID2TNODES($msgid) $start $nid]
 	} else {
-	    set MSGID2ROOTS($msgid) [list $nid]
+	    set MSGID2ROOTS($msgid) {}
 	    set MSGID2TNODES($msgid) [list $nid]
 	}
     } else {
@@ -63,16 +62,19 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     }
     # save mapping from node id to message id
     set NID2MSGID($nid) [list $msgid]
-    set NODES($nid,type) $type
+    set NODES($nid,children) {}
+    set NODES($nid,end) $end
     set NODES($nid,name) $name
     set NODES($nid,parent) {}
-    set NODES($nid,children) {}
     set NODES($nid,relname) {}
     set NODES($nid,reltype) {}
     set NODES($nid,start) $start
-    set NODES($nid,end) $end
+    set NODES($nid,type) $type
     set NAME2NID($msgid,$name) $nid;
     set-text $nid $msgid;
+    if {$type == "text"} {
+	::rsttool::treeditor::update-roots $msgid $nid {add}
+    }
     return $nid
 }
 
@@ -240,9 +242,9 @@ proc ::rsttool::treeditor::tree::node::erase {a_nid} {
     }
     if {[info exists NODES($a_nid,spanwgt)]} {
 	$RSTW delete $NODES($a_nid,spanwgt);
+	array unset NODES $a_nid,spanwgt;
     }
     array unset NODES $a_nid,textwgt;
-    array unset NODES $a_nid,spanwgt;
     ::rsttool::treeditor::tree::arc::erase $a_nid;
 }
 
@@ -871,12 +873,12 @@ proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
 }
 
 proc ::rsttool::treeditor::tree::node::draw-text {window txt x y {options {}}} {
-    $window create text $x $y -text $txt -anchor n -justify center \
-    	{*}$options
+    return [$window create text $x $y -text $txt -anchor n -justify center \
+		{*}$options];
 }
 
 proc ::rsttool::treeditor::tree::node::draw-line {window x1 y1 x2 y2} {
-    $window create line $x1 $y1  $x2 $y2
+    return [$window create line $x1 $y1  $x2 $y2];
 }
 
 ##################################################################
