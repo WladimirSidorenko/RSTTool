@@ -264,7 +264,7 @@ proc ::rsttool::file::read-tnode {a_segments} {
 		error "Duplicate node name '$name' for message $msgid."
 		return -8;
 	    }
-	    ::rsttool::treeditor::tree::node::make {text} $start $end $name $msgid;
+	    ::rsttool::treeditor::tree::node::make {text} $start $end $name $msgid $nid;
 	}
 
 	# update counter of text nodes
@@ -329,14 +329,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	    error "Duplicate node id $nid."
 	    return -7;
 	} else {
-	    set NODES($nid) {};
-	    set NODES($nid,type)  $type;
-	    set NODES($nid,start) $start;
-	    set NODES($nid,end)   $end;
-	    set NODES($nid,name) "$NODES($start,name)-$NODES($end,name)";
-	    set NODES($nid,parent)   {};
-	    set NODES($nid,relname)  {};
-	    set NODES($nid,children) {};
+	    ::rsttool::treeditor::tree::node::make $type $start $end {} $msgid $nid;
 	}
 
 	if {$type == "external"} {
@@ -365,6 +358,8 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
     variable ::rsttool::relations::SPAN;
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
+
+    if {![info exists NODES($a_nid,reltype)]} {return;}
 
     switch -nocase -- $NODES($a_nid,reltype) \
 	$SPAN {
@@ -477,7 +472,6 @@ proc ::rsttool::file::read-relations {a_relations} {
 		} else {
 		    set MSGID2ROOTS($nuc_msgid) [ldelete $MSGID2ROOTS($nuc_msgid) $inuc_id];
 		    set MSGID2ROOTS($nuc_msgid) [ldelete $MSGID2ROOTS($nuc_msgid) $isat_id];
-		    set MSGID2ROOTS($nuc_msgid) [insort $MSGID2ROOTS($nuc_msgid) [get-start $ispan_id] $ispan_id];
 		    puts stderr "read-relations: MSGID2ROOTS($nuc_msgid) = $MSGID2ROOTS($nuc_msgid)";
 		}
 	    }
@@ -624,6 +618,7 @@ proc ::rsttool::file::save {} {
 	if {[catch {puts $tmpfile [$root asXML]}]} {
 	    error "Could not write XML document to temporary file $tmpfname";
 	    ::close $tmpfile;
+	    file delete -force -- $tmpfname;
 	    return;
 	}
 	::close $tmpfile;

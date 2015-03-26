@@ -130,9 +130,12 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 
     # prevent non-projective edges, i.e. given node can only be linked
     # to its adjacent span
-    puts stderr "link-nodes: MSGID2ROOTS($clicked_msgid) = $MSGID2ROOTS($clicked_msgid)"
-    set clicked_idx [node::bisearch $clicked_nid $MSGID2ROOTS($clicked_msgid)]
-    set dragged_idx [node::bisearch $dragged_nid $MSGID2ROOTS($dragged_msgid)]
+    puts stderr "link-nodes: MSGID2ROOTS(clicked_msgid) = $MSGID2ROOTS($clicked_msgid)"
+    namespace import ::rsttool::treeditor::tree::node::get-visible-parent;
+    set clicked_idx [node::bisearch [get-visible-parent $clicked_nid] $MSGID2ROOTS($clicked_msgid)]
+    set dragged_idx [node::bisearch [get-visible-parent $dragged_nid] $MSGID2ROOTS($dragged_msgid)]
+    puts stderr "link-nodes: clicked_prnt = [get-visible-parent $clicked_nid]"
+    puts stderr "link-nodes: dragged_prnt = [get-visible-parent $dragged_nid]"
     puts stderr "link-nodes: clicked_idx = $clicked_idx; dragged_idx = $dragged_idx"
     if {[expr abs([expr $clicked_idx - $dragged_idx])] > 1} {
 	message "Can't connect non-adjacent nodes."
@@ -285,6 +288,7 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 	puts stderr "link-chld-to-prnt: y-layout-subtree span_nid = $a_span_nid $ypos"
 	::rsttool::treeditor::layout::y-layout-subtree $a_span_nid $ypos;
     } else {
+	::rsttool::treeditor::layout::update-upwards $a_span_nid $a_chld_nid;
 	::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
     }
 

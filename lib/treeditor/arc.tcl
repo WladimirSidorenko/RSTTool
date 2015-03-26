@@ -53,10 +53,6 @@ proc ::rsttool::treeditor::tree::arc::draw-line {a_wdgt x1 y1 x2 y2} {
     $a_wdgt create line $x1 $y1  $x2 $y2
 }
 
-proc ::rsttool::treeditor::tree::arc::draw-text {a_wdgt a_txt x y {options {}}} {
-    $a_wdgt create text $x $y -text $a_txt -anchor n -justify center {*}$options;
-}
-
 proc ::rsttool::treeditor::tree::arc::bottom-point {item} {
     variable ::rsttool::treeditor::RSTW;
     list [lindex [$RSTW coords $item] 0] [lindex [$RSTW bbox $item] 3]
@@ -70,6 +66,7 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
     namespace import ::rsttool::treeditor::tree::ntw;
+    namespace import ::rsttool::treeditor::tree::node::draw-text;
     namespace import ::rsttool::utils::add-points;
     namespace import ::rsttool::utils::subtract-points;
     namespace import ::rsttool::utils::mid-point;

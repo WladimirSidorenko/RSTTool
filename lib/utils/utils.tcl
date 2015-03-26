@@ -121,12 +121,10 @@ proc ::rsttool::utils::max {args} {
 }
 
 proc ::rsttool::utils::ldelete { list value } {
-    set ix [lsearch -exact $list $value]
-    if {$ix >= 0} {
-	return [lreplace $list $ix $ix]
-    } else {
-	return $list
+    while {[set ix [lsearch -exact $list $value]] >= 0} {
+	set list [lreplace $list $ix $ix];
     }
+    return $list;
 }
 
 proc ::rsttool::utils::min {args} {

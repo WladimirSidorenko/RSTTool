@@ -348,6 +348,8 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     # display any nodes and sentences that already were annotated for
     # current message
     if {$CRNT_MSGID != $prev_prnt_msg_id} {show-nodes $CRNT_MSGID 1}
+    variable ::rsttool::treeditor::VISIBLE_NODES;
+    puts stderr "next-mesage: VISIBLE_NODES = [array names VISIBLE_NODES]"
     ::rsttool::treeditor::layout::redisplay-net;
 }
 
@@ -408,6 +410,8 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $OFFSET_SHIFT]
 
     set inid [::rsttool::treeditor::tree::node::make {text} $start_pos $end_pos {} $CRNT_MSGID];
+    ::rsttool::treeditor::layout::x-layout $inid $::rsttool::treeditor::CURRENT_XPOS;
+    ::rsttool::treeditor::layout::y-layout $inid;
     ::rsttool::treeditor::tree::node::display $inid;
     # ::rsttool::treeditor::layout::redisplay-net;
 
