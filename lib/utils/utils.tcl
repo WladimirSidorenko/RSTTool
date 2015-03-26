@@ -7,6 +7,7 @@ namespace eval ::rsttool::utils {
     namespace export ldelete;
     namespace export max;
     namespace export min;
+    namespace export mid-point;
     namespace export reset-array;
     namespace export strip;
     namespace export subtract-points;
@@ -156,6 +157,14 @@ proc ::rsttool::utils::strip {a_string} {
 proc ::rsttool::utils::add-points {p1 p2} {
     list [expr [lindex $p1 0] + [lindex $p2 0]]\
 	[expr [lindex $p1 1] + [lindex $p2 1]]
+}
+
+proc ::rsttool::utils::halve-point {p1} {
+    list [expr [lindex $p1 0] / 2] [expr [lindex $p1 1] / 2];
+}
+
+proc ::rsttool::utils::mid-point {p1 p2} {
+    add-points $p1 [halve-point [subtract-points $p2 $p1]];
 }
 
 proc ::rsttool::utils::subtract-points {p1 p2} {

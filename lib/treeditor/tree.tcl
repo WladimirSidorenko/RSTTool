@@ -130,8 +130,10 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 
     # prevent non-projective edges, i.e. given node can only be linked
     # to its adjacent span
+    puts stderr "link-nodes: MSGID2ROOTS($clicked_msgid) = $MSGID2ROOTS($clicked_msgid)"
     set clicked_idx [node::bisearch $clicked_nid $MSGID2ROOTS($clicked_msgid)]
     set dragged_idx [node::bisearch $dragged_nid $MSGID2ROOTS($dragged_msgid)]
+    puts stderr "link-nodes: clicked_idx = $clicked_idx; dragged_idx = $dragged_idx"
     if {[expr abs([expr $clicked_idx - $dragged_idx])] > 1} {
 	message "Can't connect non-adjacent nodes."
 	return;
@@ -181,17 +183,18 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     set prnt_nid $clicked_nid;
     set chld_nid $dragged_nid;
     switch -nocase  -- $type {
-	"nucleus" {}
+	"nucleus" {
+	    set prnt_nid $dragged_nid;
+	    set chld_nid $clicked_nid;
+	}
 	"nucleus-embedded" {
+	    set prnt_nid $dragged_nid;
+	    set chld_nid $clicked_nid;
 	    set relation "$relation-embedded";
 	}
 	"satellite" {
-	    set prnt_nid $clicked_nid;
-	    set chld_nid $dragged_nid;
 	}
 	"satellite-embedded" {
-	    set prnt_nid $clicked_nid;
-	    set chld_nid $dragged_nid;
 	    set relation "$relation-embedded";
 	}
 	"multinuclear" {
@@ -239,6 +242,7 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
     # update parent and relation of the child node
     set NODES($a_chld_nid,parent) $a_prnt_nid;
     set NODES($a_chld_nid,relname) $a_relation;
+    set NODES($a_chld_nid,reltype) $HYPOTACTIC;
     # append child node to the list of the parent's children
     set NODES($a_prnt_nid,children) [node::insort $NODES($a_prnt_nid,children) \
 					 $NODES($a_chld_nid,start) $a_chld_nid];
@@ -248,9 +252,14 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 
     # create a span node for the parent, if it's needed
     if {$a_span_nid == {}} {
+	set chld_start [node::get-start $a_chld_nid];
+	set prnt_start [node::get-start  $a_prnt_nid];
+	set chld_end [node::get-end $a_chld_nid];
+	set prnt_end [node::get-end  $a_prnt_nid];
+
 	set a_span_nid [node::make [expr $a_ext_rel ? {{external}} : {{internal}} ] \
-			    [expr $NODES($a_chld_nid,start) < $NODES($a_prnt_nid,start) ? $a_chld_nid: $a_prnt_nid] \
-			    [expr $NODES($a_chld_nid,end) < $NODES($a_prnt_nid,end) ? $a_prnt_nid: $a_chld_nid] \
+			    [expr $chld_start < $prnt_start ? $a_chld_nid: $a_prnt_nid] \
+			    [expr $chld_end < $prnt_end ? $a_prnt_nid: $a_chld_nid] \
 			    {} $NID2MSGID($a_prnt_nid)];
 	if {$a_ext_rel} {
 	    set NID2ENID($a_prnt_nid) $a_span_nid;
@@ -263,7 +272,10 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 	set NODES($a_prnt_nid,reltype) $SPAN;
 	# remove parent node from the roots
 	set prnt_msgid $NID2MSGID($a_prnt_nid);
-	set MSGID2ROOTS($a_prnt_nid) [ldelete $MSGID2ROOTS($prnt_msgid) $a_prnt_nid];
+	set MSGID2ROOTS($prnt_msgid) [ldelete $MSGID2ROOTS($prnt_msgid) $a_prnt_nid];
+	# insort new span node
+	set MSGID2ROOTS($prnt_msgid) \
+	    [node::insort $MSGID2ROOTS($prnt_msgid) $NODES($NODES($a_span_nid,start),start) $a_span_nid];
 	# position span nid at the previous position of the parent nid
 	# and re-draw the tree
 	set NODES($a_span_nid,xpos) $NODES($a_prnt_nid,xpos);
@@ -272,13 +284,15 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 	node::erase $a_prnt_nid;
 	puts stderr "link-chld-to-prnt: y-layout-subtree span_nid = $a_span_nid $ypos"
 	::rsttool::treeditor::layout::y-layout-subtree $a_span_nid $ypos;
+    } else {
+	::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
     }
 
     # reposition child node at the same height as the parent
     # draw an arc from child to parent node
-    puts stderr "link-chld-to-prnt: arc::display $a_prnt_nid $a_chld_nid $HYPOTACTIC"
-    ::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
-    arc::display $a_prnt_nid $a_chld_nid $HYPOTACTIC;
+    # puts stderr "link-chld-to-prnt: arc::display $a_prnt_nid $a_chld_nid $HYPOTACTIC"
+    # ::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
+    # arc::display $a_prnt_nid $a_chld_nid $HYPOTACTIC;
     # ::rsttool::treeditor::layout::restructure-upwards $a_chld_nid;
 }
 

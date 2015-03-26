@@ -295,6 +295,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::GROUP_NODE_CNT;
     namespace import ::rsttool::treeditor::tree::node::insort;
+    namespace import ::rsttool::treeditor::tree::node::get-start;
 
     if {$a_spans == {}} {return 0;}
     set nid {}; set start {}; set end {};
@@ -307,6 +308,10 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	if {[set nid [xml-get-attr $child {id}]] == {}} {
 	    return -2;
 	}
+	if {$nid > 0} {
+	    error "Invalid node id for abstract node: $nid (should be < 0)";
+	    return;
+	}
 	if {[set type [xml-get-attr $child {type}]] == {}} {
 	    return -3;
 	}
@@ -316,7 +321,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	if {[set end [xml-get-attr $child {end}]] == {}} {
 	    return -5;
 	}
-	if {[set msgid1 [xml-get-attr $child {msgid}]] == {}} {
+	if {[set msgid [xml-get-attr $child {msgid}]] == {}} {
 	    return -6;
 	}
 
@@ -328,44 +333,155 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	    set NODES($nid,type)  $type;
 	    set NODES($nid,start) $start;
 	    set NODES($nid,end)   $end;
+	    set NODES($nid,name) "$NODES($start,name)-$NODES($end,name)";
 	    set NODES($nid,parent)   {};
 	    set NODES($nid,relname)  {};
 	    set NODES($nid,children) {};
 	}
 
 	if {$type == "external"} {
-	    if {[info exists MSGID2ENID($msgid1)]} {
-		error "Duplicate external node for message $msgid1."
+	    if {[info exists MSGID2ENID($msgid)]} {
+		error "Duplicate external node for message $msgid."
 		return -7;
 	    }
-	    set MSGID2ENID($msgid1) [list $nid]
+	    set MSGID2ENID($msgid) [list $nid]
 	}
-	set NID2MSGID($nid) [list $msgid1]
+	set NID2MSGID($nid) [list $msgid]
 
-	if {[info exists MSGID2ROOTS($msgid1)]} {
-	    set MSGID2ROOTS($msgid1) [insort $MSGID2ROOTS($msgid1) $idx $nid]
+	if {[info exists MSGID2ROOTS($msgid)]} {
+	    set MSGID2ROOTS($msgid) [insort $MSGID2ROOTS($msgid) [get-start $nid] $nid]
 	} else {
-	    error "Non-terminal node ($nid) defined for message without terminal nodes ($msgid1)."
+	    error "Non-terminal node ($nid) defined for message without terminal nodes ($msgid)."
 	}
 
-	if {$nid > $GROUP_NODE_CNT} {
+	if {$nid < $GROUP_NODE_CNT} {
 	    set GROUP_NODE_CNT $nid;
 	}
     }
+    return 0;
+}
+proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::relations::SPAN;
+    variable ::rsttool::relations::HYPOTACTIC;
+    variable ::rsttool::relations::PARATACTIC;
+
+    switch -nocase -- $NODES($a_nid,reltype) \
+	$SPAN {
+	    set irel [$a_xml_doc createElement {hypRelation}];
+	    set ispan [$a_xml_doc createElement {spannode}];
+	    $ispan setAttribute {idref} $NODES($a_nid,parent);
+	    $irel appendChild $ispan;
+	    set inuc [$a_xml_doc createElement {nucleus}];
+	    $inuc setAttribute {idref} $a_nid;
+	    $irel appendChild $inuc;
+	    set ichild {};
+	    foreach cid $NODES($a_nid,children) {
+		if {$NODES($cid,reltype) != $HYPOTACTIC} {continue;}
+		if {$ichild != {}} {
+		    $irel removeChild $ichild;
+		    set irel [$irel cloneNode];
+		}
+		$irel setAttribute {relname} $NODES($cid,relname);
+		set ichild [$a_xml_doc createElement {satellite}];
+		$ichild setAttribute {idref} $cid;
+		$irel appendChild $ichild;
+		$a_relations appendChild $irel;
+	    }
+	    if {$ichild == {}} {
+		error "Invalid data structure for node '$NODES($a_nid,name)': span node exists without children.";
+		return -1;
+	    }
+	} \
+	$PARATACTIC {
+	    error "Cannot save paratactic relations.";
+	    return -1;
+	    set irel [$a_xml_doc createElement {hypRelation}];
+	} \
+	default {
+	    return 0;
+	}
+
+    $a_relations appendChild $irel;
     return 0;
 }
 
 proc ::rsttool::file::read-relations {a_relations} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2ENID;
-    if {$a_relations == {}} {return 0;}
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::MSGID2ROOTS;
+    variable ::rsttool::relations::SPAN;
+    variable ::rsttool::relations::HYPOTACTIC;
+    variable ::rsttool::relations::PARATACTIC;
+    namespace import ::rsttool::treeditor::tree::link-chld-to-prnt;
+    namespace import ::rsttool::treeditor::tree::node::get-start;
+    namespace import ::rsttool::utils::ldelete;
 
+    set relname "";
+    set ispan {}; set inuc {}; set isat {};
+    set ispan_id {}; set inuc_id {}; set isat_id {};
     foreach irel [$a_relations childNodes] {
-	switch -nocase -- [$child nodeName] {
-	    "parrelation" {
-		;
-	    }
+	switch -nocase -- [$irel nodeName] {
 	    "hyprelation" {
+		if {[set relname [xml-get-attr $irel {relname}]] == {}} {
+		    return -1;
+		}
+		if {[set ispan [$irel selectNodes ./spannode]] == {}} {
+		    error "No span node specified for hypotactic relation."
+		    return -2;
+		};
+		set ispan_id [xml-get-attr $ispan {idref}];
+		if {[set inuc [$irel selectNodes ./nucleus]] == {}} {
+		    error "No nucleus specified for hypotactic relation."
+		    return -3;
+		};
+		set inuc_id [xml-get-attr $inuc {idref}];
+		if {[set isat [$irel selectNodes ./satellite]] == {}} {
+		    error "No satellite specified for hypotactic relation."
+		    return -4;
+		};
+		set isat_id [xml-get-attr $isat {idref}];
+		# add parent to span's children
+		set NODES($ispan_id,children) [insort $NODES($ispan_id,children) \
+						   [get-start $inuc_id] $inuc_id];
+		# link parent to span
+		set NODES($inuc_id,parent) $ispan_id;
+		set NODES($inuc_id,relname) {span};
+		set NODES($inuc_id,reltype) $SPAN;
+		set NODES($inuc_id,children) [insort $NODES($inuc_id,children) \
+						   [get-start $isat_id] $isat_id];
+		# link child to parent
+		set NODES($isat_id,parent) $inuc_id;
+		set NODES($isat_id,relname) $relname;
+		set NODES($isat_id,reltype) $HYPOTACTIC;
+		# remove child and parent from the list of message roots
+		set nuc_msgid $NID2MSGID($inuc_id);
+		set sat_msgid $NID2MSGID($isat_id);
+		if {$nuc_msgid != $sat_msgid} {
+		    if {![info exists MSGID2ROOTS($nuc_msgid,$sat_msgid)]} {
+			set MSGID2ROOTS($nuc_msgid,$sat_msgid) {};
+
+			if [info exists MSGID2ROOTS($nuc_msgid)] {
+			    set MSGID2ROOTS($nuc_msgid,$sat_msgid) $MSGID2ROOTS($nuc_msgid);
+			}
+			if [info exists MSGID2ROOTS($sat_msgid)] {
+			    set MSGID2ROOTS($nuc_msgid,$sat_msgid) \
+				[concat $MSGID2ROOTS($nuc_msgid,$sat_msgid) $MSGID2ROOTS($sat_msgid)];
+			}
+		    }
+		    set MSGID2ROOTS($nuc_msgid,$sat_msgid) [ldelete $MSGID2ROOTS($nuc_msgid,$sat_msgid) $inuc_id];
+		    set MSGID2ROOTS($nuc_msgid,$sat_msgid) [ldelete $MSGID2ROOTS($nuc_msgid,$sat_msgid) $isat_id];
+		    set MSGID2ROOTS($nuc_msgid,$sat_msgid) [insort $MSGID2ROOTS($nuc_msgid,$sat_msgid) \
+								[get-start $ispan_id] $ispan_id];
+		} else {
+		    set MSGID2ROOTS($nuc_msgid) [ldelete $MSGID2ROOTS($nuc_msgid) $inuc_id];
+		    set MSGID2ROOTS($nuc_msgid) [ldelete $MSGID2ROOTS($nuc_msgid) $isat_id];
+		    set MSGID2ROOTS($nuc_msgid) [insort $MSGID2ROOTS($nuc_msgid) [get-start $ispan_id] $ispan_id];
+		    puts stderr "read-relations: MSGID2ROOTS($nuc_msgid) = $MSGID2ROOTS($nuc_msgid)";
+		}
+	    }
+	    "parrelation" {
 		;
 	    }
 	    default {
@@ -476,10 +592,11 @@ proc ::rsttool::file::save {} {
 	return;
     } else {
 	# create XML document
-	set xmldoc [dom createDocument annotation]
-	set root [$xmldoc documentElement]
-	set tnodes [$xmldoc createElement segments]
-	set gnodes [$xmldoc createElement spans]
+	set xmldoc [dom createDocument annotation];
+	set root [$xmldoc documentElement];
+	set tnodes [$xmldoc createElement segments];
+	set gnodes [$xmldoc createElement spans];
+	set relations [$xmldoc createElement relations];
 	# save nodes
 	foreach nid [array names NID2MSGID] {
 	    if {[text-node-p $nid]} {
@@ -487,12 +604,12 @@ proc ::rsttool::file::save {} {
 	    } else {
 		write-gnode $nid $gnodes $xmldoc;
 	    }
+	    write-relations $nid $relations $xmldoc;
 	}
 	$root appendChild $tnodes
 	$root appendChild $gnodes
-
-	set relations [$xmldoc createElement relations]
 	$root appendChild $relations
+
 	# create temporary file
 	set tmpdir [file dirname $CRNT_ANNO_FILE]
 	if {![file exists $tmpdir] || ![file isdirectory $tmpdir] || ![file writable $tmpdir]} {

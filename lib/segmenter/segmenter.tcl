@@ -294,7 +294,7 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     # puts stderr "checking external node msgs2extnid($prev_prnt_msg_id,$prev_msg_id)"
     if [info exists MSGID2ENID($prev_prnt_msg_id,$prev_msg_id)] {
 	set extnid [lindex $MSGID2ENID($prev_prnt_msg_id,$prev_msg_id) 0]
-	unset VISIBLE_NODES($extnid)
+	array unset VISIBLE_NODES $extnid;
 	# unlink children from the abstract group node
 	# foreach cid $node($extnid,children) {
 	#     set node($cid,parent) {}
@@ -348,7 +348,7 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     # display any nodes and sentences that already were annotated for
     # current message
     if {$CRNT_MSGID != $prev_prnt_msg_id} {show-nodes $CRNT_MSGID 1}
-    ::rsttool::treeditor::layout::redisplay-net
+    ::rsttool::treeditor::layout::redisplay-net;
 }
 
 proc ::rsttool::segmenter::segment {{my_current {}}} {
@@ -408,7 +408,8 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $OFFSET_SHIFT]
 
     set inid [::rsttool::treeditor::tree::node::make {text} $start_pos $end_pos {} $CRNT_MSGID];
-    ::rsttool::treeditor::layout::redisplay-net;
+    ::rsttool::treeditor::tree::node::display $inid;
+    # ::rsttool::treeditor::layout::redisplay-net;
 
     .editor.text mark set insert last_sel
     .editor.text tag add old my_sel.first last_sel

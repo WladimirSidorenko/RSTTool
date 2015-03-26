@@ -9,6 +9,8 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export text-node-p;
     namespace export group-node-p;
     namespace export set-text;
+    namespace export get-start;
+    namespace export get-end;
 }
 
 ##################################################################
@@ -30,8 +32,6 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     if {$type ==  "text"} {
 	if {$name == {}} {set name [unique-tnode-name]}
 	set nid [unique-tnode-id]
-	# save mapping from node id to message id
-	set NID2MSGID($nid) [list $msgid]
 	# save mapping from message id to node id
 	if {[info exists MSGID2ROOTS($msgid)]} {
 	    # since we might add node after some group nodes were
@@ -43,9 +43,22 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	    set MSGID2TNODES($msgid) [list $nid]
 	}
     } else {
-	if {$name == {}} {set name "$NODES($start,name)-$NODES($end,name)"}
+	if {$name == {}} {
+	    set sname {}; set ename {};
+	    if {[group-node-p $start]} {
+		set start $NODES($start,start)
+	    }
+	    set sname $NODES($start,name);
+	    if {[group-node-p $end]} {
+		set end $NODES($end,end);
+	    }
+	    set ename $NODES($end,name);
+	    set name "$sname-$ename";
+	}
 	set nid [unique-gnode-id]
     }
+    # save mapping from node id to message id
+    set NID2MSGID($nid) [list $msgid]
     set NODES($nid,type) $type
     set NODES($nid,name) $name
     set NODES($nid,parent) {}
@@ -58,6 +71,24 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     set VISIBLE_NODES($nid) 1
     set-text $nid $msgid;
     return $nid
+}
+
+proc ::rsttool::treeditor::tree::node::get-start {a_nid} {
+    variable ::rsttool::NODES;
+
+    if {[group-node-p $a_nid]} {
+	return [get-start $NODES($a_nid,start)];
+    }
+    return $NODES($a_nid,start);
+}
+
+proc ::rsttool::treeditor::tree::node::get-end {a_nid} {
+    variable ::rsttool::NODES;
+
+    if {[group-node-p $a_nid]} {
+	return [get-end $NODES($a_nid,end)];
+    }
+    return $NODES($a_nid,end);
 }
 
 proc ::rsttool::treeditor::tree::node::set-text {a_nid {a_msgid {}}} {
@@ -113,14 +144,16 @@ proc ::rsttool::treeditor::tree::node::display {a_nid} {
     variable ::rsttool::treeditor::WTN;
     variable ::rsttool::treeditor::NODE_WIDTH;
 
-    set text "$NODES($a_nid,name)\n$NODES($a_nid,text)"
-    set xpos $NODES($a_nid,xpos)
-    set ypos [expr $NODES($a_nid,ypos) + 2]
+    set text {};
     if [group-node-p $a_nid] {
 	set color "green"
+	set text "$NODES($a_nid,name)"
     } else {
 	set color "black"
+	set text "$NODES($a_nid,name)\n$NODES($a_nid,text)"
     }
+    set xpos $NODES($a_nid,xpos);
+    set ypos [expr $NODES($a_nid,ypos) + 2];
     set wgt [draw-text $RSTW $text $xpos $ypos "-width $NODE_WIDTH -fill $color"]
 
     set NODES($a_nid,textwgt) $wgt
@@ -143,19 +176,22 @@ proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
 proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
     # set visibility status for all internal nodes belonging to the message
     # `$msg_id` to $show
+    variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID
     variable ::rsttool::MSGID2ROOTS;
     variable ::rsttool::treeditor::VISIBLE_NODES;
 
     if {! [info exists MSGID2ROOTS($msg_id)]} {return}
-
     # show/hide internal nodes pertaining to message `msg_id`
     if {$show} {
 	foreach nid $MSGID2ROOTS($msg_id) {
 	    set VISIBLE_NODES($nid) 1
 	}
     } else {
-	foreach nid $MSGID2ROOTS($msg_id) {
-	    if {[info exists VISIBLE_NODES($nid)]} {unset VISIBLE_NODES($nid)}
+	foreach nid [array names VISIBLE_NODES] {
+	    if {$NID2MSGID($nid) == $msg_id} {
+		array unset VISIBLE_NODES $nid;
+	    }
 	}
     }
 }
@@ -168,9 +204,14 @@ proc ::rsttool::treeditor::tree::node::erase {a_nid} {
     namespace import ::rsttool::treeditor::tree::ntw;
 
     puts stderr "erase-node:  erasing nid = $a_nid"
-    $RSTW delete [ntw $a_nid];
-    $RSTW delete $NODES($a_nid,spanwgt);
-    array unset WTN [ntw $a_nid];
+    set a_wdgt [ntw $a_nid];
+    if {$a_wdgt != {}} {
+	$RSTW delete $a_wdgt;
+	array unset WTN $a_wdgt;
+    }
+    if {[info exists NODES($a_nid,spanwgt)]} {
+	$RSTW delete $NODES($a_nid,spanwgt);
+    }
     array unset NODES $a_nid,textwgt;
     array unset NODES $a_nid,spanwgt;
     ::rsttool::treeditor::tree::arc::erase $a_nid;
@@ -656,7 +697,7 @@ proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list} {
 	    set lstart $idx;
 	}
     }
-    return ret;
+    return $ret;
 }
 
 proc ::rsttool::treeditor::tree::node::insort {a_list a_start a_nid} {

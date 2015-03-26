@@ -38,7 +38,7 @@ proc ::rsttool::helper::create_toplevel {name} {
 	foreach item $rel_items {
 	    menu .$name.menubar.$item -tearoff 0
 	    .$name.menubar add cascade -label "$item" -menu \
-		.$name.menubar.$item
+		.$name.menubar.$item;
 	}
 	set types {rst multinuc embedded constit}
 	foreach type $types {

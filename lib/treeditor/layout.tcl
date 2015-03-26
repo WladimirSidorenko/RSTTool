@@ -37,6 +37,7 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
 	}
     }
 
+    puts stderr "MSGID2ROOTS($PRNT_MSGID,$CRNT_MSGID) = $MSGID2ROOTS($PRNT_MSGID,$CRNT_MSGID)"
     # 3. layout and draw
     x-layout $MSGID2ROOTS($PRNT_MSGID,$CRNT_MSGID);
     y-layout $MSGID2ROOTS($PRNT_MSGID,$CRNT_MSGID);
@@ -63,6 +64,7 @@ proc ::rsttool::treeditor::layout::x-layout {a_nodes} {
     set xinc [expr $NODE_WIDTH + 10]
     set xpos [expr $NODE_WIDTH / 2 + 30]
     foreach nid $a_nodes {
+	puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
     	if [group-node-p $nid] {
     	    set xpos [xlayout-group-node $nid];
     	} else {
@@ -73,25 +75,26 @@ proc ::rsttool::treeditor::layout::x-layout {a_nodes} {
     set CURRENT_XPOS $xpos
 }
 
-proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid a_msgid1 a_msgid2} {
+proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid} {
     variable ::rsttool::NODES;
     variable ::rsttool::treeditor::NODE_WIDTH;
     variable ::rsttool::treeditor::VISIBLE_NODES;
-    namespace import ::rsttool::utils::max;
-    namespace import ::rsttool::utils::min;
+    variable ::rsttool::treeditor::NODE_WIDTH;
+    variable ::rsttool::treeditor::CURRENT_XPOS;
+    namespace import ::rsttool::treeditor::tree::arc::group-relation-p;
 
     # only position nodes which are not yet positioned
-    if {$NODES($nid,xpos) != {}} {return}
+    if {[info exists NODES($a_nid,xpos)] && $NODES($a_nid,xpos) != {}} {return}
 
     # 1. Collect x coords of constituents
     set x_coords {}
+    puts stderr "xlayout-group-node: a_nid = $a_nid";
     foreach dep $NODES($a_nid,children) {
 	#  [group-relation-p $node($dep,relname)]
-	if [info exists VISIBLE_NODES($dep)] {
-	    if { !$NODES($dep,xpos) } {
-		xlayout-group-node $dep
-	    }
-	    if [group-relation-p $NODES($dep,reltype)] {
+	if {[info exists VISIBLE_NODES($dep)]} {
+	    puts stderr "xlayout-group-node: dep = $dep";
+	    xlayout-group-node $dep;
+	    if {[group-relation-p $NODES($dep,reltype)]} {
 		# we want to place the node over its members, not satelites
 		lappend x_coords $NODES($dep,xpos)
 	    }
@@ -101,17 +104,12 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid a_msgid1 a_msgid2} 
     if { $x_coords == {} } {
 	# group-node, but all children invisible
 	# find the first visible text node BEFORE the first tn child
-	set first_tn [find-first-text-node $nid]
-	set prev_node [previous-visible-node $first_tn]
-	if { $prev_node > 0 } {
-	    set NODES($nid,xpos) [expr $NODES($prev_node,xpos) + $NODE_WIDTH + 10];
-	} else {
-	    set NODES($nid,xpos) [expr $NODE_WIDTH + 10];
-	}
+	set CURRENT_XPOS [expr $CURRENT_XPOS + $NODE_WIDTH + 10];
+	set NODES($a_nid,xpos) $CURRENT_XPOS;
     } else {
 	set imin [expr min($x_coords)];
 	set imax [expr max($x_coords)];
-	set NODES($nid,xpos) [expr $imin + ($imax - $imin) / 2]
+	set NODES($a_nid,xpos) [expr $imin + ($imax - $imin) / 2]
     }
 }
 
@@ -146,6 +144,7 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     # 2. Re-layout children
     set chld_ypos [expr [lindex [$RSTW bbox [ntw $a_nid]] 3] + 30]
     foreach cid $NODES($a_nid,children) {
+	puts stderr "y-layout-subtree: cid = $cid";
     	if {[info exists VISIBLE_NODES($cid)] && $cid != $a_nid} {
 	    # paratactic child nodes should keep the y position of
 	    # their parent
@@ -154,7 +153,8 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
 	    } else {
 		y-layout-subtree $cid $a_ypos;
 	    }
-	    ::rsttool::treeditor::tree::arc::display $a_nid $cid;
+	    puts stderr "y-layout-subtree: display arc between $a_nid and $cid with type $NODES($cid,reltype)";
+	    ::rsttool::treeditor::tree::arc::display $a_nid $cid $NODES($cid,reltype);
     	}
     }
 }
@@ -185,31 +185,27 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
 #     ::rsttool::treeditor::tree::node::redisplay $nid
 # }
 
-# proc ::rsttool::treeditor::layout::find-first-text-node {nid} {
-#     variable ::rsttool::NODES;
+proc ::rsttool::treeditor::layout::find-first-text-node {nid} {
+    variable ::rsttool::NODES;
 
-#     #come back here
-#     if [text-node-p $nid] {return $nid}
-#     # this just returns A child -- we can work back from any
-#     # child since all children are invis.
-#     set cid [lindex [lsort -integer $NODES($nid,children)] 0]
-#     if [text-node-p $cid] {
-# 	return $cid
-#     } else {
-# 	return [find-first-text-node $cid]
-#     }
-# }
+    #come back here
+    if [text-node-p $nid] {return $nid}
+    # this just returns A child -- we can work back from any
+    # child since all children are invis.
+    set cid [lindex $NODES($nid,children) 0]
+    return [find-first-text-node $cid]
+}
 
-# proc ::rsttool::treeditor::layout::previous-visible-node {nid} {
-#     variable ::rsttool::NODES;
-#     variable ::rsttool::TEXT_NODES;
+proc ::rsttool::treeditor::layout::previous-visible-node {nid} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::TEXT_NODES;
 
-#     set pos [lsearch $text_nodes $nid]
-#     for {set i [expr $pos - 1]} {$i > 0} {incr i -1} {
-# 	if $NODES($i,visible) {return $i}
-#     }
-#     return 0
-# }
+    set pos [lsearch $text_nodes $nid]
+    for {set i [expr $pos - 1]} {$i > 0} {incr i -1} {
+	if $NODES($i,visible) {return $i}
+    }
+    return 0
+}
 
 proc ::rsttool::treeditor::layout::resize-display {change} {
     variable ::rsttool::NODES;

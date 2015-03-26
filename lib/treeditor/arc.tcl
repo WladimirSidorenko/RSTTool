@@ -41,7 +41,7 @@ proc ::rsttool::treeditor::tree::arc::constit-relation-p {rel} {
 
 proc ::rsttool::treeditor::tree::arc::draw-arc {a_wdgt a_points} {
     puts stderr "draw-arc: $a_wdgt create line $a_points -tag line -joinstyle round -smooth true -arrow first;"
-    $a_wdgt create line $a_points -tag line -joinstyle round -smooth true -arrow first;
+    $a_wdgt create line {*}$a_points -tag line -joinstyle round -smooth true -arrow first;
 }
 
 proc ::rsttool::treeditor::tree::arc::draw-line-between {a_wdgt a_p1 {a_p2 {}}} {
@@ -72,6 +72,7 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
     namespace import ::rsttool::treeditor::tree::ntw;
     namespace import ::rsttool::utils::add-points;
     namespace import ::rsttool::utils::subtract-points;
+    namespace import ::rsttool::utils::mid-point;
 
     set nuc_wdgt [ntw $a_nuc_nid];
     set sat_wdgt [ntw $a_sat_nid];
@@ -84,7 +85,7 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
     set color "red";
     set label $NODES($a_sat_nid,relname);
     set ypos $NODES($a_sat_nid,ypos);
-    set nucbot [bottom-point [ntw $nuc_wdgt]];
+    set nucbot [bottom-point $nuc_wdgt];
     set satpnt "$NODES($a_sat_nid,xpos) $NODES($a_sat_nid,ypos)";
     set labelpnt {0 0};
 
@@ -124,7 +125,7 @@ proc ::rsttool::treeditor::tree::arc::erase {a_nid} {
 	$RSTW delete $NODES($a_nid,arrowwgt)
 	array unset NODES  $a_nid,arrowwgt;
     }
-    if {[info exists NODES($a_nid,arrowwgt)] && $NODES($a_nid,labelwgt) != {} } {
+    if {[info exists NODES($a_nid,labelwgt)] && $NODES($a_nid,labelwgt) != {} } {
 	$RSTW delete $NODES($a_nid,labelwgt)
 	array unset NODES  $a_nid,labelwgt;
     }
