@@ -17,6 +17,7 @@ namespace eval ::rsttool::treeditor::tree {
 
 ##################################################################
 proc ::rsttool::treeditor::tree::clicked-node {x y} {
+    puts stderr "clicked-node: wdgt = [clicked-widget $x $y], node = [wtn [clicked-widget $x $y]];"
     return [wtn [clicked-widget $x $y]];
 }
 
@@ -83,6 +84,7 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::segmenter::message;
 
+    puts stderr "link-nodes called";
     # global visible_nodes
     # global last_group_node_id DISCO_NODE
     # global newest_node rstw node currentsat
@@ -362,7 +364,10 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2MSGID;
     namespace import ::rsttool::utils::ldelete;
+    namespace import ::rsttool::treeditor::destroy-group-node;
+    namespace import ::rsttool::treeditor::tree::node::group-node-p;
 
+    return;
     # 1. handle missed clicks
     if {$sat == {} || $NODES($sat,parent) == {}} {return}
 
@@ -372,7 +377,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
     set node($sat,parent) {}
     set node($sat,relname) {}
     set spannid {}
-    if {[info exists node($nuc,parent)] && $NODES($nuc,relname) == "span"} {
+    if {[info exists NODES($nuc,parent)] && $NODES($nuc,relname) == "span"} {
 	set spannid $NODES($nuc,parent)
     }
     # puts stderr "unlink-node: sat = $sat (children: $NODES($sat,children))"
@@ -380,7 +385,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
     # if {$spannid != {}} {puts stderr "unlink-node: spannid = $spannid  (children: $NODES($spannid,children))"}
 
     # 2. Redraw satellite substructure
-    if {$redraw} {y-layout-subtree $sat}
+    if {$redraw} {layout::y-layout-subtree $sat}
     # 3. If parent has no more children, delete span node and shift
     # the parent up the structure
     set dgn 0
@@ -393,7 +398,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	# puts stderr "unlink-node: 2) set dgn 1"
 	# here, we have to differentiate between cases where `nuc` and
 	# `sat` belong to same or to different messages
-	if {$nid2msgid($nuc) == $nid2msgid($sat)} {
+	if {$NID2MSGID($nuc) == $NID2MSGID($sat)} {
 	    foreach chnid $NODES($nuc,children) {
 		if {$NODES($chnid,relname) != "span"} {
 		    set dgn 0
@@ -419,7 +424,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	}
     }
     # puts stderr "unlink-node: restructure-upwards nuc = $nuc redraw = $redraw"
-    restructure-upwards $nuc $redraw
+    ::rsttool::treeditor::layout::update-upwards $nuc $redraw
 }
 
 proc rsttool::treeditor::tree::screen-coords {item canvas} {

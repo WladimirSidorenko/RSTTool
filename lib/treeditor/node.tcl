@@ -781,11 +781,12 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
     variable ::rsttool::MSGID2ENID;
     variable ::rsttool::NAME2NID;
     variable ::rsttool::treeditor::VISIBLE_NODES;
+    namespace import ::rsttool::utils::ldelete;
 
     # remove this node from MSGID's
     set msgid $NID2MSGID($nid);
     if [info exists MSGID2ROOTS($msgid)] {
-	set MSGID2ROOTS($msgid) [ldelete $MSGID2ROOTS($msgid) $nid];
+	::rsttool::treeditor::update-roots $msgid $nid {remove};
 	if [text-node-p $nid] {
 	    set MSGID2TNODES($msgid) [ldelete $MSGID2TNODES($msgid) $nid];
 	}

@@ -415,7 +415,7 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     ::rsttool::treeditor::update-roots $CRNT_MSGID $inid {add};
     ::rsttool::treeditor::layout::x-layout $inid $::rsttool::treeditor::CURRENT_XPOS;
     ::rsttool::treeditor::layout::y-layout $inid;
-    ::rsttool::treeditor::tree::node::display $inid;
+    # ::rsttool::treeditor::tree::node::display $inid;
     # ::rsttool::treeditor::layout::redisplay-net;
 
     .editor.text mark set insert last_sel

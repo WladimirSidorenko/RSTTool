@@ -499,7 +499,56 @@ proc ::rsttool::file::read-relations {a_relations} {
 		}
 	    }
 	    "parrelation" {
-		;
+		if {[set relname [xml-get-attr $irel {relname}]] == {}} {
+		    return -1;
+		}
+		if {[set ispan [$irel selectNodes ./spannode]] == {}} {
+		    error "No span node specified for paratactic relation."
+		    return -2;
+		};
+		set ispan_id [xml-get-attr $ispan {idref}];
+		set ispan_msgid $NID2MSGID($ispan_id);
+		set nuc_cnt 0;
+		set inuc_id {}; set inuc_msgid {};
+		# iterate over nuclei of that paratactic relation
+		foreach inuc [$irel selectNodes ./nucleus] {
+		    if {[set inuc_id [xml-get-attr $inuc {idref}]] == {}} {
+			error "No node id specified for nucleus."
+			return -3;
+		    }
+		    # update parent of the nucleus and add it to span's children
+		    set NODES($inuc_id,parent) $ispan_id;
+		    set NODES($inuc_id,relname) $relname;
+		    set NODES($inuc_id,reltype) $PARATACTIC;
+		    set NODES($ispan_id,children) [insort $NODES($ispan_id,children) \
+						       [get-start $inuc_id] $inuc_id];
+		    incr nuc_cnt;
+		    set inuc_msgid $NID2MSGID($inuc_id);
+		    if {$ispan_msgid != $inuc_msgid} {
+			if {![info exists MSGID2ROOTS($ispan_msgid,$inuc_msgid)]} {
+			    set MSGID2ROOTS($ispan_msgid,$inuc_msgid) {};
+
+			    if [info exists MSGID2ROOTS($ispan_msgid)] {
+				set MSGID2ROOTS($ispan_msgid,$inuc_msgid) $MSGID2ROOTS($ispan_msgid);
+			    }
+			    if [info exists MSGID2ROOTS($inuc_msgid)] {
+				set MSGID2ROOTS($ispan_msgid,$inuc_msgid) \
+				    [concat $MSGID2ROOTS($ispan_msgid,$inuc_msgid) $MSGID2ROOTS($inuc_msgid)];
+			    }
+			}
+			set MSGID2ROOTS($ispan_msgid,$inuc_msgid) [ldelete $MSGID2ROOTS($ispan_msgid,$inuc_msgid) $inuc_id];
+			set MSGID2ROOTS($ispan_msgid,$inuc_msgid) [insort $MSGID2ROOTS($ispan_msgid,$inuc_msgid) \
+								    [get-start $ispan_id] $ispan_id];
+		    } else {
+			::rsttool::treeditor::update-roots $inuc_msgid $inuc_id {remove};
+		    }
+		}
+		if {$nuc_cnt < 2} {
+		    error "Invalid number of nuclei for paratactic relation: $nuc_cnt."
+		    return -6;
+		}
+		# remove child and parent from the list of message roots
+		set inuc_msgid $NID2MSGID($inuc_id);
 	    }
 	    default {
 		error "Unrecognized element [$child nodeName]";
