@@ -8,6 +8,8 @@ package require tdom;
 namespace eval ::rsttool::file {
     variable HOME $::env(HOME);
     variable FTYPES {{{XML Files} {.xml}}};
+    variable SAVED_PARNUC;
+    array set SAVED_PARNUC {};
 
     namespace export xml-get-attr;
     namespace export xml-get-text;
@@ -356,30 +358,31 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
     variable ::rsttool::relations::SPAN;
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
+    variable ::rsttool::file::SAVED_PARNUC;
 
     if {![info exists NODES($a_nid,reltype)]} {return;}
 
     switch -nocase -- $NODES($a_nid,reltype) \
 	$SPAN {
-	    set irel [$a_xml_doc createElement {hypRelation}];
+	    set xrel [$a_xml_doc createElement {hypRelation}];
 	    set ispan [$a_xml_doc createElement {spannode}];
 	    $ispan setAttribute {idref} $NODES($a_nid,parent);
-	    $irel appendChild $ispan;
+	    $xrel appendChild $ispan;
 	    set inuc [$a_xml_doc createElement {nucleus}];
 	    $inuc setAttribute {idref} $a_nid;
-	    $irel appendChild $inuc;
+	    $xrel appendChild $inuc;
 	    set ichild {};
 	    foreach cid $NODES($a_nid,children) {
 		if {$NODES($cid,reltype) != $HYPOTACTIC} {continue;}
 		if {$ichild != {}} {
-		    $irel removeChild $ichild;
-		    set irel [$irel cloneNode];
+		    $xrel removeChild $ichild;
+		    set xrel [$xrel cloneNode];
 		}
-		$irel setAttribute {relname} $NODES($cid,relname);
+		$xrel setAttribute {relname} $NODES($cid,relname);
 		set ichild [$a_xml_doc createElement {satellite}];
 		$ichild setAttribute {idref} $cid;
-		$irel appendChild $ichild;
-		$a_relations appendChild $irel;
+		$xrel appendChild $ichild;
+		$a_relations appendChild $xrel;
 	    }
 	    if {$ichild == {}} {
 		error "Invalid data structure for node '$NODES($a_nid,name)': span node exists without children.";
@@ -387,15 +390,38 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 	    }
 	} \
 	$PARATACTIC {
-	    error "Cannot save paratactic relations.";
-	    return -1;
-	    set irel [$a_xml_doc createElement {hypRelation}];
+	    set ispan $NODES($a_nid,parent);
+	    # remember the span node
+	    if {[info exists SAVED_PARNUC($ispan)]} {return;}
+	    set SAVED_PARNUC($ispan) 1;
+	    set xspan [$a_xml_doc createElement {spannode}];
+	    $xspan setAttribute {idref} $ispan;
+	    set xrel [$a_xml_doc createElement {parRelation}];
+	    set irelname $NODES($a_nid,relname);
+	    $xrel setAttribute {relname} $irelname;
+	    $xrel appendChild $xspan;
+	    # append nuclei of the span to the XML relation
+	    set nuc_cnt 0;
+	    foreach inuc $NODES($ispan,children) {
+		if {$NODES($inuc,reltype) != $PARATACTIC} {continue;}
+		if {$NODES($inuc,relname) != $irelname} {
+		    error "Invalid data structure: different paratactic relations link to the same span ($ispan).";
+		    return -2;
+		}
+		set xnuc [$a_xml_doc createElement {nucleus}];
+		$xnuc setAttribute {idref} $inuc;
+		$xrel appendChild $xnuc;
+		incr nuc_cnt;
+	    }
+	    if {$nuc_cnt < 2} {
+		error "Invalid data structure: multinuclear relations has less than two nuclei ($ispan).";
+		return -3;
+	    }
+	    $a_relations appendChild $xrel;
 	} \
 	default {
 	    return 0;
 	}
-
-    $a_relations appendChild $irel;
     return 0;
 }
 
@@ -570,6 +596,8 @@ proc ::rsttool::file::save {} {
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::MODIFIED;
     variable ::rsttool::CRNT_ANNO_FILE;
+    variable ::rsttool::file::SAVED_PARNUC;
+
     namespace import ::rsttool::treeditor::tree::node::group-node-p;
     namespace import ::rsttool::treeditor::tree::node::text-node-p;
 
@@ -597,6 +625,9 @@ proc ::rsttool::file::save {} {
 	    }
 	    write-relations $nid $relations $xmldoc;
 	}
+	# reset array of PARATACTIC nuclei
+	array unset SAVED_PARNUC;
+	array set SAVED_PARNUC {};
 	$root appendChild $tnodes
 	$root appendChild $gnodes
 	$root appendChild $relations

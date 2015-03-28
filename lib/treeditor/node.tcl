@@ -12,7 +12,9 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export group-node-p;
     namespace export set-text;
     namespace export get-start;
+    namespace export get-start-node;
     namespace export get-end;
+    namespace export get-end-node;
     namespace export get-visible-parent;
 }
 
@@ -97,6 +99,24 @@ proc ::rsttool::treeditor::tree::node::get-start {a_nid} {
 	return [get-start $NODES($a_nid,start)];
     }
     return $NODES($a_nid,start);
+}
+
+proc ::rsttool::treeditor::tree::node::get-start-node {a_nid} {
+    variable ::rsttool::NODES;
+
+    if {[group-node-p $a_nid]} {
+	return $NODES($a_nid,start);
+    }
+    return $a_nid;
+}
+
+proc ::rsttool::treeditor::tree::node::get-end-node {a_nid} {
+    variable ::rsttool::NODES;
+
+    if {[group-node-p $a_nid]} {
+	return [get-end $NODES($a_nid,end)];
+    }
+    return $NODES($a_nid,end);
 }
 
 proc ::rsttool::treeditor::tree::node::get-end {a_nid} {

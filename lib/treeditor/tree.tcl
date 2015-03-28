@@ -230,8 +230,9 @@ proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
 
     # create span node, if necessary
     if {$a_span_nid == {}} {
-	set ypos [expr min($NODES($a_nid1,ypos),$NODES($a_nid2,ypos))];
-	set xpos [expr min($NODES($a_nid1,xpos),$NODES($a_nid2,xpos))];
+	set ypos [expr max($NODES($a_nid1,ypos),$NODES($a_nid2,ypos))];
+	set xpos [expr min($NODES([node::get-start-node $a_nid1],xpos),\
+			       $NODES([node::get-start-node $a_nid2],xpos))];
 	set a_span_nid [make-span-node $a_nid1 $a_nid2 $a_relation 1 $a_ext_rel];
 	set NODES($a_span_nid,ypos) $ypos;
 	puts stderr "link-multinuc: xlayout-group-node $a_span_nid $xpos";
