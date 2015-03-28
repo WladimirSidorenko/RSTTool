@@ -1,5 +1,8 @@
 #!/usr/bin/env wish
 
+##################################################################
+
+##################################################################
 namespace eval ::rsttool::relations {
     variable DATADIR [file join [pwd] data];
 
@@ -122,7 +125,9 @@ proc ::rsttool::relations::load {a_fname {a_dirname {}} {type "internal"}} {
 	}
     }
     # sort the lists of relations
-    set [subst $type2rel]($reltype) [lsort -dictionary -nocase $[subst $type2rel]($reltype)]
+    foreach itype [array names [subst $type2rel]] {
+	set [subst $type2rel]($reltype) [lsort -dictionary -nocase [set [subst $type2rel]([subst $reltype])]];
+    }
     return 0;
 }
 

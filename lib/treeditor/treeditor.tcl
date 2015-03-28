@@ -221,10 +221,10 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation} {
     set iprnt [lindex $FORREST($a_msgid) 1];
     set ikey "$iprnt,$a_msgid";
     if {[info exists MSGID2ROOTS($ikey)]} {
-	if {$a_operation == {remove}} {
+	if {$a_operation == {remove} || $iprnt == {}} {
 	    set MSGID2ROOTS($ikey) [$op $MSGID2ROOTS($ikey) $a_nid]
 	} else {
-	    # insert the new node right after the nodes of the parent
+	    set MSGID2ROOTS($ikey) [concat $MSGID2ROOTS($iprnt) $MSGID2ROOTS($a_msgid)]
 	}
     }
 }

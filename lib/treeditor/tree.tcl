@@ -199,7 +199,7 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 	    set relation "$relation-embedded";
 	}
 	"multinuclear" {
-	    set mutinuc 1;
+	    set multinuc 1;
 	}
 	default {
 	    error "Invalid dependecy type: $type";
@@ -221,7 +221,31 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 
 proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
 						    {a_span_nid {}} {a_ext_rel 0}} {
-    ;
+    variable ::rsttool::NODES;
+
+    if {$a_ext_rel} {return;}
+
+    set chld1_wdgt [ntw $a_nid1];
+    set chld2_wdgt [ntw $a_nid2];
+
+    # create span node, if necessary
+    if {$a_span_nid == {}} {
+	set ypos [expr min($NODES($a_nid1,ypos),$NODES($a_nid2,ypos))];
+	set xpos [expr min($NODES($a_nid1,xpos),$NODES($a_nid2,xpos))];
+	set a_span_nid [make-span-node $a_nid1 $a_nid2 $a_relation 1 $a_ext_rel];
+	set NODES($a_span_nid,ypos) $ypos;
+	puts stderr "link-multinuc: xlayout-group-node $a_span_nid $xpos";
+	::rsttool::treeditor::layout::xlayout-group-node $a_span_nid $xpos;
+	# erase both child subtrees
+	erase-subtree $a_nid1;
+	erase-subtree $a_nid2;
+	# then, we redraw the subtree from the span nid
+	::rsttool::treeditor::layout::y-layout-subtree $a_span_nid $ypos;
+    } else {
+	set NODES($a_nid2,parent) $a_span_nid;
+	set NODES($a_nid2,relname) $a_relation;
+	set NODES($a_nid2,reltype) $HYPOTACTIC;
+    }
 }
 
 proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_relation \
@@ -247,55 +271,77 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
     set NODES($a_prnt_nid,children) [node::insort $NODES($a_prnt_nid,children) \
 					 $NODES($a_chld_nid,start) $a_chld_nid];
 
-    # remove child node from the list of message roots
-    ::rsttool::treeditor::update-roots $chld_msgid $a_chld_nid {remove};
 
     # create a span node for the parent, if it's needed
     if {$a_span_nid == {}} {
-	set chld_start [node::get-start $a_chld_nid];
-	set prnt_start [node::get-start  $a_prnt_nid];
-	set chld_end [node::get-end $a_chld_nid];
-	set prnt_end [node::get-end  $a_prnt_nid];
-
-	set a_span_nid [node::make [expr $a_ext_rel ? {{external}} : {{internal}} ] \
-			    [expr $chld_start < $prnt_start ? $a_chld_nid: $a_prnt_nid] \
-			    [expr $chld_end < $prnt_end ? $a_prnt_nid: $a_chld_nid] \
-			    {} $NID2MSGID($a_prnt_nid)];
-	if {$a_ext_rel} {
-	    set NID2ENID($a_prnt_nid) $a_span_nid;
-	}
-	# add parent node to the list of span childrens
-	set NODES($a_span_nid,children) [list $a_prnt_nid];
-	# set span node as the parent of the parent node
-	lappend NODES($a_prnt_nid,parent) $a_span_nid;
-	set NODES($a_prnt_nid,relname) {span};
-	set NODES($a_prnt_nid,reltype) $SPAN;
-	# remove parent node from the roots
-	set prnt_msgid $NID2MSGID($a_prnt_nid);
-
-	::rsttool::treeditor::update-roots $prnt_msgid $a_prnt_nid {remove};
-	# insort new span node
-	::rsttool::treeditor::update-roots $prnt_msgid $a_span_nid {add};
-	# position span nid at the previous position of the parent nid
-	# and re-draw the tree
-	set NODES($a_span_nid,xpos) $NODES($a_prnt_nid,xpos);
 	set ypos $NODES($a_prnt_nid,ypos);
-	puts stderr "link-chld-to-prnt: node::erase a_prnt_nid = $a_prnt_nid"
+	set a_span_nid [make-span-node $a_prnt_nid $a_chld_nid $a_relation 0 $a_ext_rel];
 	# since all subtree of the parent will shift down, we have to erase this subtree first
 	erase-subtree $a_prnt_nid;
-	puts stderr "link-chld-to-prnt: y-layout-subtree span_nid = $a_span_nid $ypos"
+	# then, we redraw the subtree from the span nid
 	::rsttool::treeditor::layout::y-layout-subtree $a_span_nid $ypos;
     } else {
+	set chld_msgid $NID2MSGID($a_chld_nid);
+	# remove child node from the list of message roots
+	::rsttool::treeditor::update-roots $chld_msgid $a_chld_nid {remove};
 	::rsttool::treeditor::layout::update-upwards $a_span_nid $a_chld_nid;
 	::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
     }
+}
 
-    # reposition child node at the same height as the parent
-    # draw an arc from child to parent node
-    # puts stderr "link-chld-to-prnt: arc::display $a_prnt_nid $a_chld_nid $HYPOTACTIC"
-    # ::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
-    # arc::display $a_prnt_nid $a_chld_nid $HYPOTACTIC;
-    # ::rsttool::treeditor::layout::restructure-upwards $a_chld_nid;
+proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype \
+						     {a_multinuc 0} {a_ext_rel 0}} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::relations::SPAN;
+    variable ::rsttool::relations::HYPOTACTIC;
+    variable ::rsttool::relations::PARATACTIC;
+    variable ::rsttool::treeditor::VISIBLE_NODES;
+    namespace import ::rsttool::treeditor::tree::node::insort;
+
+    set chld_start [node::get-start $a_chld_nid];
+    set prnt_start [node::get-start  $a_prnt_nid];
+    set chld_end [node::get-end $a_chld_nid];
+    set prnt_end [node::get-end  $a_prnt_nid];
+
+    set span_nid [node::make [expr $a_ext_rel ? {{external}} : {{internal}} ] \
+		      [expr $chld_start < $prnt_start ? $a_chld_nid: $a_prnt_nid] \
+		      [expr $chld_end < $prnt_end ? $a_prnt_nid: $a_chld_nid] \
+		      {} $NID2MSGID($a_prnt_nid)];
+    # set span node as the parent of the parent node
+    lappend NODES($a_prnt_nid,parent) $span_nid;
+    # add parent node to the list of span childrens
+    set NODES($span_nid,children) [list $a_prnt_nid];
+    # for multinuclear span, append both nodes
+    if {$a_multinuc} {
+	set NODES($a_prnt_nid,relname) $a_reltype;
+	set NODES($a_prnt_nid,reltype) $PARATACTIC;
+
+	set NODES($span_nid,children) [insort $NODES($span_nid,children) $chld_start $a_chld_nid];
+	lappend NODES($a_chld_nid,parent) $span_nid;
+	set NODES($a_chld_nid,relname) $a_reltype;
+	set NODES($a_chld_nid,reltype) $PARATACTIC;
+    } else {
+	set NODES($a_prnt_nid,relname) {span};
+	set NODES($a_prnt_nid,reltype) $SPAN;
+	# position span nid at the previous position of the parent nid
+	set NODES($span_nid,xpos) $NODES($a_prnt_nid,xpos);
+    }
+    # remember this span as external, if needed
+    if {$a_ext_rel} {
+	set NID2ENID($a_prnt_nid) $span_nid;
+    }
+    # remove parent node from the roots
+    set prnt_msgid $NID2MSGID($a_prnt_nid);
+    set chld_msgid $NID2MSGID($a_chld_nid);
+
+    set VISIBLE_NODES($span_nid) 1;
+
+    ::rsttool::treeditor::update-roots $prnt_msgid $a_prnt_nid {remove};
+    ::rsttool::treeditor::update-roots $chld_msgid $a_chld_nid {remove};
+    # insort new span node
+    ::rsttool::treeditor::update-roots $prnt_msgid $span_nid {add};
+    return $span_nid;
 }
 
 proc ::rsttool::treeditor::tree::erase-subtree {a_nid} {
@@ -473,7 +519,8 @@ proc ::rsttool::treeditor::tree::choose-label {sat type {external 0}} {
 	    if {$external} {
 		set relations $TYPE2EREL($PARATACTIC);
 	    } else {
-		set relations $TYPE2EREL($PARATACTIC);
+		puts stderr "TYPE2REL($PARATACTIC) = $TYPE2REL($PARATACTIC)"
+		set relations $TYPE2REL($PARATACTIC);
 	    }
 	}
 	default {

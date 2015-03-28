@@ -357,6 +357,7 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     variable ::rsttool::NODES;
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::segmenter::OFFSET_SHIFT;
+    variable ::rsttool::treeditor::VISIBLE_NODES;
 
     # if no index was specified, set the index position to the
     # position of the cursor and move it to the left, if currently
@@ -410,6 +411,8 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $OFFSET_SHIFT]
 
     set inid [::rsttool::treeditor::tree::node::make {text} $start_pos $end_pos {} $CRNT_MSGID];
+    set VISIBLE_NODES($inid) 1;
+    ::rsttool::treeditor::update-roots $CRNT_MSGID $inid {add};
     ::rsttool::treeditor::layout::x-layout $inid $::rsttool::treeditor::CURRENT_XPOS;
     ::rsttool::treeditor::layout::y-layout $inid;
     ::rsttool::treeditor::tree::node::display $inid;

@@ -262,6 +262,7 @@ proc ::rsttool::file::read-tnode {a_segments} {
 		return -8;
 	    }
 	    ::rsttool::treeditor::tree::node::make {text} $start $end $name $msgid $nid;
+	    ::rsttool::treeditor::update-roots $msgid $nid {add};
 	}
 
 	# update counter of text nodes
@@ -406,9 +407,8 @@ proc ::rsttool::file::read-relations {a_relations} {
     variable ::rsttool::relations::SPAN;
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
-    namespace import ::rsttool::treeditor::tree::link-chld-to-prnt;
-    namespace import ::rsttool::treeditor::tree::node::get-start;
     namespace import ::rsttool::utils::ldelete;
+    namespace import ::rsttool::treeditor::tree::node::get-start;
 
     set relname "";
     set ispan {}; set inuc {}; set isat {};

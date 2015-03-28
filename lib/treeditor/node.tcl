@@ -72,9 +72,6 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     set NODES($nid,type) $type
     set NAME2NID($msgid,$name) $nid;
     set-text $nid $msgid;
-    if {$type == "text"} {
-	::rsttool::treeditor::update-roots $msgid $nid {add}
-    }
     return $nid
 }
 

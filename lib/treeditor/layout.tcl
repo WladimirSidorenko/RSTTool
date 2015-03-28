@@ -119,6 +119,8 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos} {
 	set NODES($a_nid,xpos) $xpos;
 	set xpos [expr $xpos + $NODE_WIDTH + 10];
     } else {
+	puts stderr "xlayout-group-node: x_coords = $x_coords";
+	set x_coords [join $x_coords ", "];
 	set imin [expr min($x_coords)];
 	set imax [expr max($x_coords)];
 	set NODES($a_nid,xpos) [expr $imin + ($imax - $imin) / 2]
@@ -158,7 +160,12 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     if {$a_ypos != {}} {
 	set NODES($a_nid,ypos) $a_ypos;
     } else {
-	set a_ypos $NODES($a_nid,ypos);
+	if {[info exists NODES($a_nid,ypos)]} {
+	    set a_ypos $NODES($a_nid,ypos);
+	} else {
+	    error "ypos not specified for node '$a_nid'.";
+	    return;
+	}
     }
     ::rsttool::treeditor::tree::node::redisplay $a_nid;
 
