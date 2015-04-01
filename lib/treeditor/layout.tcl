@@ -105,7 +105,7 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos} {
 		([get-start $dep] > $istart && ![group-relation-p $NODES($dep,reltype)])} {
 	    continue;
 	}
-	puts stderr "***xlayout-group-node: dep = $dep";
+	puts stderr "***xlayout-group-node: dep = $dep, dep start = [get-start $dep], istart = $istart";
 	set xpos [xlayout-group-node $dep $xpos];
 	if {[group-relation-p $NODES($dep,reltype)]} {
 	    # we want to place the node over its members, not satelites

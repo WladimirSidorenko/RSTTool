@@ -375,8 +375,8 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 	    foreach cid $NODES($a_nid,children) {
 		if {$NODES($cid,reltype) != $HYPOTACTIC} {continue;}
 		if {$ichild != {}} {
-		    $xrel removeChild $ichild;
-		    set xrel [$xrel cloneNode];
+		    set xrel [$xrel cloneNode -deep];
+		    [$xrel selectNodes [$ichild nodeName]] delete;
 		}
 		$xrel setAttribute {relname} $NODES($cid,relname);
 		set ichild [$a_xml_doc createElement {satellite}];
@@ -461,6 +461,7 @@ proc ::rsttool::file::read-relations {a_relations} {
 		};
 		set isat_id [xml-get-attr $isat {idref}];
 		# add parent to span's children
+		set NODES($ispan_id,children) [ldelete $NODES($ispan_id,children) $inuc_id];
 		set NODES($ispan_id,children) [insort $NODES($ispan_id,children) \
 						   [get-start $inuc_id] $inuc_id];
 		# link parent to span
@@ -470,7 +471,7 @@ proc ::rsttool::file::read-relations {a_relations} {
 		set NODES($inuc_id,children) [insort $NODES($inuc_id,children) \
 						   [get-start $isat_id] $isat_id];
 		# link child to parent
-		set NODES($isat_id,parent) $inuc_id;
+		lappend NODES($isat_id,parent) $inuc_id;
 		set NODES($isat_id,relname) $relname;
 		set NODES($isat_id,reltype) $HYPOTACTIC;
 		# remove child and parent from the list of message roots

@@ -108,9 +108,9 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 	return;
     }
 
-    set dragged_msgid $NID2MSGID($dragged_nid);
-    set dragged_prnt $NODES($dragged_nid,parent);
-    if {$dragged_prnt != {} && [info exists VISIBLE_NODES($dragged_prnt)]} {
+    set clicked_msgid $NID2MSGID($clicked_nid)
+    set clicked_prnt $NODES($clicked_nid,parent)
+    if {$clicked_prnt != {} && [info exists VISIBLE_NODES($clicked_prnt)]} {
 	set clicked_is_prnt 0;
     }
 
@@ -118,11 +118,12 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     # puts stderr "autolink_nodes: dragged_nid = $dragged_nid"
     # puts stderr "autolink_nodes: type = $type"
 
-    set clicked_msgid $NID2MSGID($clicked_nid)
-    set clicked_prnt $NODES($clicked_nid,parent)
+    set dragged_msgid $NID2MSGID($dragged_nid);
+    set dragged_prnt $NODES($dragged_nid,parent);
+    puts stderr "dragged_prnt = $dragged_prnt"
     if {$dragged_msgid != $clicked_msgid} { set ext_connection 1 }
     # forbid multiple roots for one message
-    if {$clicked_prnt != {} && [info exists VISIBLE_NODES($clicked_prnt)] &&\
+    if {$dragged_prnt != {} && [info exists VISIBLE_NODES($dragged_prnt)] &&\
 	    $clicked_is_prnt == 0} {
 	message "Node $NODES($clicked_nid,name) already has a parent."
 	return;
@@ -184,15 +185,21 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 
     set multinuc 0;
     set prnt_nid $clicked_nid;
+    set prnt_msgid $clicked_msgid;
     set chld_nid $dragged_nid;
+    set chld_msgid $dragged_msgid;
     switch -nocase  -- $type {
 	"nucleus" {
 	    set prnt_nid $dragged_nid;
+	    set prnt_msgid $dragged_msgid;
 	    set chld_nid $clicked_nid;
+	    set chld_msgid $clicked_msgid;
 	}
 	"nucleus-embedded" {
 	    set prnt_nid $dragged_nid;
+	    set prnt_msgid $dragged_msgid;
 	    set chld_nid $clicked_nid;
+	    set chld_msgid $clicked_msgid;
 	    set relation "$relation-embedded";
 	}
 	"satellite" {
@@ -210,9 +217,11 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     }
 
     if {$multinuc} {
-	link-multinuc $prnt_nid $chld_nid $relation $NODES($prnt_nid,parent);
+	link-multinuc $prnt_nid $chld_nid $relation $NODES($prnt_nid,parent) \
+	    $ext_connection $chld_msgid $prnt_msgid;
     } else {
-	link-chld-to-prnt $chld_nid $prnt_nid $relation $NODES($prnt_nid,parent);
+	link-chld-to-prnt $chld_nid $prnt_nid $relation $NODES($prnt_nid,parent) \
+	    $ext_connection $chld_msgid $prnt_msgid;
     }
     ::rsttool::set-state {changed} \
 	"Linked $NODES($chld_nid,name) to $NODES($prnt_nid,name) as $relation";
@@ -222,7 +231,8 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 }
 
 proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
-						    {a_span_nid {}} {a_ext_rel 0}} {
+						    {a_span_nid {}} {a_ext_rel 0} \
+						    {a_chld_msgid {}} {a_prnt_msgid {}}} {
     variable ::rsttool::NODES;
 
     if {$a_ext_rel} {return;}
@@ -252,7 +262,8 @@ proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
 }
 
 proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_relation \
-							 {a_span_nid {}} {a_ext_rel 0}} {
+							 {a_span_nid {}} {a_ext_rel 0} \
+							{a_chld_msgid {}} {a_prnt_msgid {}}} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2ENID;
     variable ::rsttool::NID2MSGID;
@@ -265,7 +276,7 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
     set prnt_wdgt [ntw $a_prnt_nid]
     set chld_wdgt [ntw $a_chld_nid]
 
-    set chld_msgid $NID2MSGID($a_chld_nid);
+    if {$a_chld_msgid == {}} {set a_chld_msgid $NID2MSGID($a_chld_nid);}
     # update parent and relation of the child node
     set NODES($a_chld_nid,parent) $a_prnt_nid;
     set NODES($a_chld_nid,relname) $a_relation;
@@ -284,9 +295,8 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 	# then, we redraw the subtree from the span nid
 	::rsttool::treeditor::layout::y-layout-subtree $a_span_nid $ypos;
     } else {
-	set chld_msgid $NID2MSGID($a_chld_nid);
 	# remove child node from the list of message roots
-	::rsttool::treeditor::update-roots $chld_msgid $a_chld_nid {remove};
+	::rsttool::treeditor::update-roots $a_chld_msgid $a_chld_nid {remove};
 	::rsttool::treeditor::layout::update-upwards $a_span_nid $a_chld_nid;
 	::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
     }
