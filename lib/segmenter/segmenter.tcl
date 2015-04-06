@@ -93,7 +93,7 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
     } else {
 	return {0 0};
     }
-    puts stderr "show-sentences: nids == $nids"
+
     # obtain text of the message to be displayed
     set msg $FORREST($msg_id);
     set txt [lindex $msg 0];
@@ -290,29 +290,6 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     ############################################
     ## Show/Hide nodes corresponding to messages
 
-    # hide group node connecting previous message with its parent
-    # puts stderr "checking external node msgs2extnid($prev_prnt_msg_id,$prev_msg_id)"
-    if [info exists MSGID2ENID($prev_prnt_msg_id,$prev_msg_id)] {
-	set extnid [lindex $MSGID2ENID($prev_prnt_msg_id,$prev_msg_id) 0]
-	array unset VISIBLE_NODES $extnid;
-	# unlink children from the abstract group node
-	# foreach cid $node($extnid,children) {
-	#     set node($cid,parent) {}
-	# }
-    }
-    # show group node connecting current message with its parent
-    # puts stderr "checking external node msgs2extnid($PRNT_MSGID,$CRNT_MSGID)"
-    if [info exists MSGID2ENID($PRNT_MSGID,$CRNT_MSGID)] {
-	# puts stderr "showing nodes $msgs2extnid($PRNT_MSGID,$CRNT_MSGID)"
-	set extnid [lindex $MSGID2ENID($PRNT_MSGID,$CRNT_MSGID) 0]
-	# puts stderr "extnid = $extnid"
-	set VISIBLE_NODES($extnid) 1
-	# restore children of this abstract group node
-	foreach {prntid cid relname} $MSGID2ENID($PRNT_MSGID,$CRNT_MSGID) {
-	    set NODES($cid,parent) $prntid
-	    set NODES($cid,relname) $relname
-	}
-    }
     # if parent has changed, hide the old and show the new one
     if {$PRNT_MSGID != $prev_prnt_msg_id} {
 	# display all known RST nodes for the new parent hide previous current
@@ -349,7 +326,7 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     # current message
     if {$CRNT_MSGID != $prev_prnt_msg_id} {show-nodes $CRNT_MSGID 1}
     variable ::rsttool::treeditor::VISIBLE_NODES;
-    puts stderr "next-mesage: VISIBLE_NODES = [array names VISIBLE_NODES]"
+    # puts stderr "next-mesage: VISIBLE_NODES = [array names VISIBLE_NODES]"
     ::rsttool::treeditor::layout::redisplay-net;
 }
 
@@ -505,8 +482,6 @@ proc ::rsttool::segmenter::move {a_path x y} {
     variable ::rsttool::CRNT_MSGID;
     namespace import ::rsttool::treeditor::tree::node::set-text;
 
-    parray ::rsttool::treeditor::VISIBLE_NODES;
-
     if {$SEG_MRK_X == {} || $SEG_MRK_Y == {}} {return}
     set old_idx "@$SEG_MRK_X,$SEG_MRK_Y wordstart"
     set new_idx "@$x,$y"
@@ -523,6 +498,7 @@ proc ::rsttool::segmenter::move {a_path x y} {
 
     # obtain id of the node at initial coordinates
     lassign [get-seg-nid $a_path $SEG_MRK_X $SEG_MRK_Y {} $CRNT_MSGID] inid istart iend
+    # puts stderr "move-boundary: new_idx = $new_idx <; old_idx = $old_idx"
     # if no node id could not be obtained or the node did not move,
     # then return
     if {$istart == {} || [$a_path compare "$old_idx" == "$new_idx"] || \
@@ -540,6 +516,7 @@ proc ::rsttool::segmenter::move {a_path x y} {
     # determine where the next location of the cursor is and find
     # adjacent node
     set delta_txt ""
+    # puts stderr "move-boundary: compare new_idx < old_idx = '[$a_path compare $new_idx < $old_idx]'"
     if [$a_path compare "$new_idx" < "$old_idx"] {
     	# if the node has shrinked, set the minimum possible index of
     	# the new shrinked node to the end of the first word in the
@@ -552,8 +529,10 @@ proc ::rsttool::segmenter::move {a_path x y} {
 	    set new_idx "end -1 chars"
 	}
 
-    	set delta_txt [$a_path get "$new_idx +1 chars" "$old_idx"]
+    	set delta_txt [$a_path get "$new_idx" "$old_idx -1 chars"]
 	set delta [string length "$delta_txt"]
+	# puts stderr "move-boundary: delta_txt = '$delta_txt'"
+	# puts stderr "move-boundary: delta = '$delta'"
     	set NODES($inid,end) [expr $NODES($inid,end) - $delta]
     	if {$nxt_nid == {}} {
 	    $a_path tag remove my_sel "$new_idx" "end"
@@ -569,6 +548,8 @@ proc ::rsttool::segmenter::move {a_path x y} {
 	    }
 	    set NODES($nxt_nid,start) [expr $NODES($nxt_nid,start) - $delta]
 	    set-text $nxt_nid;
+	    set NODES($inid,end) [expr $NODES($inid,end) - $delta]
+	    set-text $inid;
 	    $a_path delete $istart $iend;		  # delete segment marker
 	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
     	}
@@ -606,8 +587,9 @@ proc ::rsttool::segmenter::move {a_path x y} {
     }
     set-text $inid;
     ::rsttool::treeditor::layout::redisplay-net;
-    puts stderr "2) move: VISIBLE_NODES =";
-    parray ::rsttool::treeditor::VISIBLE_NODES;
+    # puts stderr "2) move: VISIBLE_NODES =";
+    # parray ::rsttool::treeditor::VISIBLE_NODES;
+    # puts stderr "move-boundary: compare new_idx < old_idx = '[$a_path compare $new_idx < $old_idx]'"
     ::rsttool::set-state {changed} "Moved boundary of segment $NODES($inid,name)";
 }
 

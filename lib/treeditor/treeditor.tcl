@@ -23,6 +23,9 @@ namespace eval ::rsttool::treeditor {
     variable WAITED_NID;
     variable DISCO_NODE {};
     variable USED_NODES {};
+    variable MESSAGE 0;
+    variable DISCUSSION 1;
+    variable DISPLAYMODE {};
 
     variable WTN;
     array set WTN {};
@@ -65,13 +68,18 @@ proc ::rsttool::treeditor::install {} {
 	::rsttool::treeditor::layout::resize-display -50 }
     button $RTBAR.enlarge -text "Enlarge" -command {
 	::rsttool::treeditor::layout::resize-display 50 }
+    button $RTBAR.discussion -text "Discussion" -command {
+	::rsttool::treeditor::set-display-mode $::rsttool::treeditor::DISCUSSION}
+    button $RTBAR.message -text "Message" -command {
+	::rsttool::treeditor::set-display-mode $::rsttool::treeditor::MESSAGE}
     # button .RTBAR.undo_by_reload -text "Undo" -command {undo_by_reload}
     # button .RTBAR.undo_by_redo -text "Don't Touch" -command {undo_by_redo}
     # button .RTBAR.showtext -text "Show Text" -command {showText really}
 
     pack $RTBAR -side top
     pack $RTBAR.link $RTBAR.disconnect $RTBAR.rename \
-	$RTBAR.reduce $RTBAR.enlarge -in $RTBAR -side left -fill y -expand 1
+	$RTBAR.reduce $RTBAR.enlarge $RTBAR.message $RTBAR.discussion \
+	-in $RTBAR -side left -fill y -expand 1
 
     set RSTW [canvas .rstframe.canvas  -bg white -relief sunken\
 		  -yscrollcommand ".rstframe.yscroll set"\
@@ -90,8 +98,12 @@ proc ::rsttool::treeditor::install {} {
 }
 
 proc ::rsttool::treeditor::install-structurer {} {
+    variable ::rsttool::treeditor::MESSAGE;
+
     pack .rstframe -side top -fill both -expand true;
+
     set-mode link;
+    set-display-mode $MESSAGE;
 }
 
 proc ::rsttool::treeditor::uninstall-structurer {} {
@@ -107,6 +119,8 @@ proc ::rsttool::treeditor::toggle-button {mode dir} {
 	link   {$RTBAR.link configure -relief $dir}
 	rename {$RTBAR.rename configure -relief $dir}
 	disconnect {$RTBAR.disconnect configure -relief $dir}
+	message {$RTBAR.message configure -relief $dir}
+	discussion {$RTBAR.discussion configure -relief $dir}
 	nothing {}
     }
 }
@@ -181,18 +195,57 @@ proc ::rsttool::treeditor::set-mode {mode} {
     }
 }
 
+# change display mode either to discussion or single message
+proc ::rsttool::treeditor::set-display-mode {a_mode} {
+    variable ::rsttool::CRNT_MSGID;
+    variable ::rsttool::PRNT_MSGID;
+    variable ::rsttool::treeditor::MESSAGE;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
+    namespace import ::rsttool::treeditor::tree::node::show-nodes;
+
+    if {$DISPLAYMODE == $a_mode} {return;}
+    switch -nocase -- $a_mode \
+	$MESSAGE {
+	    show-nodes $PRNT_MSGID 1 {internal};
+	    show-nodes $CRNT_MSGID 1 {internal};
+	    show-nodes $PRNT_MSGID 1 {external};
+
+	    toggle-button {message} {sunken};
+	    toggle-button {discussion} {raised};
+	} \
+	$DISCUSSION {
+	    show-nodes $PRNT_MSGID 0 {internal};
+	    show-nodes $CRNT_MSGID 0 {internal};
+	    if {$PRNT_MSGID == {}} {
+		show-nodes $CRNT_MSGID 1 {external};
+	    } else {
+		show-nodes $PRNT_MSGID 1 {external};
+	    }
+	    toggle-button {message} {raised};
+	    toggle-button {discussion} {sunken};
+	} \
+	default {
+	    return;
+	}
+
+    set DISPLAYMODE $a_mode;
+    layout::redisplay-net;
+}
+
 # update roots of all message pair involving given message
 proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation} {
-    variable ::rsttool::FORREST;
+    variable ::rsttool::NODES;
+    variable ::rsttool::THREADS;
+    variable ::rsttool::THREAD_ID;
+    variable ::rsttool::PRNT_MSGID;
+    variable ::rsttool::MSGID2ENID;
     variable ::rsttool::MSGID2ROOTS;
+    variable ::rsttool::MSGID2EROOTS;
+    variable ::rsttool::treeditor::MESSAGE;
+    variable ::rsttool::treeditor::DISPLAYMODE;
     namespace import ::rsttool::utils::ldelete;
 
-    # obtain all pairs of messages which the given message pertains to
-    set ichildren [lindex $FORREST($a_msgid) end];
-    set indices [list $a_msgid];
-    foreach chnid $ichildren {
-	lappend indices "$a_msgid,$chnid";
-    }
     # perform given operation on all messages
     set op {};
     switch -nocase --  $a_operation {
@@ -212,19 +265,37 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation} {
 	    return;
 	}
     }
-    foreach idx $indices {
-	if {[info exists MSGID2ROOTS($idx)]} {
-	    set MSGID2ROOTS($idx) [$op $MSGID2ROOTS($idx) $a_nid]
-	}
+    # update roots of the message in question
+    if {![info exists MSGID2ROOTS($a_msgid)]} {
+	set MSGID2ROOTS($a_msgid) {};
     }
-    # update roots of the parent,message pair
-    set iprnt [lindex $FORREST($a_msgid) 1];
-    set ikey "$iprnt,$a_msgid";
-    if {[info exists MSGID2ROOTS($ikey)]} {
-	if {$a_operation == {remove} || $iprnt == {}} {
-	    set MSGID2ROOTS($ikey) [$op $MSGID2ROOTS($ikey) $a_nid]
-	} else {
-	    set MSGID2ROOTS($ikey) [concat $MSGID2ROOTS($iprnt) $MSGID2ROOTS($a_msgid)]
+    set MSGID2ROOTS($a_msgid) [$op $MSGID2ROOTS($a_msgid) $a_nid]
+
+    # update external nodes, if necessary
+    if {$DISPLAYMODE == $MESSAGE} {
+	if {[llength $MSGID2ROOTS($a_msgid)] == 1} {
+	    set iroot [lindex $MSGID2ROOTS($a_msgid) 0];
+	    variable ::rsttool::FORREST;
+	    variable ::rsttool::MSGID2EROOTS;
+	    namespace import ::rsttool::treeditor::tree::node::get-end;
+	    namespace import ::rsttool::treeditor::tree::node::get-child-pos;
+
+	    if {[get-end $iroot] == [string length [lindex $FORREST($a_msgid) 0]]} {
+		if {![info exists MSGID2ENID($a_msgid)]} {set MSGID2ENID($a_msgid) {}}
+		set MSGID2ENID($a_msgid) [concat $iroot $MSGID2ENID($a_msgid)];
+
+		set prnt_msgid [lindex $FORREST($a_msgid) 1];
+		if {$prnt_msgid != {}} {
+		    if {![info exists MSGID2EROOTS($prnt_msgid)]} {set MSGID2EROOTS($prnt_msgid) {}}
+		    set MSGID2EROOTS($prnt_msgid) [concat [lrange $MSGID2EROOTS($prnt_msgid) 0 0] \
+			[::rsttool::treeditor::tree::node::insort \
+			     [lrange $MSGID2EROOTS($prnt_msgid) 1 end] \
+			     [get-child-pos $a_msgid] $iroot 0 \
+			     ::rsttool::treeditor::tree::node::get-child-pos]];
+		}
+	    }
+	} elseif {[info exists MSGID2ENID($a_msgid)]} {
+	    array unset MSGID2ENID $a_msgid;
 	}
     }
 }

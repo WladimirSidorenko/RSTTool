@@ -31,7 +31,6 @@ namespace eval ::rsttool {
     variable CRNT_BASE_FILE {};
     variable CRNT_ANNO_FILE {};
 
-    variable MODIFIED 0;
     variable TOTAL 0;
     variable ANNOTATED 0;
 
@@ -55,17 +54,17 @@ namespace eval ::rsttool {
 
     variable NID2MSGID;
     array set NID2MSGID {};
-    variable NID2ENID;
-    array set NID2ENID {};
     variable MSGID2ENID;
     array set MSGID2ENID {};
     variable NAME2NID;
     array set NAME2NID {};
 
-    variable MSGID2ROOTS;
-    array set MSGID2ROOTS {};
     variable MSGID2TNODES;
     array set MSGID2TNODES {};
+    variable MSGID2ROOTS;
+    array set MSGID2ROOTS {};
+    variable MSGID2EROOTS;
+    array set MSGID2EROOTS {};
 }
 
 ######################################
@@ -140,8 +139,9 @@ proc ::rsttool::reset {} {
     utils::reset-array ::rsttool::FORREST;
     utils::reset-array ::rsttool::MSGID2ENID;
     utils::reset-array ::rsttool::MSGID2ROOTS;
+    utils::reset-array ::rsttool::MSGID2EROOTS;
+    utils::reset-array ::rsttool::MSGID2TNODES
     utils::reset-array ::rsttool::NAME2NID;
-    utils::reset-array ::rsttool::NID2ENID;
     utils::reset-array ::rsttool::NID2MSGID;
     utils::reset-array ::rsttool::NODES;
     utils::reset-array ::rsttool::ROOTS;

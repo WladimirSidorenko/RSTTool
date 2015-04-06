@@ -427,7 +427,6 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 
 proc ::rsttool::file::read-relations {a_relations} {
     variable ::rsttool::NODES;
-    variable ::rsttool::NID2ENID;
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::MSGID2ROOTS;
     variable ::rsttool::relations::SPAN;
@@ -630,7 +629,7 @@ proc ::rsttool::file::_read_message {a_msg {a_prnt_id {}}} {
 	}
 	lset FORREST($a_prnt_id) end [concat [lindex $FORREST($a_prnt_id) end] [list $msg_id]];
     }
-    # recurse int children
+    # recurse into children
     foreach child [$a_msg childNodes] {
 	set chname [$child nodeName];
 	if {$chname == "#text" || $chname == "text"} {continue;}
