@@ -222,7 +222,8 @@ proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
 	erase $a_nid;
     }
     display $a_nid;
-    ::rsttool::treeditor::tree::arc::display $NODES($a_nid,parent) $a_nid $NODES($a_nid,reltype);
+    ::rsttool::treeditor::tree::arc::display $NODES($a_nid,parent) \
+	$a_nid $NODES($a_nid,reltype);
 }
 
 proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
@@ -230,10 +231,10 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
     # `$msg_id` to $show
     variable ::rsttool::NODES;
     variable ::rsttool::NID2MSGID
-    variable ::rsttool::MSGID2ROOTS;
-    variable ::rsttool::MSGID2EROOTS;
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::PRNT_MSGID;
+    variable ::rsttool::MSGID2ROOTS;
+    variable ::rsttool::MSGID2EROOTS;
     variable ::rsttool::treeditor::MESSAGE;
     variable ::rsttool::treeditor::DISCUSSION;
     variable ::rsttool::treeditor::DISPLAYMODE;
@@ -243,24 +244,30 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
     if {! [info exists MSGID2ROOTS($msg_id)]} {return}
     # show/hide internal nodes pertaining to message `msg_id`
     if {$show} {
-	set inid {};
 	if {$DISPLAYMODE == $MESSAGE} {
 	    set inodes $MSGID2ROOTS($msg_id);
 	} elseif {$PRNT_MSGID == {}} {
-		set inodes $MSGID2EROOTS($PRNT_MSGID);
+	    if {! [info exists MSGID2EROOTS($PRNT_MSGID)]} {set MSGID2EROOTS($PRNT_MSGID) {}}
+	    set inodes $MSGID2EROOTS($PRNT_MSGID);
 	} else {
+	    if {! [info exists MSGID2EROOTS($CRNT_MSGID)]} {set MSGID2EROOTS($CRNT_MSGID) {}}
 	    set inodes $MSGID2EROOTS($CRNT_MSGID);
 	}
 	puts stderr "show-nodes: inodes = $inodes, msg_id = $msg_id";
+	set inid {};
 	while {$inodes != {}} {
-	    set inid [lindex $inodes 0]
-	    puts stderr "show-nodes: inid = $inid (msgid = $NID2MSGID($inid))";
-	    set inodes [lreplace $inodes 0 0]
+	    # pop first node on the queue
+	    set inid [lindex $inodes 0];
+	    set inodes [lreplace $inodes 0 0];
+	    # pop first node on the queue
 	    if {$DISPLAYMODE == $MESSAGE && $NID2MSGID($inid) != $msg_id} {continue;}
 	    if {$DISPLAYMODE == $DISCUSSION && $NODES($inid,type) != {external}} {continue;}
 	    set VISIBLE_NODES($inid) 1
 	    set inodes [concat $inodes $NODES($inid,children)];
 	}
+    } elseif {$DISPLAYMODE == $DISCUSSION} {
+	namespace import ::rsttool::utils::reset-array;
+	reset-array ::rsttool::treeditor::VISIBLE_NODES;
     } else {
 	foreach nid [array names VISIBLE_NODES] {
 	    if {$NID2MSGID($nid) == $msg_id} {

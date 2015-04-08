@@ -33,10 +33,12 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
     # decide, which nodes to display
     if {$DISPLAYMODE == $MESSAGE} {
 	set roots2display $MSGID2ROOTS($CRNT_MSGID);
-    } elseif {$PRNT_MSGID != {}} {
-	set roots2display $MSGID2EROOTS($PRNT_MSGID);
-    } else {
+    } elseif {$PRNT_MSGID == {}} {
+	if {! [info exists MSGID2EROOTS($CRNT_MSGID)]} {set MSGID2EROOTS($CRNT_MSGID) {}}
 	set roots2display $MSGID2EROOTS($CRNT_MSGID);
+    } else {
+	if {! [info exists MSGID2EROOTS($PRNT_MSGID)]} {set MSGID2EROOTS($PRNT_MSGID) {}}
+	set roots2display $MSGID2EROOTS($PRNT_MSGID);
     }
     # puts stderr "MSGID2ROOTS($CRNT_MSGID) = $MSGID2ROOTS($CRNT_MSGID)"
     # 3. layout and draw

@@ -460,7 +460,6 @@ proc ::rsttool::file::read-relations {a_relations} {
 		};
 		set isat_id [xml-get-attr $isat {idref}];
 		# add parent to span's children
-		set NODES($ispan_id,children) [ldelete $NODES($ispan_id,children) $inuc_id];
 		set NODES($ispan_id,children) [insort $NODES($ispan_id,children) \
 						   [get-start $inuc_id] $inuc_id];
 		# link parent to span
@@ -477,24 +476,11 @@ proc ::rsttool::file::read-relations {a_relations} {
 		set nuc_msgid $NID2MSGID($inuc_id);
 		set sat_msgid $NID2MSGID($isat_id);
 		if {$nuc_msgid != $sat_msgid} {
-		    if {![info exists MSGID2ROOTS($nuc_msgid,$sat_msgid)]} {
-			set MSGID2ROOTS($nuc_msgid,$sat_msgid) {};
-
-			if [info exists MSGID2ROOTS($nuc_msgid)] {
-			    set MSGID2ROOTS($nuc_msgid,$sat_msgid) $MSGID2ROOTS($nuc_msgid);
-			}
-			if [info exists MSGID2ROOTS($sat_msgid)] {
-			    set MSGID2ROOTS($nuc_msgid,$sat_msgid) \
-				[concat $MSGID2ROOTS($nuc_msgid,$sat_msgid) $MSGID2ROOTS($sat_msgid)];
-			}
-		    }
-		    set MSGID2ROOTS($nuc_msgid,$sat_msgid) [ldelete $MSGID2ROOTS($nuc_msgid,$sat_msgid) $inuc_id];
-		    set MSGID2ROOTS($nuc_msgid,$sat_msgid) [ldelete $MSGID2ROOTS($nuc_msgid,$sat_msgid) $isat_id];
-		    set MSGID2ROOTS($nuc_msgid,$sat_msgid) [insort $MSGID2ROOTS($nuc_msgid,$sat_msgid) \
-								[get-start $ispan_id] $ispan_id];
+		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 1;
+		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 1;
 		} else {
-		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove};
-		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove};
+		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 0;
+		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 0;
 		    puts stderr "read-relations: MSGID2ROOTS($nuc_msgid) = $MSGID2ROOTS($nuc_msgid)";
 		}
 	    }
@@ -503,9 +489,9 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    return -1;
 		}
 		if {[set ispan [$irel selectNodes ./spannode]] == {}} {
-		    error "No span node specified for paratactic relation."
+		    error "No span node specified for paratactic relation.";
 		    return -2;
-		};
+		}
 		set ispan_id [xml-get-attr $ispan {idref}];
 		set ispan_msgid $NID2MSGID($ispan_id);
 		set nuc_cnt 0;
@@ -524,24 +510,7 @@ proc ::rsttool::file::read-relations {a_relations} {
 						       [get-start $inuc_id] $inuc_id];
 		    incr nuc_cnt;
 		    set inuc_msgid $NID2MSGID($inuc_id);
-		    if {$ispan_msgid != $inuc_msgid} {
-			if {![info exists MSGID2ROOTS($ispan_msgid,$inuc_msgid)]} {
-			    set MSGID2ROOTS($ispan_msgid,$inuc_msgid) {};
-
-			    if [info exists MSGID2ROOTS($ispan_msgid)] {
-				set MSGID2ROOTS($ispan_msgid,$inuc_msgid) $MSGID2ROOTS($ispan_msgid);
-			    }
-			    if [info exists MSGID2ROOTS($inuc_msgid)] {
-				set MSGID2ROOTS($ispan_msgid,$inuc_msgid) \
-				    [concat $MSGID2ROOTS($ispan_msgid,$inuc_msgid) $MSGID2ROOTS($inuc_msgid)];
-			    }
-			}
-			set MSGID2ROOTS($ispan_msgid,$inuc_msgid) [ldelete $MSGID2ROOTS($ispan_msgid,$inuc_msgid) $inuc_id];
-			set MSGID2ROOTS($ispan_msgid,$inuc_msgid) [insort $MSGID2ROOTS($ispan_msgid,$inuc_msgid) \
-								    [get-start $ispan_id] $ispan_id];
-		    } else {
-			::rsttool::treeditor::update-roots $inuc_msgid $inuc_id {remove};
-		    }
+		    ::rsttool::treeditor::update-roots $inuc_msgid $inuc_id {remove};
 		}
 		if {$nuc_cnt < 2} {
 		    error "Invalid number of nuclei for paratactic relation: $nuc_cnt."
