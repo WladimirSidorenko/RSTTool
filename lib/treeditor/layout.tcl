@@ -22,7 +22,7 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::utils::max;
 
-    # puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]"
+    puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
 
     # 1. Clean up from earlier structures
     $RSTW delete all;

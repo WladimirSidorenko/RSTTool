@@ -260,20 +260,22 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 	    if {$a_external} {
 		proc insort {a_list a_nid} {
 		    variable ::rsttool::NID2MSGID;
-		    namespace import ::rsttool::treeditor::tree::node::insort;
-		    namespace import ::rsttool::treeditor::tree::node::get-child-pos;
 
+		    puts stderr "a_nid = $a_nid";
 		    set msgid $NID2MSGID($a_nid);
+		    puts stderr "msgid = $msgid";
+		    # use fully qualified `insort` here
+		    namespace import ::rsttool::treeditor::tree::node::get-child-pos;
 		    set a_list [concat [lrange $a_list 0 0] \
-				    [insort [lrange $a_list 1 end] \
-					 [get-child-pos $msgid] $a_nid 0 \
+				    [::rsttool::treeditor::tree::node::insort [lrange $a_list 1 end] \
+					 [get-child-pos $a_nid] $a_nid 0 \
 					 ::rsttool::treeditor::tree::node::get-child-pos]];
 		}
 	    } else {
 		proc insort {a_list a_nid} {
 		    namespace import ::rsttool::treeditor::tree::node::get-start;
-		    return [::rsttool::treeditor::tree::node::insort  $a_list \
-				[get-start $a_nid] $a_nid];
+		    # use fully qualified `insort` here
+		    return [::rsttool::treeditor::tree::node::insort  $a_list [get-start $a_nid] $a_nid];
 		}
 	    }
 	    set op insort;
@@ -295,23 +297,23 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 	if {![info exists MSGID2ROOTS($a_msgid)]} {set MSGID2ROOTS($a_msgid) {}}
 	set MSGID2ROOTS($a_msgid) [$op $MSGID2ROOTS($a_msgid) $a_nid]
 
-	if {$a_update_external} {
-	    if {[llength $MSGID2ROOTS($a_msgid)] == 1} {
-		set iroot [lindex $MSGID2ROOTS($a_msgid) 0];
+	if {[llength $MSGID2ROOTS($a_msgid)] == 1} {
+	    set iroot [lindex $MSGID2ROOTS($a_msgid) 0];
+	    if {[info exists NODES($iroot,parent)] && $NODES($iroot,parent) != {}} {return}
 
-		if {[get-end $iroot] == [string length [lindex $FORREST($a_msgid) 0]]} {
-		    set MSGID2ENID($a_msgid) $iroot;
-		    set NODES($iroot,type) {external};
-		    if {$NODES($iroot,parent) != {}} {return;}
-		    # update external roots of the current message
-		    update-roots $a_msgid $iroot {add} 1;
-		    # update external roots of the parent message
-		    set prnt_msgid [lindex $FORREST($a_msgid) 1];
-		    if {$prnt_msgid != {}} {update-roots $prnt_msgid $iroot {add} 1;}
-		}
-	    } elseif {[info exists MSGID2ENID($a_msgid)]} {
-		array unset MSGID2ENID $a_msgid;
+	    namespace import ::rsttool::treeditor::tree::node::get-end;
+	    if {[get-end $iroot] == [string length [lindex $FORREST($a_msgid) 0]]} {
+		set MSGID2ENID($a_msgid) $iroot;
+		set NODES($iroot,external) 1;
+		if {$NODES($iroot,parent) != {}} {return;}
+		# update external roots of the current message
+		update-roots $a_msgid $iroot {add} 1;
+		# update external roots of the parent message
+		set prnt_msgid [lindex $FORREST($a_msgid) 1];
+		if {$prnt_msgid != {}} {update-roots $prnt_msgid $iroot {add} 1;}
 	    }
+	} elseif {[info exists MSGID2ENID($a_msgid)]} {
+	    array unset MSGID2ENID $a_msgid;
 	}
     }
 }

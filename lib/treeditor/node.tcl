@@ -66,21 +66,19 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	if {$nid == {}} {set nid [unique-gnode-id]; set VISIBLE_NODES($nid) 1};
     }
     # save mapping from node id to message id
-    set NID2MSGID($nid) [list $msgid]
-    set NODES($nid,children) {}
-    set NODES($nid,end) $end
-    set NODES($nid,name) $name
-    set NODES($nid,parent) {}
-    set NODES($nid,eparent) {}
-    set NODES($nid,relname) {}
-    set NODES($nid,erelname) {}
-    set NODES($nid,reltype) {}
-    set NODES($nid,ereltype) {}
-    set NODES($nid,start) $start
-    set NODES($nid,type) $type
+    set NID2MSGID($nid) [list $msgid];
+    set NODES($nid,children) {};
+    set NODES($nid,end) $end;
+    set NODES($nid,name) $name;
+    set NODES($nid,parent) {};
+    set NODES($nid,relname) {};
+    set NODES($nid,reltype) {};
+    set NODES($nid,external) 0;
+    set NODES($nid,start) $start;
+    set NODES($nid,type) $type;
     set NAME2NID($msgid,$name) $nid;
     set-text $nid $msgid;
-    return $nid
+    return $nid;
 }
 
 proc ::rsttool::treeditor::tree::node::get-visible-parent {a_nid} {
@@ -101,6 +99,7 @@ proc ::rsttool::treeditor::tree::node::get-visible-parent {a_nid} {
 proc ::rsttool::treeditor::tree::node::get-start {a_nid} {
     variable ::rsttool::NODES;
 
+    puts stderr "get-start: a_nid = $a_nid;"
     if {[group-node-p $a_nid]} {
 	return [get-start $NODES($a_nid,start)];
     }
@@ -134,12 +133,15 @@ proc ::rsttool::treeditor::tree::node::get-end-node {a_nid} {
     return $NODES($a_nid,end);
 }
 
-proc ::rsttool::treeditor::tree::node::get-child-pos {a_msgid} {
+proc ::rsttool::treeditor::tree::node::get-child-pos {a_nid} {
     variable ::rsttool::FORREST;
     variable ::rsttool::NID2MSGID;
 
-    set prnt_msgid [lindex $FORREST($a_msgid) 1];
-    return [lsearch [lindex $FORREST($prnt_msgid) end] $a_msgid];
+    puts stderr "get-child-pos: a_msgid"
+    set msgid $NID2MSGID($a_nid);
+    set prnt_msgid [lindex $FORREST($msgid) 1];
+    if {$prnt_msgid == {}} {return -1}
+    return [lsearch [lindex $FORREST($prnt_msgid) end] $msgid];
 }
 
 proc ::rsttool::treeditor::tree::node::set-text {a_nid {a_msgid {}}} {
@@ -261,7 +263,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    set inodes [lreplace $inodes 0 0];
 	    # pop first node on the queue
 	    if {$DISPLAYMODE == $MESSAGE && $NID2MSGID($inid) != $msg_id} {continue;}
-	    if {$DISPLAYMODE == $DISCUSSION && $NODES($inid,type) != {external}} {continue;}
+	    if {$DISPLAYMODE == $DISCUSSION && !$NODES($inid,external)} {continue;}
 	    set VISIBLE_NODES($inid) 1
 	    set inodes [concat $inodes $NODES($inid,children)];
 	}
@@ -741,9 +743,7 @@ proc ::rsttool::treeditor::tree::node::fix-children {new_node clicked_node dragg
 
 proc ::rsttool::treeditor::tree::node::group-node-p {nid} {
     variable ::rsttool::NODES;
-    if {$NODES($nid,type) == "internal" || $NODES($nid,type) == "external"} {
-	return 1;
-    }
+    if {$NODES($nid,type) == "internal"} {return 1}
     return 0;
 }
 
@@ -771,6 +771,12 @@ proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list {a_start -1} \
 	set llen [expr $llen / 2];
 	set idx [expr $lstart + $llen];
 	if {$idx >= $orig_len} {break;}
+	puts stderr "bisearch: a_list = $a_list";
+	puts stderr "bisearch: a_start = $a_start";
+	puts stderr "bisearch: a_list = $a_list";
+	puts stderr "bisearch: idx = $idx";
+	puts stderr "bisearch: nid = [lindex $a_list $idx]";
+	puts stderr "bisearch: a_get_start = [$a_get_start [lindex $a_list $idx]]";
 	set jstart [$a_get_start [lindex $a_list $idx]];
 
 	if {$a_start == $jstart} {
