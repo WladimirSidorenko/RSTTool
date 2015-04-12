@@ -42,8 +42,9 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
     }
     # puts stderr "MSGID2ROOTS($CRNT_MSGID) = $MSGID2ROOTS($CRNT_MSGID)"
     # 3. layout and draw
+    puts stderr "*** redisplay-net: x-layout: roots2display == $roots2display"
     x-layout $roots2display;
-    # puts stderr "*** redisplay-net: x-layout passed"
+    puts stderr "*** redisplay-net: x-layout passed"
     y-layout $roots2display;
     # puts stderr "*** redisplay-net: y-layout passed"
 
@@ -154,6 +155,7 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     variable ::rsttool::treeditor::RSTW;
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::treeditor::tree::ntw;
+    namespace import ::rsttool::treeditor::tree::node::redisplay;
     namespace import ::rsttool::treeditor::tree::arc::group-relation-p;
 
     # puts stderr "y-layout-subtree: a_nid = $a_nid";
@@ -169,7 +171,7 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
 	    return;
 	}
     }
-    ::rsttool::treeditor::tree::node::redisplay $a_nid;
+    redisplay $a_nid;
 
     # 2. Re-layout children
     set chld_ypos [expr [lindex [$RSTW bbox [ntw $a_nid]] 3] + 30]

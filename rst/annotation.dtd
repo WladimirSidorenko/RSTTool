@@ -41,7 +41,7 @@
 	  <!-- id of span -->
 	  id	ID	#REQUIRED
 	  <!-- type of span -->
-	  type	(internal|external)	"internal"
+	  type	(span|text)	"span"
 	  <!-- left-most span of segment -->
 	  start IDREF	#REQUIRED
 	  <!-- right-most span of segment -->

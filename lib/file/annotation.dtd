@@ -41,7 +41,7 @@
 	  <!-- id of span -->
 	  id	ID	#REQUIRED
 	  <!-- type of span -->
-	  type	(internal|external)	"internal"
+	  type	(span|text)	"span"
 	  <!-- id of the message which given span pertains to -->
 	  msgid1	IDREF	#REQUIRED
 	  <!-- id of the child message -->

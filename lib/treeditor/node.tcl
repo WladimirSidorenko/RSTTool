@@ -6,17 +6,18 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export bisearch;
     namespace export draw-span;
     namespace export draw-text;
+    namespace export get-child-pos;
+    namespace export get-end-node;
+    namespace export get-end;
+    namespace export get-start-node;
+    namespace export get-start;
+    namespace export get-visible-parent;
+    namespace export group-node-p;
     namespace export insort;
+    namespace export redisplay;
+    namespace export set-text;
     namespace export show-nodes;
     namespace export text-node-p;
-    namespace export group-node-p;
-    namespace export set-text;
-    namespace export get-start;
-    namespace export get-start-node;
-    namespace export get-end;
-    namespace export get-end-node;
-    namespace export get-visible-parent;
-    namespace export get-child-pos;
 }
 
 ##################################################################
@@ -191,43 +192,6 @@ proc ::rsttool::treeditor::tree::node::cmp {a_nid1 a_nid2} {
     return [expr [get-start $a_nid1] - [get-start $a_nid2]];
 }
 
-proc ::rsttool::treeditor::tree::node::display {a_nid} {
-    variable ::rsttool::NODES;
-    variable ::rsttool::treeditor::RSTW;
-    variable ::rsttool::treeditor::WTN;
-    variable ::rsttool::treeditor::NODE_WIDTH;
-
-    set text {};
-    if [group-node-p $a_nid] {
-	set color "green"
-	set text "$NODES($a_nid,name)"
-    } else {
-	set color "black"
-	set text "$NODES($a_nid,name)\n$NODES($a_nid,text)"
-    }
-    set xpos $NODES($a_nid,xpos);
-    set ypos [expr $NODES($a_nid,ypos) + 2];
-    set wgt [draw-text $RSTW $text $xpos $ypos "-width $NODE_WIDTH -fill $color"]
-
-    set NODES($a_nid,textwgt) $wgt
-    set WTN($wgt) $a_nid
-
-    draw-span $a_nid
-    # display-arc $a_nid
-}
-
-proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
-    variable ::rsttool::NODES;
-
-    if {[info exists NODES($a_nid,textwgt)] && $NODES($a_nid,textwgt) != {} } {
-	puts stderr "redisplay: erasing node $a_nid";
-	erase $a_nid;
-    }
-    display $a_nid;
-    ::rsttool::treeditor::tree::arc::display $NODES($a_nid,parent) \
-	$a_nid $NODES($a_nid,reltype);
-}
-
 proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
     # set visibility status for all internal nodes belonging to the message
     # `$msg_id` to $show
@@ -242,20 +206,19 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
     variable ::rsttool::treeditor::DISPLAYMODE;
     variable ::rsttool::treeditor::VISIBLE_NODES;
 
-    puts stderr "show-nodes: 1) VISIBLE_NODES = [array names VISIBLE_NODES]";
     if {! [info exists MSGID2ROOTS($msg_id)]} {return}
     # show/hide internal nodes pertaining to message `msg_id`
     if {$show} {
 	if {$DISPLAYMODE == $MESSAGE} {
 	    set inodes $MSGID2ROOTS($msg_id);
 	} elseif {$PRNT_MSGID == {}} {
-	    if {! [info exists MSGID2EROOTS($PRNT_MSGID)]} {set MSGID2EROOTS($PRNT_MSGID) {}}
-	    set inodes $MSGID2EROOTS($PRNT_MSGID);
-	} else {
 	    if {! [info exists MSGID2EROOTS($CRNT_MSGID)]} {set MSGID2EROOTS($CRNT_MSGID) {}}
 	    set inodes $MSGID2EROOTS($CRNT_MSGID);
+	} else {
+	    if {! [info exists MSGID2EROOTS($PRNT_MSGID)]} {set MSGID2EROOTS($PRNT_MSGID) {}}
+	    set inodes $MSGID2EROOTS($PRNT_MSGID);
 	}
-	puts stderr "show-nodes: inodes = $inodes, msg_id = $msg_id";
+	puts stderr "show-nodes: 0) DISPLAYMODE = $DISPLAYMODE, inodes = $inodes, msg_id = $msg_id";
 	set inid {};
 	while {$inodes != {}} {
 	    # pop first node on the queue
@@ -267,17 +230,11 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    set VISIBLE_NODES($inid) 1
 	    set inodes [concat $inodes $NODES($inid,children)];
 	}
-    } elseif {$DISPLAYMODE == $DISCUSSION} {
+    } else {
 	namespace import ::rsttool::utils::reset-array;
 	reset-array ::rsttool::treeditor::VISIBLE_NODES;
-    } else {
-	foreach nid [array names VISIBLE_NODES] {
-	    if {$NID2MSGID($nid) == $msg_id} {
-		array unset VISIBLE_NODES $nid;
-	    }
-	}
     }
-    puts stderr "show-nodes: 2) VISIBLE_NODES = [array names VISIBLE_NODES]";
+    puts stderr "show-nodes: 1) DISPLAYMODE = $DISPLAYMODE; VISIBLE_NODES = [array names VISIBLE_NODES];";
 }
 
 proc ::rsttool::treeditor::tree::node::erase {a_nid} {
@@ -743,16 +700,14 @@ proc ::rsttool::treeditor::tree::node::fix-children {new_node clicked_node dragg
 
 proc ::rsttool::treeditor::tree::node::group-node-p {nid} {
     variable ::rsttool::NODES;
-    if {$NODES($nid,type) == "internal"} {return 1}
+    if {$NODES($nid,type) != "text"} {return 1}
     return 0;
 }
 
 proc ::rsttool::treeditor::tree::node::text-node-p {nid} {
     variable ::rsttool::NODES;
     #come back here
-    if { $nid == {} || $NODES($nid,type) == "text"} {
-	return 1
-    }
+    if { $nid == {} || $NODES($nid,type) == "text"} {return 1}
     return 0
 }
 
@@ -853,32 +808,81 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
     array unset VISIBLE_NODES $nid;
 }
 
+proc ::rsttool::treeditor::tree::node::display {a_nid} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::FORREST;
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::treeditor::WTN;
+    variable ::rsttool::treeditor::RSTW;
+    variable ::rsttool::treeditor::NODE_WIDTH;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
+
+    set text {};
+    if {$DISPLAYMODE == $DISCUSSION} {
+	set imsgid $NID2MSGID($a_nid);
+	if {[llength $imsgid] > 1} {
+	    set color "green"
+	    set text "$NODES($a_nid,name)";
+	} else {
+	    set color "black"
+	    set text "[expr [get-child-pos $a_nid] + 1]\n[lindex $FORREST($imsgid) 0]";
+	}
+    } elseif {[group-node-p $a_nid]} {
+	set color "green";
+	set text "$NODES($a_nid,name)";
+    } else {
+	set color "black"
+	set text "$NODES($a_nid,name)\n$NODES($a_nid,text)"
+    }
+    set xpos $NODES($a_nid,xpos);
+    set ypos [expr $NODES($a_nid,ypos) + 2];
+    set wgt [draw-text $RSTW $text $xpos $ypos "-width $NODE_WIDTH -fill $color"]
+
+    set NODES($a_nid,textwgt) $wgt
+    set WTN($wgt) $a_nid
+
+    draw-span $a_nid
+    # display-arc $a_nid
+}
+
+proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
+    variable ::rsttool::NODES;
+
+    if {[info exists NODES($a_nid,textwgt)] && $NODES($a_nid,textwgt) != {} } {
+	puts stderr "redisplay: erasing node $a_nid";
+	erase $a_nid;
+    }
+    display $a_nid;
+    ::rsttool::treeditor::tree::arc::display $NODES($a_nid,parent) \
+	$a_nid $NODES($a_nid,reltype);
+}
+
 proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
     variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
     variable ::rsttool::treeditor::RSTW;
+    variable ::rsttool::treeditor::MESSAGE;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
     variable ::rsttool::treeditor::VISIBLE_NODES;
     variable ::rsttool::treeditor::HALF_NODE_WIDTH;
 
-    if { $a_nid == {} } { return;}
+    if { $a_nid == {} } {return}
 
     set xpos $NODES($a_nid,xpos)
     set ypos $NODES($a_nid,ypos)
     set min $xpos
     set max $xpos
 
-    if {[group-node-p $a_nid]} {
-	set span ""
+    if {($DISPLAYMODE == $MESSAGE && [group-node-p $a_nid]) || \
+    ($DISPLAYMODE == $DISCUSSION && [llength $NID2MSGID($a_nid)] > 1)} {
 	if {[info exists NODES($a_nid,start)]} {
 	    set start_nid $NODES($a_nid,start);
 	    if {[info exists NODES($start_nid,xpos)]} {
 		set min $NODES($start_nid,xpos)
 	    } else {
 		error "Unknown index: NODES($start_nid,xpos)"
-	    }
-	    if {[info exists NODES($start_nid,name)]} {
-		set span "$NODES($start_nid,name) - "
-	    } else {
-		error "Unknown index: NODES($start_nid,name)"
 	    }
 	} else {
 	    error "Unknown index: NODES($a_nid,start)"
@@ -891,16 +895,9 @@ proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
 	    } else {
 		error "Unknown index: NODES($end_nid,xpos)"
 	    }
-	    if {[info exists NODES($end_nid,name)]} {
-		set span [concat $span "$NODES($end_nid,name)"]
-	    } else {
-		error "Unknown index: NODES($start_nid,name)"
-	    }
 	} else {
 	    error "Unknown index: NODES($a_nid,end)"
 	}
-    } else {
-	set span $NODES($a_nid,name)
     }
 
     # draw the span-line

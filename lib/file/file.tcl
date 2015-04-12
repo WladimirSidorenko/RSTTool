@@ -1,8 +1,8 @@
 #!/usr/bin/env wish
 # -*- mode: tcl; coding: utf-8; -*-
 
-package require rsttool::appearance::bindings;
 package require tdom;
+package require rsttool::appearance::bindings;
 
 ##################################################################
 namespace eval ::rsttool::file {

@@ -202,8 +202,8 @@ proc ::rsttool::treeditor::set-display-mode {a_mode} {
     variable ::rsttool::treeditor::MESSAGE;
     variable ::rsttool::treeditor::DISCUSSION;
     variable ::rsttool::treeditor::DISPLAYMODE;
-    namespace import ::rsttool::treeditor::tree::node::show-nodes;
     namespace import ::rsttool::utils::reset-array;
+    namespace import ::rsttool::treeditor::tree::node::show-nodes;
     # switch mode
     if {$DISPLAYMODE == $a_mode} {return;}
     set DISPLAYMODE $a_mode;

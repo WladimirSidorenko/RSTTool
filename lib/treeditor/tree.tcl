@@ -319,7 +319,7 @@ proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype
     set chld_end [node::get-end $a_chld_nid];
     set prnt_end [node::get-end  $a_prnt_nid];
 
-    set span_nid [node::make {internal} \
+    set span_nid [node::make {span} \
 		      [expr $chld_start < $prnt_start ? $a_chld_nid: $a_prnt_nid] \
 		      [expr $chld_end < $prnt_end ? $a_prnt_nid: $a_chld_nid] \
 		      {} $NID2MSGID($a_prnt_nid)];

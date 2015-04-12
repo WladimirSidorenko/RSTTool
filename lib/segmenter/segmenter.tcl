@@ -232,7 +232,9 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 
     variable ::rsttool::NODES;
     variable ::rsttool::MSGID2ENID;
-    variable ::rsttool::treeditor::VISIBLE_NODES;
+    variable ::rsttool::treeditor::MESSAGE;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
 
     variable OFFSET_SHIFT;
 
@@ -288,30 +290,12 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     set PRNT_MSGID [lindex $crnt_msg 1];	# obtain id of the parent of current message
 
     ############################################
-    ## Show/Hide nodes corresponding to messages
-
-    # if parent has changed, hide the old and show the new one
+    ## Redisplay parent text, if necessary
     if {$PRNT_MSGID != $prev_prnt_msg_id} {
-	# display all known RST nodes for the new parent hide previous current
-	# node, if it is not the parent of the next message
-	if {$PRNT_MSGID != $prev_msg_id} {show-nodes $PRNT_MSGID 1}
-	# hide all RST nodes in RST window which correspond to the
-	# previous parent
-	if {$CRNT_MSGID != $prev_prnt_msg_id} {show-nodes $prev_prnt_msg_id 0}
-	# obtain text of the new parent
-	if {$PRNT_MSGID == {}} {
-	    set PRNT_MSGTXT "";
-	} else {
-	    set PRNT_MSGTXT [lindex $FORREST($PRNT_MSGID) 0];
-	}
-	# reload the text
 	.editor.textPrnt delete 0.0 end
 	show-sentences .editor.textPrnt $PRNT_MSGID 1
     }
-    if {$PRNT_MSGID != $prev_msg_id} {
-	# puts stderr "hiding nodes for message $prev_msg_id"
-	show-nodes $prev_msg_id 0
-    }
+
     # clear current message text area and place new text into it
     .editor.text delete 1.0 end
     .editor.text tag add new 1.0 end
@@ -322,11 +306,19 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     set OFFSET_SHIFT [show-sentences .editor.text $CRNT_MSGID 1]
     # make suggestion for the boundary of the next segment
     next-sentence
-    # display any nodes and sentences that already were annotated for
-    # current message
-    if {$CRNT_MSGID != $prev_prnt_msg_id} {show-nodes $CRNT_MSGID 1}
-    variable ::rsttool::treeditor::VISIBLE_NODES;
+
+    ############################################
+    ## Show/Hide nodes corresponding to messages
     # puts stderr "next-mesage: VISIBLE_NODES = [array names VISIBLE_NODES]"
+    if {$DISPLAYMODE == $MESSAGE} {
+	# hide current node and show the next one
+	show-nodes $prev_msg_id 0;
+	show-nodes $CRNT_MSGID 1;
+    } elseif {$PRNT_MSGID != {} && $PRNT_MSGID != $prev_prnt_msg_id} {
+	show-nodes $PRNT_MSGID 1;
+    } else {
+	show-nodes $CRNT_MSGID 1;
+    }
     ::rsttool::treeditor::layout::redisplay-net;
 }
 

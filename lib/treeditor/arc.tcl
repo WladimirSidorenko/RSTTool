@@ -40,15 +40,12 @@ proc ::rsttool::treeditor::tree::arc::constit-relation-p {rel} {
 }
 
 proc ::rsttool::treeditor::tree::arc::draw-arc {a_wdgt a_points} {
-    puts stderr "draw-arc: $a_wdgt create line $a_points -tag line -joinstyle round -smooth true -arrow first;"
     set wdgt [$a_wdgt create line {*}$a_points -tag line -joinstyle round -smooth true -arrow first];
-    puts stderr "draw-arc: $a_wdgt create line $a_points -tag line -joinstyle round -smooth true -arrow first; = $wdgt"
     return $wdgt;
 }
 
 proc ::rsttool::treeditor::tree::arc::draw-line-between {a_wdgt a_p1 {a_p2 {}}} {
     set wdgt [draw-line $a_wdgt {*}$a_p1 {*}$a_p2];
-    puts stderr "draw-line-between: a_wdgt = $a_wdgt a_p1 = $a_p1 a_p2 = $a_p2; = $wdgt"
     return $wdgt;
 }
 
@@ -89,13 +86,9 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
     set satpnt "$NODES($a_sat_nid,xpos) $NODES($a_sat_nid,ypos)";
     set labelpnt {0 0};
 
-    puts stderr "display-arc: drawing arc between nodes $a_nuc_nid and $a_sat_nid"
-    puts stderr "display-arc: reltype = $a_reltype; label = $label"
-    puts stderr "display-arc: nucbot = $nucbot"
     switch -nocase -- $a_reltype \
 	$SPAN {
 	    set NODES($a_sat_nid,arrowwgt) [draw-line-between $RSTW $nucbot $satpnt];
-	    puts stderr "display-arc: arrowwgt = $NODES($a_sat_nid,arrowwgt);"
 	    set labelpnt [subtract-points $satpnt {0 15}];
 	} \
 	$HYPOTACTIC {
@@ -103,11 +96,9 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
 	    set midpnt [subtract-points [mid-point $nucpnt $satpnt] {0 20}]
 	    set labelpnt [subtract-points $midpnt {0 6}]
 	    set NODES($a_sat_nid,arrowwgt) [draw-arc $RSTW [concat $nucpnt $midpnt $satpnt]]
-	    puts stderr "display-arc: arrowwgt = $NODES($a_sat_nid,arrowwgt);"
 	} \
 	$PARATACTIC {
 	    set NODES($a_sat_nid,arrowwgt) [draw-line-between $RSTW $nucbot $satpnt]
-	    puts stderr "display-arc: arrowwgt = $NODES($a_sat_nid,arrowwgt);"
 	    set labelpnt [add-points $nucbot {0 15}]
 	} \
 	{} {
@@ -118,7 +109,6 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
     if {$a_reltype != $SPAN} {
 	set NODES($a_sat_nid,labelwgt) [draw-text $RSTW $label [lindex $labelpnt 0] \
 					    [lindex $labelpnt 1] [list -fill $color]]
-	puts stderr "display-arc: labelwgt = $NODES($a_sat_nid,labelwgt);"
     }
 }
 
@@ -126,14 +116,11 @@ proc ::rsttool::treeditor::tree::arc::erase {a_nid} {
     variable ::rsttool::NODES;
     variable ::rsttool::treeditor::RSTW;
 
-    puts stderr "Erase arc a_nid = $a_nid";
     if {[info exists NODES($a_nid,arrowwgt)] && $NODES($a_nid,arrowwgt) != {} } {
-	puts stderr "Erasing arrow widget $NODES($a_nid,arrowwgt)";
 	$RSTW delete $NODES($a_nid,arrowwgt);
 	array unset NODES  $a_nid,arrowwgt;
     }
     if {[info exists NODES($a_nid,labelwgt)] && $NODES($a_nid,labelwgt) != {} } {
-	puts stderr "Erasing label widget $NODES($a_nid,labelwgt)";
 	$RSTW delete $NODES($a_nid,labelwgt);
 	array unset NODES  $a_nid,labelwgt;
     }
