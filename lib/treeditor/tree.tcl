@@ -121,7 +121,7 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     set dragged_msgid $NID2MSGID($dragged_nid);
     set dragged_prnt $NODES($dragged_nid,parent);
     puts stderr "dragged_prnt = $dragged_prnt"
-    if {$dragged_msgid != $clicked_msgid} { set ext_connection 1 }
+    if {$dragged_msgid != $clicked_msgid} {set ext_connection 1}
     # forbid multiple roots for one message
     if {$dragged_prnt != {} && [info exists VISIBLE_NODES($dragged_prnt)] &&\
 	    $clicked_is_prnt == 0} {
@@ -269,9 +269,6 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::relations::SPAN;
     variable ::rsttool::relations::HYPOTACTIC;
-    variable ::rsttool::treeditor::MODE;
-    variable ::rsttool::treeditor::EXTERNAL;
-    variable ::rsttool::treeditor::INTERNAL;
     namespace import ::rsttool::utils::ldelete;
 
     set prnt_wdgt [ntw $a_prnt_nid]
@@ -285,25 +282,27 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 
     # create a span node for the parent, if it's needed
     if {$a_ext_rel} {
-	set MODE EXTERNAL;
+	# append child node to the list of the parent's children
+	set NODES($a_prnt_nid,echildren) [node::insort $NODES($a_prnt_nid,echildren) \
+					     $NODES($a_chld_nid,start) $a_chld_nid];
 	return;
-    }
-
-    # append child node to the list of the parent's children
-    set NODES($a_prnt_nid,children) [node::insort $NODES($a_prnt_nid,children) \
-					 $NODES($a_chld_nid,start) $a_chld_nid];
-    if {$a_span_nid == {}} {
-	set ypos $NODES($a_prnt_nid,ypos);
-	set a_span_nid [make-span-node $a_prnt_nid $a_chld_nid $a_relation 0];
-	# since all subtree of the parent will shift down, we have to erase this subtree first
-	erase-subtree $a_prnt_nid;
-	# then, we redraw the subtree from the span nid
-	::rsttool::treeditor::layout::y-layout-subtree $a_span_nid $ypos;
     } else {
-	# remove child node from the list of message roots
-	::rsttool::treeditor::update-roots $a_chld_msgid $a_chld_nid {remove};
-	::rsttool::treeditor::layout::update-upwards $a_span_nid $a_chld_nid;
-	::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
+	# append child node to the list of the parent's children
+	set NODES($a_prnt_nid,children) [node::insort $NODES($a_prnt_nid,children) \
+					     $NODES($a_chld_nid,start) $a_chld_nid];
+	if {$a_span_nid == {}} {
+	    set ypos $NODES($a_prnt_nid,ypos);
+	    set a_span_nid [make-span-node $a_prnt_nid $a_chld_nid $a_relation 0];
+	    # since all subtree of the parent will shift down, we have to erase this subtree first
+	    erase-subtree $a_prnt_nid;
+	    # then, we redraw the subtree from the span nid
+	    ::rsttool::treeditor::layout::y-layout-subtree $a_span_nid $ypos;
+	} else {
+	    # remove child node from the list of message roots
+	    ::rsttool::treeditor::update-roots $a_chld_msgid $a_chld_nid {remove};
+	    ::rsttool::treeditor::layout::update-upwards $a_span_nid $a_chld_nid;
+	    ::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
+	}
     }
 }
 

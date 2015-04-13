@@ -281,7 +281,7 @@ proc ::rsttool::file::write-gnode {a_nid a_prnt_elem a_xml_doc} {
 
     set node [$a_xml_doc createElement {span}];
     $node setAttribute {id} $a_nid;
-    $node setAttribute {type} $NODES($a_nid,type);
+    $node setAttribute {external} $NODES($a_nid,external);
     $node setAttribute {start} $NODES($a_nid,start);
     $node setAttribute {end} $NODES($a_nid,end);
     $node setAttribute {msgid} $NID2MSGID($a_nid);
@@ -299,7 +299,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
 
     if {$a_spans == {}} {return 0;}
     set nid {}; set start {}; set end {};
-    set type {}; set msgid1 {}; set msgid2 {};
+    set external {}; set msgid1 {}; set msgid2 {};
     foreach child [$a_spans childNodes] {
 	if {[string tolower [$child nodeName]] != "span"} {
 	    error "Incorrect file format: expected <span>.";
@@ -312,7 +312,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	    error "Invalid node id for abstract node: $nid (should be < 0)";
 	    return;
 	}
-	if {[set type [xml-get-attr $child {type}]] == {}} {
+	if {[set external [xml-get-attr $child {external}]] == {}} {
 	    return -3;
 	}
 	if {[set start [xml-get-attr $child {start}]] == {}} {
@@ -331,20 +331,12 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	} else {
 	    ::rsttool::treeditor::tree::node::make $type $start $end {} $msgid $nid;
 	}
-
-	if {$type == "external"} {
-	    if {[info exists MSGID2ENID($msgid)]} {
-		error "Duplicate external node for message $msgid."
-		return -7;
-	    }
-	    set MSGID2ENID($msgid) [list $nid]
-	}
 	set NID2MSGID($nid) [list $msgid]
 
 	if {[info exists MSGID2ROOTS($msgid)]} {
-	    ::rsttool::treeditor::update-roots $msgid $nid {add}
+	    ::rsttool::treeditor::update-roots $msgid $nid {add};
 	} else {
-	    error "Non-terminal node ($nid) defined for message without terminal nodes ($msgid)."
+	    error "Non-terminal node ($nid) defined for message without terminal nodes ($msgid).";
 	}
 
 	if {$nid < $GROUP_NODE_CNT} {

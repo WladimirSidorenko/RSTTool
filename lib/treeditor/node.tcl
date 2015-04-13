@@ -66,11 +66,15 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     # save mapping from node id to message id
     set NID2MSGID($nid) [list $msgid];
     set NODES($nid,children) {};
+    set NODES($nid,echildren) {};
     set NODES($nid,end) $end;
     set NODES($nid,name) $name;
     set NODES($nid,parent) {};
+    set NODES($nid,eparent) {};
     set NODES($nid,relname) {};
+    set NODES($nid,erelname) {};
     set NODES($nid,reltype) {};
+    set NODES($nid,ereltype) {};
     set NODES($nid,external) 0;
     set NODES($nid,start) $start;
     set NODES($nid,type) $type;
