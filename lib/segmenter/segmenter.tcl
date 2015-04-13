@@ -218,6 +218,8 @@ proc ::rsttool::segmenter::next-sentence {{trgframe .editor.text}} {
 }
 
 proc ::rsttool::segmenter::next-message {{direction {forward}}} {
+    variable OFFSET_SHIFT;
+
     variable ::rsttool::THREADS;
     variable ::rsttool::THREAD_ID;
     variable ::rsttool::FORREST;
@@ -236,10 +238,8 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     variable ::rsttool::treeditor::DISCUSSION;
     variable ::rsttool::treeditor::DISPLAYMODE;
 
-    variable OFFSET_SHIFT;
-
     namespace import ::rsttool::treeditor::tree::node::show-nodes;
-    puts stderr "next-mesage: direction = $direction;\nMSG_QUEUE = $MSG_QUEUE;\nMSG_PREV_QUEUE = $MSG_PREV_QUEUE"
+    # puts stderr "next-mesage: direction = $direction;\nMSG_QUEUE = $MSG_QUEUE;\nMSG_PREV_QUEUE = $MSG_PREV_QUEUE"
 
     # remember current message id
     set prev_msg_id $CRNT_MSGID
@@ -259,7 +259,6 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 	    }
 	    lappend MSG_QUEUE [lindex $THREADS $THREAD_ID]
 	}
-
 	# remember current message in `MSG_PREV_QUEUE`
 	if {$CRNT_MSGID != {}} {lappend MSG_PREV_QUEUE $CRNT_MSGID;}
 	# assign the id of the leftmost tweet in the Queue to `CRNT_MSGID`
@@ -305,7 +304,7 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     set MSG_GRP_NODE_CNT -1;
     set OFFSET_SHIFT [show-sentences .editor.text $CRNT_MSGID 1]
     # make suggestion for the boundary of the next segment
-    next-sentence
+    next-sentence;
 
     ############################################
     ## Show/Hide nodes corresponding to messages
@@ -316,8 +315,10 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 	show-nodes $CRNT_MSGID 1;
     } elseif {$PRNT_MSGID != {} && $PRNT_MSGID != $prev_prnt_msg_id} {
 	show-nodes $PRNT_MSGID 1;
+	puts stderr "next-message: show-nodes prnt_msgid = $PRNT_MSGID 1";
     } else {
 	show-nodes $CRNT_MSGID 1;
+	puts stderr "next-message: show-nodes crnt_msgid = $CRNT_MSGID 1";
     }
     ::rsttool::treeditor::layout::redisplay-net;
 }
@@ -380,10 +381,12 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $OFFSET_SHIFT]
 
     set inid [::rsttool::treeditor::tree::node::make {text} $start_pos $end_pos {} $CRNT_MSGID];
-    set VISIBLE_NODES($inid) 1;
     ::rsttool::treeditor::update-roots $CRNT_MSGID $inid {add};
-    ::rsttool::treeditor::layout::x-layout $inid $::rsttool::treeditor::CURRENT_XPOS;
-    ::rsttool::treeditor::layout::y-layout $inid;
+    if {$::rsttool::treeditor::DISPLAYMODE == $::rsttool::treeditor::MESSAGE} {
+	set VISIBLE_NODES($inid) 1;
+	::rsttool::treeditor::layout::x-layout $inid $::rsttool::treeditor::CURRENT_XPOS;
+	::rsttool::treeditor::layout::y-layout $inid;
+    }
     # ::rsttool::treeditor::tree::node::display $inid;
     # ::rsttool::treeditor::layout::redisplay-net;
 

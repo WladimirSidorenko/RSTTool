@@ -111,8 +111,8 @@ proc ::rsttool::file::open {} {
 		if {[::rsttool::relations::load [$child text]  $prj_dir "external"]} {
 		    set error 1; break;
 		}
-		puts stderr "ERELATIONS = ";
-		parray ::rsttool::relations::ERELATIONS;
+		# puts stderr "ERELATIONS = ";
+		# parray ::rsttool::relations::ERELATIONS;
 	    }
 	    "relscheme" {
 		if {[::rsttool::relations::load [$child text] $prj_dir "internal"]} {
@@ -161,7 +161,7 @@ proc ::rsttool::file::open {} {
 proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
     variable ::rsttool::CRNT_ANNO_FILE;
 
-    puts stderr "_open_anno: a_fname = $a_fname"
+    # puts stderr "_open_anno: a_fname = $a_fname"
     set ifname [search $a_fname $a_dirname];
     # if file does not exist, create an empty one
     if {$ifname == {}} {
@@ -185,7 +185,7 @@ proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
 	    return $ret;
 	}
     }
-    puts stderr "_open_anno: ifname = $ifname"
+    # puts stderr "_open_anno: ifname = $ifname"
     set CRNT_ANNO_FILE $ifname;
     return 0;
 }
@@ -231,7 +231,7 @@ proc ::rsttool::file::read-tnode {a_segments} {
     variable ::rsttool::TXT_NODE_CNT;
     namespace import ::rsttool::treeditor::tree::node::insort;
 
-    puts stderr "read-tnode: a_segments = $a_segments"
+    # puts stderr "read-tnode: a_segments = $a_segments"
     if {$a_segments == {}} {return 0;}
     set nid {}; set name {}; set msgid {}; set span {}; set start -1; set end -1;
     foreach child [$a_segments childNodes] {
@@ -481,7 +481,7 @@ proc ::rsttool::file::read-relations {a_relations} {
 		} else {
 		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 0;
 		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 0;
-		    puts stderr "read-relations: MSGID2ROOTS($nuc_msgid) = $MSGID2ROOTS($nuc_msgid)";
+		    # puts stderr "read-relations: MSGID2ROOTS($nuc_msgid) = $MSGID2ROOTS($nuc_msgid)";
 		}
 	    }
 	    "parrelation" {

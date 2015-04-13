@@ -22,7 +22,7 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::utils::max;
 
-    puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
+    # puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
 
     # 1. Clean up from earlier structures
     $RSTW delete all;
@@ -42,9 +42,9 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
     }
     # puts stderr "MSGID2ROOTS($CRNT_MSGID) = $MSGID2ROOTS($CRNT_MSGID)"
     # 3. layout and draw
-    puts stderr "*** redisplay-net: x-layout: roots2display == $roots2display"
+    # puts stderr "*** redisplay-net: x-layout: roots2display == $roots2display"
     x-layout $roots2display;
-    puts stderr "*** redisplay-net: x-layout passed"
+    # puts stderr "*** redisplay-net: x-layout passed"
     y-layout $roots2display;
     # puts stderr "*** redisplay-net: y-layout passed"
 
@@ -187,7 +187,6 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
 		y-layout-subtree $cid $a_ypos;
 	    }
 	    # puts stderr "y-layout-subtree: display arc between $a_nid and $cid with type $NODES($cid,reltype)";
-	    # ::rsttool::treeditor::tree::arc::display $a_nid $cid $NODES($cid,reltype);
     	}
     }
 }

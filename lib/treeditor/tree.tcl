@@ -245,7 +245,7 @@ proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
 	set ypos [expr max($NODES($a_nid1,ypos),$NODES($a_nid2,ypos))];
 	set xpos [expr min($NODES([node::get-start-node $a_nid1],xpos),\
 			       $NODES([node::get-start-node $a_nid2],xpos))];
-	set a_span_nid [make-span-node $a_nid1 $a_nid2 $a_relation 1 $a_ext_rel];
+	set a_span_nid [make-span-node $a_nid1 $a_nid2 $a_relation 1];
 	set NODES($a_span_nid,ypos) $ypos;
 	puts stderr "link-multinuc: xlayout-group-node $a_span_nid $xpos";
 	::rsttool::treeditor::layout::xlayout-group-node $a_span_nid $xpos;
@@ -287,9 +287,14 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
     if {$a_ext_rel} {
 	set MODE EXTERNAL;
 	return;
-    } elseif {$a_span_nid == {}} {
+    }
+
+    # append child node to the list of the parent's children
+    set NODES($a_prnt_nid,children) [node::insort $NODES($a_prnt_nid,children) \
+					 $NODES($a_chld_nid,start) $a_chld_nid];
+    if {$a_span_nid == {}} {
 	set ypos $NODES($a_prnt_nid,ypos);
-	set a_span_nid [make-span-node $a_prnt_nid $a_chld_nid $a_relation 0 $a_ext_rel];
+	set a_span_nid [make-span-node $a_prnt_nid $a_chld_nid $a_relation 0];
 	# since all subtree of the parent will shift down, we have to erase this subtree first
 	erase-subtree $a_prnt_nid;
 	# then, we redraw the subtree from the span nid
@@ -300,9 +305,6 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 	::rsttool::treeditor::layout::update-upwards $a_span_nid $a_chld_nid;
 	::rsttool::treeditor::layout::y-layout-subtree $a_prnt_nid;
     }
-    # append child node to the list of the parent's children
-    set NODES($a_prnt_nid,children) [node::insort $NODES($a_prnt_nid,children) \
-					 $NODES($a_chld_nid,start) $a_chld_nid];
 }
 
 proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype {a_multinuc 0}} {
