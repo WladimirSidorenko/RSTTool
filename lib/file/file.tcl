@@ -329,7 +329,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	    error "Duplicate node id $nid."
 	    return -7;
 	} else {
-	    ::rsttool::treeditor::tree::node::make $type $start $end {} $msgid $nid;
+	    ::rsttool::treeditor::tree::node::make {span} $start $end {} $msgid $nid;
 	}
 	set NID2MSGID($nid) [list $msgid]
 
@@ -377,7 +377,7 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 		$a_relations appendChild $xrel;
 	    }
 	    if {$ichild == {}} {
-		error "Invalid data structure for node '$NODES($a_nid,name)': span node exists without children.";
+		error "Invalid data structure for node '$a_nid': span node exists without children.";
 		return -1;
 	    }
 	} \

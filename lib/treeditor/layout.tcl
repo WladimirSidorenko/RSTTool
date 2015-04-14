@@ -158,8 +158,8 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     namespace import ::rsttool::treeditor::tree::node::redisplay;
     namespace import ::rsttool::treeditor::tree::arc::group-relation-p;
 
-    # puts stderr "y-layout-subtree: a_nid = $a_nid";
-    # puts stderr "y-layout-subtree: VISIBLE_NODES = [array names VISIBLE_NODES]";
+    puts stderr "y-layout-subtree: a_nid = $a_nid";
+    puts stderr "y-layout-subtree: VISIBLE_NODES = [array names VISIBLE_NODES]";
     # 1. Re-layout this node
     if {$a_ypos != {}} {
 	set NODES($a_nid,ypos) $a_ypos;
@@ -172,6 +172,7 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
 	}
     }
     redisplay $a_nid;
+    puts stderr "y-layout-subtree: node $a_nid redisplayed";
 
     # 2. Re-layout children
     set chld_ypos [expr [lindex [$RSTW bbox [ntw $a_nid]] 3] + 30]

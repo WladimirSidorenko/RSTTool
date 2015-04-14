@@ -121,9 +121,17 @@ proc ::rsttool::treeditor::tree::node::get-end {a_nid} {
     variable ::rsttool::NODES;
 
     if {[group-node-p $a_nid]} {
+	puts stderr "node::get-end: a_nid = $a_nid (end = $NODES($a_nid,end))";
 	return [get-end $NODES($a_nid,end)];
+    } else {
+	puts stderr "node::get-end: a_nid = $a_nid (NODES($a_nid,children) == $NODES($a_nid,children))";
+	if {$NODES($a_nid,children) == {}} {
+	    return $NODES($a_nid,end);
+	} else {
+	    set chld_end [get-end [lindex $NODES($a_nid,children) end]];
+	    return [expr max($NODES($a_nid,end),$chld_end)];
+	}
     }
-    return $NODES($a_nid,end);
 }
 
 proc ::rsttool::treeditor::tree::node::get-end-node {a_nid} {
@@ -859,8 +867,12 @@ proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
 	# puts stderr "redisplay: erasing node $a_nid";
 	erase $a_nid;
     }
+    puts stderr "node::redisplay: displaying node $a_nid";
     display $a_nid;
+    puts stderr "node::redisplay: node $a_nid displayed";
+    puts stderr "node::redisplay: displaying node arc prnt = $NODES($a_nid,parent) a_nid = $a_nid $NODES($a_nid,reltype)";
     ::rsttool::treeditor::tree::arc::display $NODES($a_nid,parent) $a_nid $NODES($a_nid,reltype);
+    puts stderr "node::redisplay: node arc displayed";
 }
 
 proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
