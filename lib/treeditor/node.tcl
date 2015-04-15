@@ -260,7 +260,10 @@ proc ::rsttool::treeditor::tree::node::erase {a_nid} {
 	$RSTW delete $NODES($a_nid,spanwgt);
 	array unset NODES $a_nid,spanwgt;
     }
-    array unset NODES $a_nid,textwgt;
+    if {[info exists NODES($a_nid,textwgt)]} {
+	$RSTW delete $NODES($a_nid,textwgt);
+	array unset NODES $a_nid,textwgt;
+    }
     ::rsttool::treeditor::tree::arc::erase $a_nid;
 }
 
@@ -820,6 +823,7 @@ proc ::rsttool::treeditor::tree::node::display {a_nid} {
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::PRNT_MSGID;
+    variable ::rsttool::MSGID2ENID;
     variable ::rsttool::treeditor::WTN;
     variable ::rsttool::treeditor::RSTW;
     variable ::rsttool::treeditor::NODE_WIDTH;
@@ -840,7 +844,9 @@ proc ::rsttool::treeditor::tree::node::display {a_nid} {
 	    } else {
 		set text "[expr [get-child-pos $a_nid] + 1]";
 	    }
-	    set text "$text\n[lindex $FORREST($imsgid) 0]";
+	    if {[info exists MSGID2ENID($imsgid)] && $MSGID2ENID($imsgid) == $a_nid} {
+		set text "$text\n[lindex $FORREST($imsgid) 0]";
+	    }
 	}
     } elseif {[group-node-p $a_nid]} {
 	set color "green";
