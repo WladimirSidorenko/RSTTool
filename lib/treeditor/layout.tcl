@@ -4,6 +4,9 @@
 ##################################################################
 namespace eval ::rsttool::treeditor::layout {
     variable SIZE_FACTOR 0;
+
+    namespace export update-upwards;
+    namespace export y-layout-subtree;
 }
 
 ##################################################################
@@ -154,6 +157,8 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     variable ::rsttool::NODES;
     variable ::rsttool::treeditor::RSTW;
     variable ::rsttool::treeditor::VISIBLE_NODES;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
     namespace import ::rsttool::treeditor::tree::ntw;
     namespace import ::rsttool::treeditor::tree::node::redisplay;
     namespace import ::rsttool::treeditor::tree::arc::group-relation-p;
@@ -175,8 +180,10 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     puts stderr "y-layout-subtree: node $a_nid redisplayed";
 
     # 2. Re-layout children
+    set chld_prfx ""
+    if {"$DISPLAYMODE" == "$DISCUSSION"} {set chld_prfx "e"}
     set chld_ypos [expr [lindex [$RSTW bbox [ntw $a_nid]] 3] + 30]
-    foreach cid $NODES($a_nid,children) {
+    foreach cid $NODES($a_nid,${chld_prfx}children) {
 	# puts stderr "y-layout-subtree: cid = $cid";
     	if {[info exists VISIBLE_NODES($cid)] && $cid != $a_nid} {
 	    # puts stderr "y-layout-subtree: cid is visible";

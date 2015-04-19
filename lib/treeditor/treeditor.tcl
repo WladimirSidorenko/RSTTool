@@ -327,6 +327,7 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 		    [get-end $iroot] == [string length [lindex $FORREST($a_msgid) 0]]} {
 		puts stderr "update-roots: adding node $iroot to the list of message $a_msgid eroots";
 		set NODES($iroot,external) 1;
+		set NODES($iroot,etype) {text};
 		set MSGID2ENID($a_msgid) $iroot;
 		# update external roots of the current message
 		update-roots $a_msgid $iroot {add} 1;

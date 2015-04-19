@@ -6,6 +6,7 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export bisearch;
     namespace export draw-span;
     namespace export draw-text;
+    namespace export eparent-msgid-p;
     namespace export get-child-pos;
     namespace export get-end-node;
     namespace export get-end;
@@ -22,7 +23,7 @@ namespace eval ::rsttool::treeditor::tree::node {
 
 ##################################################################
 proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
-						 {name {}} {msgid {}} {nid {}}} {
+						 {name {}} {msgid {}} {nid {}} {external 0}} {
     variable ::rsttool::NODES;
     variable ::rsttool::FORREST;
     variable ::rsttool::NAME2NID;
@@ -35,6 +36,9 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     if {$msgid == {}} {
 	set msgid $CRNT_MSGID;
     }
+
+    set prfx "";
+    if {$external == {}} {set prfx "e";}
 
     if {$type ==  "text"} {
 	if {$name == {}} {set name [unique-tnode-name]};
@@ -50,15 +54,25 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	# puts stderr "node::make: 1) MSGID2TNODES($msgid) = $MSGID2TNODES($msgid)"
     } else {
 	if {$name == {}} {
-	    set sname {}; set ename {};
-	    if {[group-node-p $start]} {
-		set start $NODES($start,start)
+	    if {$external} {
+		if {[is-prnt-p $start $end]} {
+		    set sname -1;
+		    set ename [get-child-pos $end];
+		} elseif {[is-prnt-p $end $start]} {
+		    set sname -1;
+		    set ename [get-child-pos $start];
+		} else {
+		    set sname [get-child-pos $start];
+		    set ename [get-child-pos $end];
+		}
+		incr sname; incr ename;
+	    } else {
+		set sname {}; set ename {};
+		if {[group-node-p $start]} {set start $NODES($start,start)}
+		set sname $NODES($start,name);
+		if {[group-node-p $end]} {set end $NODES($end,end);}
+		set ename $NODES($end,name);
 	    }
-	    set sname $NODES($start,name);
-	    if {[group-node-p $end]} {
-		set end $NODES($end,end);
-	    }
-	    set ename $NODES($end,name);
 	    set name "$sname-$ename";
 	}
 	if {$nid == {}} {set nid [unique-gnode-id]; set VISIBLE_NODES($nid) 1};
@@ -77,7 +91,9 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     set NODES($nid,ereltype) {};
     set NODES($nid,external) 0;
     set NODES($nid,start) $start;
-    set NODES($nid,type) $type;
+    set NODES($nid,type) {};
+    set NODES($nid,etype) {};
+    set NODES($nid,${prfx}type) $type;
     set NAME2NID($msgid,$name) $nid;
     set-text $nid $msgid;
     return $nid;
@@ -147,10 +163,11 @@ proc ::rsttool::treeditor::tree::node::get-child-pos {a_nid} {
     variable ::rsttool::FORREST;
     variable ::rsttool::NID2MSGID;
 
-    # puts stderr "get-child-pos: a_msgid"
     set msgid $NID2MSGID($a_nid);
+    puts stderr "get-child-pos: a_nid == $a_nid; msgid = $msgid"
     set prnt_msgid [lindex $FORREST($msgid) 1];
-    if {$msgid == {}} {return -1}
+    puts stderr "get-child-pos: a_nid == $a_nid; prnt_msgid = $prnt_msgid"
+    if {$prnt_msgid == {}} {return -1}
     return [lsearch [lindex $FORREST($prnt_msgid) end] $msgid];
 }
 
@@ -720,6 +737,21 @@ proc ::rsttool::treeditor::tree::node::text-node-p {nid} {
     return 0
 }
 
+proc ::rsttool::treeditor::tree::node::eparent-msgid-p {a_msgid} {
+    variable ::rsttool::CRNT_MSGID;
+    variable ::rsttool::PRNT_MSGID;
+
+    return [expr ($PRNT_MSGID != {} && $a_msgid == $PRNT_MSGID) || \
+		($PRNT_MSGID == {} || $a_msgid == $CRNT_MSGID)];
+}
+
+proc ::rsttool::treeditor::tree::node::is-prnt-p {prnt_nid chld_nid} {
+    variable ::rsttool::FORREST;
+    variable ::rsttool::NID2MSGID;
+
+    return [expr $NID2MSGID($prnt_nid) == [lindex $FORREST($chld_nid) 1]];
+}
+
 proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list {a_start -1} \
 						     {a_get_start ::rsttool::treeditor::tree::node::get-start}} {
     variable ::rsttool::NODES;
@@ -833,10 +865,7 @@ proc ::rsttool::treeditor::tree::node::display {a_nid} {
     set text {};
     if {$DISPLAYMODE == $DISCUSSION} {
 	set imsgid $NID2MSGID($a_nid);
-	if {[llength $imsgid] > 1} {
-	    set color "green";
-	    set text "$NODES($a_nid,name)";
-	} else {
+	if {$NODES($a_nid,etype) == {text}} {
 	    set color "black";
 	    if {$imsgid == $PRNT_MSGID || \
 		    ($PRNT_MSGID == {} && $imsgid == $CRNT_MSGID)} {
@@ -844,9 +873,10 @@ proc ::rsttool::treeditor::tree::node::display {a_nid} {
 	    } else {
 		set text "[expr [get-child-pos $a_nid] + 1]";
 	    }
-	    if {[info exists MSGID2ENID($imsgid)] && $MSGID2ENID($imsgid) == $a_nid} {
-		set text "$text\n[lindex $FORREST($imsgid) 0]";
-	    }
+	    set text "$text\n[lindex $FORREST($imsgid) 0]";
+	} else {
+	    set color "green";
+	    set text "$NODES($a_nid,name)";
 	}
     } elseif {[group-node-p $a_nid]} {
 	set color "green";
@@ -868,17 +898,27 @@ proc ::rsttool::treeditor::tree::node::display {a_nid} {
 
 proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
     variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::CRNT_MSGID;
+    variable ::rsttool::PRNT_MSGID;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
 
+    # erase node
     if {[info exists NODES($a_nid,textwgt)] && $NODES($a_nid,textwgt) != {}} {
-	# puts stderr "redisplay: erasing node $a_nid";
 	erase $a_nid;
     }
-    puts stderr "node::redisplay: displaying node $a_nid";
+    # display node
     display $a_nid;
-    puts stderr "node::redisplay: node $a_nid displayed";
-    puts stderr "node::redisplay: displaying node arc prnt = $NODES($a_nid,parent) a_nid = $a_nid $NODES($a_nid,reltype)";
-    ::rsttool::treeditor::tree::arc::display $NODES($a_nid,parent) $a_nid $NODES($a_nid,reltype);
-    puts stderr "node::redisplay: node arc displayed";
+    # display arc
+    set prnt_prfx "";
+    set msgid $NID2MSGID($a_nid);
+    if {$DISPLAYMODE == $DISCUSSION && (($PRNT_MSGID != {} && $msgid != $PRNT_MSGID) || \
+	    ($PRNT_MSGID == {} && $msgid != $CRNT_MSGID))} {
+	set prnt_prfx "e";
+    }
+    ::rsttool::treeditor::tree::arc::display $NODES($a_nid,${prnt_prfx}parent)\
+	$a_nid $NODES($a_nid,${prnt_prfx}reltype);
 }
 
 proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {

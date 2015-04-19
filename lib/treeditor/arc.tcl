@@ -61,10 +61,16 @@ proc ::rsttool::treeditor::tree::arc::bottom-point {item} {
 proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
 						   {a_reltype {}}} {
     variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::CRNT_MSGID;
+    variable ::rsttool::PRNT_MSGID;
     variable ::rsttool::treeditor::RSTW;
     variable ::rsttool::relations::SPAN;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
+
     namespace import ::rsttool::treeditor::tree::ntw;
     namespace import ::rsttool::treeditor::tree::node::draw-text;
     namespace import ::rsttool::utils::add-points;
@@ -78,9 +84,16 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
 	if {$a_reltype == {}} {return}
     }
 
+    set sat_msgid $NID2MSGID($a_sat_nid);
+    set prnt_prfx "";
+    if {$DISPLAYMODE == $DISCUSSION && (($PRNT_MSGID != {} && $sat_msgid != $PRNT_MSGID) || \
+	    ($PRNT_MSGID == {} && $sat_msgid != $CRNT_MSGID))} {
+	set prnt_prfx "e";
+    }
+
     # set variables
     set color "red";
-    set label $NODES($a_sat_nid,relname);
+    set label $NODES($a_sat_nid,${prnt_prfx}relname);
     set ypos $NODES($a_sat_nid,ypos);
     set nucbot [bottom-point $nuc_wdgt];
     set satpnt "$NODES($a_sat_nid,xpos) $NODES($a_sat_nid,ypos)";
