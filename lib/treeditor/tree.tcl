@@ -83,11 +83,12 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     variable ::rsttool::treeditor::DRAGGED_NID;
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::segmenter::message;
+    namespace import ::rsttool::treeditor::tree::node::get-visible-parent;
 
     # by default, we assume that clicked node is a parent, but that
     # assumption might be changed later in this function
+    set ext_connection 0;
     set clicked_is_prnt 1;
-    set ext_connection 0
 
     if {$dragged_nid == {}} {
 	if {$DRAGGED_NID != {} && [info exists VISIBLE_NODES($DRAGGED_NID)]} {
@@ -98,7 +99,7 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     }
     # forbid connections from the node to itself
     if {$clicked_nid == $dragged_nid} {
-	message "Can't connect identical nodes."
+	message "Can't connect identical nodes.";
 	return;
     }
 
@@ -108,19 +109,17 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 
     set dragged_msgid $NID2MSGID($dragged_nid);
     set dragged_prnt $NODES($dragged_nid,parent);
-    puts stderr "dragged_prnt = $dragged_prnt"
+    puts stderr "dragged_prnt = $dragged_prnt";
     if {$dragged_msgid != $clicked_msgid} {set ext_connection 1}
     # forbid multiple roots for one message
-    if {$dragged_prnt != {} && [info exists VISIBLE_NODES($dragged_prnt)] &&\
-	    $clicked_is_prnt == 0} {
-	message "Node $NODES($clicked_nid,name) already has a parent."
+    if {$dragged_prnt != {} && [info exists VISIBLE_NODES($dragged_prnt)] && $clicked_is_prnt == 0} {
+	message "Node $NODES($clicked_nid,name) already has a parent.";
 	return;
     }
 
     # prevent non-projective edges, i.e. given node can only be linked
     # to its adjacent span
     puts stderr "link-nodes: MSGID2ROOTS(clicked_msgid) = $MSGID2ROOTS($clicked_msgid)"
-    namespace import ::rsttool::treeditor::tree::node::get-visible-parent;
     set clicked_idx [node::bisearch [get-visible-parent $clicked_nid] $MSGID2ROOTS($clicked_msgid)]
     set dragged_idx [node::bisearch [get-visible-parent $dragged_nid] $MSGID2ROOTS($dragged_msgid)]
     puts stderr "link-nodes: clicked_prnt = [get-visible-parent $clicked_nid]"
@@ -140,17 +139,17 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 	# if parent message of the dragged node is the message
 	# corresponding to the clicked node, we cannot make the clicked
 	# node a satellite
-	set dragged_prnt_msgid [lindex $FORREST($dragged_msgid) 1]
-	set clicked_prnt_msgid [lindex $FORREST($clicked_msgid) 1]
+	set dragged_prnt_msgid [lindex $FORREST($dragged_msgid) 1];
+	set clicked_prnt_msgid [lindex $FORREST($clicked_msgid) 1];
 	# for external connections, the type of dependencies is always
 	# predefined
 	if {$ext_connection} {
+	    set nucleus_embedded "";
+	    set satellite_embedded "";
 	    if {$dragged_msgid == $clicked_prnt_msgid} {
 		set satellite "";
-		set satellite_embedded "";
 	    } else {
 		set nucleus "";
-		set nucleus_embedded "";
 	    }
 	} elseif {! $clicked_is_prnt} {
 	    set nucleus "";
@@ -271,6 +270,7 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 
     if {$a_chld_msgid == {}} {set a_chld_msgid $NID2MSGID($a_chld_nid)}
 
+    puts stderr "link-chld-to-prnt: a_chld_nid == $a_chld_nid ; a_prnt_nid == $a_prnt_nid"
     # create a span node for the parent, if it's needed
     set prnt_prfx "";
     set chld_prfx "";
@@ -356,6 +356,7 @@ proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype
     set chld_prfx "";
     set prnt_prfx "";
 
+    puts stderr "make-span-node: linking nodes prnt = $a_prnt_nid, chld = $a_chld_nid"
     set chld_msgid $NID2MSGID($a_chld_nid);
     set prnt_msgid $NID2MSGID($a_prnt_nid);
     set span_msgid $prnt_msgid;
@@ -385,6 +386,9 @@ proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype
 		      [expr $chld_start < $prnt_start ? $a_chld_nid: $a_prnt_nid] \
 		      [expr $chld_end < $prnt_end ? $a_prnt_nid: $a_chld_nid] \
 		      {} $span_msgid {} $a_external];
+    puts stderr "make-span-node: new span = $span_nid, start = $NODES($span_nid,start), end = $NODES($span_nid,end)"
+    puts stderr "make-span-node: start xpos = $NODES($NODES($span_nid,start),xpos),\
+end = $NODES($NODES($span_nid,end),xpos)"
     # set span node as the parent of the parent node
     set NODES($a_prnt_nid,${prnt_prfx}parent) $span_nid;
     # add parent node to the list of span childrens

@@ -13,6 +13,7 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export get-start-node;
     namespace export get-start;
     namespace export get-visible-parent;
+    namespace export egroup-node-p;
     namespace export group-node-p;
     namespace export insort;
     namespace export redisplay;
@@ -38,7 +39,7 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     }
 
     set prfx "";
-    if {$external == {}} {set prfx "e";}
+    if {$external} {set prfx "e";}
 
     if {$type ==  "text"} {
 	if {$name == {}} {set name [unique-tnode-name]};
@@ -730,26 +731,32 @@ proc ::rsttool::treeditor::tree::node::group-node-p {nid} {
     return 0;
 }
 
+proc ::rsttool::treeditor::tree::node::egroup-node-p {nid} {
+    variable ::rsttool::NODES;
+    if {$NODES($nid,etype) == "text" || $NODES($nid,etype) == {}} {return 0}
+    return 1;
+}
+
 proc ::rsttool::treeditor::tree::node::text-node-p {nid} {
     variable ::rsttool::NODES;
     #come back here
     if { $nid == {} || $NODES($nid,type) == "text"} {return 1}
-    return 0
+    return 0;
 }
 
 proc ::rsttool::treeditor::tree::node::eparent-msgid-p {a_msgid} {
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::PRNT_MSGID;
 
-    return [expr ($PRNT_MSGID != {} && $a_msgid == $PRNT_MSGID) || \
-		($PRNT_MSGID == {} || $a_msgid == $CRNT_MSGID)];
+    return [expr ([string equal "$PRNT_MSGID" ""] && [string equal "$a_msgid" "$PRNT_MSGID"]) || \
+		(![string equal "$PRNT_MSGID" ""] || [string equal "$a_msgid" "$CRNT_MSGID"])];
 }
 
 proc ::rsttool::treeditor::tree::node::is-prnt-p {prnt_nid chld_nid} {
     variable ::rsttool::FORREST;
     variable ::rsttool::NID2MSGID;
 
-    return [expr $NID2MSGID($prnt_nid) == [lindex $FORREST($chld_nid) 1]];
+    return [string equal "$NID2MSGID($prnt_nid)" "[lindex $FORREST($NID2MSGID($chld_nid)) 1]"];
 }
 
 proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list {a_start -1} \
@@ -938,8 +945,9 @@ proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
     set min $xpos
     set max $xpos
 
+    puts stderr "draw-span: a_nid = $a_nid; start = $NODES($a_nid,start), end = $NODES($a_nid,end);"
     if {($DISPLAYMODE == $MESSAGE && [group-node-p $a_nid]) || \
-    ($DISPLAYMODE == $DISCUSSION && [llength $NID2MSGID($a_nid)] > 1)} {
+	    ($DISPLAYMODE == $DISCUSSION && [egroup-node-p $a_nid])} {
 	if {[info exists NODES($a_nid,start)]} {
 	    set start_nid $NODES($a_nid,start);
 	    if {[info exists NODES($start_nid,xpos)]} {
@@ -962,11 +970,12 @@ proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
 	    error "Unknown index: NODES($a_nid,end)"
 	}
     }
+    puts stderr "draw-span: min = $min; max = $max;"
 
     # draw the span-line
     set NODES($a_nid,spanwgt) [draw-line $RSTW \
-				[expr $min - $HALF_NODE_WIDTH] $ypos\
-				[expr $max + $HALF_NODE_WIDTH] $ypos]
+				   [expr $min - $HALF_NODE_WIDTH] $ypos \
+				   [expr $max + $HALF_NODE_WIDTH] $ypos];
 }
 
 proc ::rsttool::treeditor::tree::node::draw-text {window txt x y {options {}}} {

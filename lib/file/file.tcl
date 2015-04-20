@@ -222,6 +222,8 @@ proc ::rsttool::file::write-tnode {a_nid a_prnt_elem a_xml_doc} {
     $node setAttribute {msgid} $NID2MSGID($a_nid);
     $node setAttribute {start} $NODES($a_nid,start);
     $node setAttribute {end} $NODES($a_nid,end);
+    $node setAttribute {external} $NODES($a_nid,external);
+    $node setAttribute {etype} $NODES($a_nid,etype);
     $a_prnt_elem appendChild $node;
 }
 
@@ -254,6 +256,7 @@ proc ::rsttool::file::read-tnode {a_segments} {
 	if {[set end [xml-get-attr $child {end}]] == {}} {
 	    return -6;
 	}
+
 	# check if this node has not already been defined
 	if {[info exists NODES($nid)]} {
 	    error "Duplicate node id $nid."
@@ -282,6 +285,7 @@ proc ::rsttool::file::write-gnode {a_nid a_prnt_elem a_xml_doc} {
     set node [$a_xml_doc createElement {span}];
     $node setAttribute {id} $a_nid;
     $node setAttribute {external} $NODES($a_nid,external);
+    $node setAttribute {etype} $NODES($a_nid,etype);
     $node setAttribute {start} $NODES($a_nid,start);
     $node setAttribute {end} $NODES($a_nid,end);
     $node setAttribute {msgid} $NID2MSGID($a_nid);
@@ -296,6 +300,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
     variable ::rsttool::GROUP_NODE_CNT;
     namespace import ::rsttool::treeditor::tree::node::insort;
     namespace import ::rsttool::treeditor::tree::node::get-start;
+    namespace import ::rsttool::treeditor::tree::node::egroup-node-p;
 
     if {$a_spans == {}} {return 0;}
     set nid {}; set start {}; set end {};
@@ -330,21 +335,27 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	    return -7;
 	} else {
 	    ::rsttool::treeditor::tree::node::make {span} $start $end {} $msgid $nid;
+	    if {[catch {set etype [$child getAttribute {etype}]}]} {set etype {}}
+	    set NODES($nid,external) $external;
+	    set NODES($nid,etype) $etype;
 	}
-	set NID2MSGID($nid) [list $msgid]
+	set NID2MSGID($nid) $msgid;
 
 	if {[info exists MSGID2ROOTS($msgid)]} {
-	    ::rsttool::treeditor::update-roots $msgid $nid {add};
+	    puts stderr "read-gnode: 0) ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external)";
+	    ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external);
+	    if {$NODES($nid,external) != 1 || ![egroup-node-p $nid]} {
+	    # 	puts stderr "read-gnode: 1) ::rsttool::treeditor::update-roots $msgid $nid {add} 0";
+		::rsttool::treeditor::update-roots $msgid $nid {add} 0;
+	    }
 	} else {
 	    error "Non-terminal node ($nid) defined for message without terminal nodes ($msgid).";
 	}
-
-	if {$nid < $GROUP_NODE_CNT} {
-	    set GROUP_NODE_CNT $nid;
-	}
+	if {$nid < $GROUP_NODE_CNT} {set GROUP_NODE_CNT $nid}
     }
     return 0;
 }
+
 proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
     variable ::rsttool::NODES;
     variable ::rsttool::relations::SPAN;
@@ -364,13 +375,16 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 	    $inuc setAttribute {idref} $a_nid;
 	    $xrel appendChild $inuc;
 	    set ichild {};
-	    foreach cid $NODES($a_nid,children) {
-		if {$NODES($cid,reltype) != $HYPOTACTIC} {continue;}
+	    set reltype {reltype};
+	    set external 0; set chld_prfx "";
+	    if {$NODES($a_nid,external)} {set external 1; set chld_prfx "e";}
+	    foreach cid $NODES($a_nid,${chld_prfx}children) {
+		if {$NODES($cid,${chld_prfx}reltype) != $HYPOTACTIC} {continue}
 		if {$ichild != {}} {
 		    set xrel [$xrel cloneNode -deep];
 		    [$xrel selectNodes [$ichild nodeName]] delete;
 		}
-		$xrel setAttribute {relname} $NODES($cid,relname);
+		$xrel setAttribute {relname} $NODES($cid,${chld_prfx}relname);
 		set ichild [$a_xml_doc createElement {satellite}];
 		$ichild setAttribute {idref} $cid;
 		$xrel appendChild $ichild;
@@ -696,7 +710,7 @@ proc ::rsttool::file::load-xml {a_fname} {
 proc ::rsttool::file::xml-get-attr {a_elem a_attr} {
     if {[set ret [$a_elem getAttribute $a_attr]] == {}} {
 	error "Element [$a_elem nodeName] does not have attribute '$a_attr'.";
-    };
+    }
     return $ret;
 }
 
