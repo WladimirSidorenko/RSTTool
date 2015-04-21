@@ -292,7 +292,7 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 	    if {$NID2MSGID($a_nid) == $a_msgid} {
 		if {$MSGID2EROOTS($a_msgid) == {} || [lindex $MSGID2EROOTS($a_msgid) 0] != $a_nid} {
 		    set MSGID2EROOTS($a_msgid) [concat $a_nid $MSGID2EROOTS($a_msgid)];
-		    puts stderr "update-roots: 0) MSGID2EROOTS($a_msgid) = $MSGID2EROOTS($a_msgid)";
+		    # puts stderr "update-roots: 0) MSGID2EROOTS($a_msgid) = $MSGID2EROOTS($a_msgid)";
 		}
 	    } else {
 		if {$MSGID2EROOTS($a_msgid) != {} && [lindex $MSGID2EROOTS($a_msgid) 0] == \
@@ -300,15 +300,15 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 		    set MSGID2EROOTS($a_msgid) [concat [lindex $MSGID2EROOTS($a_msgid) 0] \
 						    [$op [lrange $MSGID2EROOTS($a_msgid) 1 end] \
 							 $a_nid]];
-		    puts stderr "update-roots: 1) MSGID2EROOTS($a_msgid) = $MSGID2EROOTS($a_msgid)";
+		    # puts stderr "update-roots: 1) MSGID2EROOTS($a_msgid) = $MSGID2EROOTS($a_msgid)";
 		} else {
 		    set MSGID2EROOTS($a_msgid) [$op $MSGID2EROOTS($a_msgid) $a_nid];
-		    puts stderr "update-roots: 2) MSGID2EROOTS($a_msgid) = $MSGID2EROOTS($a_msgid)";
+		    # puts stderr "update-roots: 2) MSGID2EROOTS($a_msgid) = $MSGID2EROOTS($a_msgid)";
 		}
 	    }
 	} else {
 	    set MSGID2EROOTS($a_msgid) [$op $MSGID2EROOTS($a_msgid) $a_nid];
-	    puts stderr "update-roots: 3) MSGID2EROOTS($a_msgid) = $MSGID2EROOTS($a_msgid)";
+	    # puts stderr "update-roots: 3) MSGID2EROOTS($a_msgid) = $MSGID2EROOTS($a_msgid)";
 	}
     } else {
 	# update roots of the message in question
@@ -317,15 +317,15 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 
 	if {[llength $MSGID2ROOTS($a_msgid)] == 1} {
 	    set iroot [lindex $MSGID2ROOTS($a_msgid) 0];
-	    puts stderr "update-roots: single root left = $iroot";
+	    # puts stderr "update-roots: single root left = $iroot";
 	    if {[info exists NODES($iroot,parent)] && $NODES($iroot,parent) != {}} {return}
 
 	    namespace import ::rsttool::treeditor::tree::node::get-end;
-	    puts stderr "update-roots: iroot end = [get-end $iroot]";
-	    puts stderr "update-roots: message length = [string length [lindex $FORREST($a_msgid) 0]]";
+	    # puts stderr "update-roots: iroot end = [get-end $iroot]";
+	    # puts stderr "update-roots: message length = [string length [lindex $FORREST($a_msgid) 0]]";
 	    if {[get-start $iroot] == 0 && \
 		    [get-end $iroot] == [string length [lindex $FORREST($a_msgid) 0]]} {
-		puts stderr "update-roots: adding node $iroot to the list of message $a_msgid eroots";
+		# puts stderr "update-roots: adding node $iroot to the list of message $a_msgid eroots";
 		set NODES($iroot,external) 1;
 		set NODES($iroot,etype) {text};
 		set MSGID2ENID($a_msgid) $iroot;

@@ -313,9 +313,11 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 	# hide current node and show the next one
 	show-nodes $prev_msg_id 0;
 	show-nodes $CRNT_MSGID 1;
-    } elseif {$PRNT_MSGID != {} && $PRNT_MSGID != $prev_prnt_msg_id} {
-	show-nodes $PRNT_MSGID 1;
-	puts stderr "next-message: show-nodes prnt_msgid = $PRNT_MSGID 1";
+    } elseif {$PRNT_MSGID != {}} {
+	if {$PRNT_MSGID != $prev_prnt_msg_id} {
+	    show-nodes $PRNT_MSGID 1;
+	    puts stderr "next-message: show-nodes prnt_msgid = $PRNT_MSGID 1";
+	}
     } else {
 	show-nodes $CRNT_MSGID 1;
 	puts stderr "next-message: show-nodes crnt_msgid = $CRNT_MSGID 1";

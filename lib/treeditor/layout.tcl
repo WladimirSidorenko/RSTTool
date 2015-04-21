@@ -43,7 +43,8 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
 	if {! [info exists MSGID2EROOTS($PRNT_MSGID)]} {set MSGID2EROOTS($PRNT_MSGID) {}}
 	set roots2display $MSGID2EROOTS($PRNT_MSGID);
     }
-    # puts stderr "MSGID2ROOTS($CRNT_MSGID) = $MSGID2ROOTS($CRNT_MSGID)"
+    puts stderr "redisplay-net: roots2display = $roots2display";
+    puts stderr "redisplay-net: visible_nodes = [array names VISIBLE_NODES]";
     # 3. layout and draw
     # puts stderr "*** redisplay-net: x-layout: roots2display == $roots2display"
     x-layout $roots2display;
@@ -155,6 +156,7 @@ proc ::rsttool::treeditor::layout::y-layout {a_nodes} {
 
 proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
     variable ::rsttool::treeditor::RSTW;
     variable ::rsttool::treeditor::VISIBLE_NODES;
     variable ::rsttool::treeditor::DISCUSSION;
@@ -162,6 +164,7 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     namespace import ::rsttool::treeditor::tree::ntw;
     namespace import ::rsttool::treeditor::tree::node::redisplay;
     namespace import ::rsttool::treeditor::tree::arc::group-relation-p;
+    namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
 
     puts stderr "y-layout-subtree: a_nid = $a_nid";
     puts stderr "y-layout-subtree: VISIBLE_NODES = [array names VISIBLE_NODES]";
@@ -180,8 +183,11 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     puts stderr "y-layout-subtree: node $a_nid redisplayed";
 
     # 2. Re-layout children
-    set chld_prfx ""
-    if {"$DISPLAYMODE" == "$DISCUSSION"} {set chld_prfx "e"}
+    set chld_prfx ""; set prnt_prfx "";
+    if {"$DISPLAYMODE" == "$DISCUSSION"} {
+	set chld_prfx "e";
+	if {![eparent-msgid-p $NID2MSGID($a_nid)]} {set prnt_prfx "e"}
+    }
     set chld_ypos [expr [lindex [$RSTW bbox [ntw $a_nid]] 3] + 30]
     foreach cid $NODES($a_nid,${chld_prfx}children) {
 	# puts stderr "y-layout-subtree: cid = $cid";
@@ -189,7 +195,7 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
 	    # puts stderr "y-layout-subtree: cid is visible";
 	    # paratactic child nodes should keep the y position of
 	    # their parent
-	    if {[group-relation-p $NODES($cid,reltype)]} {
+	    if {[group-relation-p $NODES($cid,${prnt_prfx}reltype)]} {
 		y-layout-subtree $cid $chld_ypos;
 	    } else {
 		y-layout-subtree $cid $a_ypos;

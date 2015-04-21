@@ -198,30 +198,39 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
     }
 
     # read segments
-    if {[set ret [read-tnode [$root selectNodes segments]]]} {
-	return $ret;}
+    if {[set ret [read-tnode [$root selectNodes segments]]]} {return $ret}
 
     # read spans
-    if {[set ret [read-gnode [$root selectNodes spans]]]} {
-	return $ret;}
-
+    if {[set ret [read-gnode [$root selectNodes spans]]]} {return $ret}
+    # make names for spans
+    variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
+    namespace import ::rsttool::treeditor::tree::node::group-node-p;
+    namespace import ::rsttool::treeditor::tree::node::egroup-node-p;
+    namespace import ::rsttool::treeditor::tree::node::make-name;
+    foreach nid [lsort -integer -increasing [array names NID2MSGID]] {
+	if {[group-node-p $nid]} {
+	    puts stderr "nid = $nid";
+	    set NODES($nid,name) [make-name $NODES($nid,start) $NODES($nid,end) \
+				      [egroup-node-p $nid]];
+	}
+    }
     # read relations
-    if {[set ret [read-relations [$root selectNodes relations]]]} {
-	return $ret;}
+    if {[set ret [read-relations [$root selectNodes relations]]]} {return $ret}
 
     return 0;
 }
 
-proc ::rsttool::file::write-tnode {a_nid a_prnt_elem a_xml_doc} {
+proc ::rsttool::file::write-node {a_nid a_prnt_elem a_xml_doc {a_type segment}} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2MSGID;
 
-    set node [$a_xml_doc createElement {segment}];
+    set node [$a_xml_doc createElement $a_type];
     $node setAttribute {id} $a_nid;
-    $node setAttribute {name} $NODES($a_nid,name);
     $node setAttribute {msgid} $NID2MSGID($a_nid);
     $node setAttribute {start} $NODES($a_nid,start);
     $node setAttribute {end} $NODES($a_nid,end);
+    if {$a_type == {segment}} {$node setAttribute {name} $NODES($a_nid,name)}
     $node setAttribute {external} $NODES($a_nid,external);
     $node setAttribute {etype} $NODES($a_nid,etype);
     $a_prnt_elem appendChild $node;
@@ -276,20 +285,6 @@ proc ::rsttool::file::read-tnode {a_segments} {
 	}
     }
     return 0;
-}
-
-proc ::rsttool::file::write-gnode {a_nid a_prnt_elem a_xml_doc} {
-    variable ::rsttool::NODES;
-    variable ::rsttool::NID2MSGID;
-
-    set node [$a_xml_doc createElement {span}];
-    $node setAttribute {id} $a_nid;
-    $node setAttribute {external} $NODES($a_nid,external);
-    $node setAttribute {etype} $NODES($a_nid,etype);
-    $node setAttribute {start} $NODES($a_nid,start);
-    $node setAttribute {end} $NODES($a_nid,end);
-    $node setAttribute {msgid} $NID2MSGID($a_nid);
-    $a_prnt_elem appendChild $node;
 }
 
 proc ::rsttool::file::read-gnode {a_spans} {
@@ -362,6 +357,7 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
     variable ::rsttool::file::SAVED_PARNUC;
+    namespace import ::rsttool::treeditor::tree::node::get-eparent;
 
     if {![info exists NODES($a_nid,reltype)]} {return;}
 
@@ -376,8 +372,11 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 	    $xrel appendChild $inuc;
 	    set ichild {};
 	    set reltype {reltype};
-	    set external 0; set chld_prfx "";
-	    if {$NODES($a_nid,external)} {set external 1; set chld_prfx "e";}
+	    if {$NODES($a_nid,external)} {
+		set external 1; set chld_prfx "e";
+	    } else {
+		set external 0; set chld_prfx "";
+	    }
 	    foreach cid $NODES($a_nid,${chld_prfx}children) {
 		if {$NODES($cid,${chld_prfx}reltype) != $HYPOTACTIC} {continue}
 		if {$ichild != {}} {
@@ -386,7 +385,7 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 		}
 		$xrel setAttribute {relname} $NODES($cid,${chld_prfx}relname);
 		set ichild [$a_xml_doc createElement {satellite}];
-		$ichild setAttribute {idref} $cid;
+		$ichild setAttribute {idref} [get-eparent $cid];
 		$xrel appendChild $ichild;
 		$a_relations appendChild $xrel;
 	    }
@@ -643,9 +642,9 @@ proc ::rsttool::file::save {} {
 	# save nodes
 	foreach nid [array names NID2MSGID] {
 	    if {[text-node-p $nid]} {
-		write-tnode $nid $tnodes $xmldoc;
+		write-node $nid $tnodes $xmldoc {segment};
 	    } else {
-		write-gnode $nid $gnodes $xmldoc;
+		write-node $nid $gnodes $xmldoc {span};
 	    }
 	    write-relations $nid $relations $xmldoc;
 	}

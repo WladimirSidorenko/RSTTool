@@ -13,9 +13,11 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export get-start-node;
     namespace export get-start;
     namespace export get-visible-parent;
+    namespace export get-eparent;
     namespace export egroup-node-p;
     namespace export group-node-p;
     namespace export insort;
+    namespace export make-name;
     namespace export redisplay;
     namespace export set-text;
     namespace export show-nodes;
@@ -54,29 +56,13 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	set MSGID2TNODES($msgid) [insort $MSGID2TNODES($msgid) $start $nid];
 	# puts stderr "node::make: 1) MSGID2TNODES($msgid) = $MSGID2TNODES($msgid)"
     } else {
-	if {$name == {}} {
-	    if {$external} {
-		if {[is-prnt-p $start $end]} {
-		    set sname -1;
-		    set ename [get-child-pos $end];
-		} elseif {[is-prnt-p $end $start]} {
-		    set sname -1;
-		    set ename [get-child-pos $start];
-		} else {
-		    set sname [get-child-pos $start];
-		    set ename [get-child-pos $end];
-		}
-		incr sname; incr ename;
-	    } else {
-		set sname {}; set ename {};
-		if {[group-node-p $start]} {set start $NODES($start,start)}
-		set sname $NODES($start,name);
-		if {[group-node-p $end]} {set end $NODES($end,end);}
-		set ename $NODES($end,name);
+	if {$nid == {}} {
+	    set nid [unique-gnode-id];
+	    set VISIBLE_NODES($nid) 1;
+	    if {$name == {}} {
+		set name [make-name $start $end $external];
 	    }
-	    set name "$sname-$ename";
 	}
-	if {$nid == {}} {set nid [unique-gnode-id]; set VISIBLE_NODES($nid) 1};
     }
     # save mapping from node id to message id
     set NID2MSGID($nid) [list $msgid];
@@ -90,7 +76,7 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     set NODES($nid,erelname) {};
     set NODES($nid,reltype) {};
     set NODES($nid,ereltype) {};
-    set NODES($nid,external) 0;
+    set NODES($nid,external) $external;
     set NODES($nid,start) $start;
     set NODES($nid,type) {};
     set NODES($nid,etype) {};
@@ -98,6 +84,30 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     set NAME2NID($msgid,$name) $nid;
     set-text $nid $msgid;
     return $nid;
+}
+
+proc ::rsttool::treeditor::tree::node::make-name {a_start a_end a_external} {
+    variable ::rsttool::NODES;
+
+    if {$a_external} {
+	if {[is-prnt-p $a_start $a_end]} {
+	    set sname -1;
+	    set ename [get-child-pos $a_end];
+	} elseif {[is-prnt-p $a_end $a_start]} {
+	    set sname -1;
+	    set ename [get-child-pos $a_start];
+	} else {
+	    set sname [get-child-pos $a_start];
+	    set ename [get-child-pos $a_end];
+	}
+	incr sname; incr ename;
+    } else {
+	puts stderr "make-name: a_start = $a_start: [get-start-node $a_start]"
+	puts stderr "make-name: a_end = $a_end: [get-end-node $a_end]"
+	set sname $NODES([get-start-node $a_start],name);
+	set ename $NODES([get-end-node $a_end],name);
+    }
+    return "$sname-$ename";
 }
 
 proc ::rsttool::treeditor::tree::node::get-visible-parent {a_nid} {
@@ -115,6 +125,16 @@ proc ::rsttool::treeditor::tree::node::get-visible-parent {a_nid} {
     return $a_nid;
 }
 
+proc ::rsttool::treeditor::tree::node::get-eparent {a_nid} {
+    variable ::rsttool::NODES;
+
+    if {$NODES($a_nid,eparent) != {}} {
+	return [get-eparent $NODES($a_nid,eparent)];
+    } else {
+	return $a_nid;
+    }
+}
+
 proc ::rsttool::treeditor::tree::node::get-start {a_nid} {
     variable ::rsttool::NODES;
 
@@ -128,9 +148,7 @@ proc ::rsttool::treeditor::tree::node::get-start {a_nid} {
 proc ::rsttool::treeditor::tree::node::get-start-node {a_nid} {
     variable ::rsttool::NODES;
 
-    if {[group-node-p $a_nid]} {
-	return $NODES($a_nid,start);
-    }
+    if {[group-node-p $a_nid]} {return $NODES($a_nid,start);}
     return $a_nid;
 }
 
@@ -154,10 +172,8 @@ proc ::rsttool::treeditor::tree::node::get-end {a_nid} {
 proc ::rsttool::treeditor::tree::node::get-end-node {a_nid} {
     variable ::rsttool::NODES;
 
-    if {[group-node-p $a_nid]} {
-	return [get-end $NODES($a_nid,end)];
-    }
-    return $NODES($a_nid,end);
+    if {[group-node-p $a_nid]} {return $NODES($a_nid,end)}
+    return $a_nid;
 }
 
 proc ::rsttool::treeditor::tree::node::get-child-pos {a_nid} {
@@ -711,24 +727,11 @@ proc ::rsttool::treeditor::tree::node::disconnect_node {clicked_node method} {
     }
 }
 
-proc ::rsttool::treeditor::tree::node::fix-children {new_node clicked_node dragged_node} {
-    global node
-    # puts stderr "fix-children: new_node = $new_node clicked_node = $clicked_node dragged_node = $dragged_node"
-    foreach child $NODES($new_node,children) {
-	if { $child == $clicked_node } {
-	} elseif {$child == $dragged_node} {
-	} elseif {$NODES($child,relname) == "span"} {
-	    link-par-to-child $clicked_node $child span
-	} elseif {[relation-type $NODES($child,relname)] == "multinuc"} {
-	    link-par-to-child $clicked_node $child $NODES($child,relname)
-	}
-    }
-}
-
 proc ::rsttool::treeditor::tree::node::group-node-p {nid} {
     variable ::rsttool::NODES;
-    if {$NODES($nid,type) != "text"} {return 1}
-    return 0;
+    puts stderr "group-node-p: nid = $nid, type = $NODES($nid,type)"
+    if {$NODES($nid,type) == "text"} {return 0}
+    return 1;
 }
 
 proc ::rsttool::treeditor::tree::node::egroup-node-p {nid} {
