@@ -42,8 +42,8 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
 	set roots2display $MSGID2EROOTS($PRNT_MSGID);
     }
 
-    # puts stderr "*** roots2display: roots2display = $roots2display";
-    # puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
+    puts stderr "*** roots2display: roots2display = $roots2display";
+    puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
     # 3. layout and draw
     # puts stderr "*** redisplay-net: x-layout: roots2display == $roots2display"
     x-layout $roots2display;
@@ -82,12 +82,14 @@ proc ::rsttool::treeditor::layout::x-layout {a_nodes {xpos {}}} {
     # puts stderr "x-layout: xpos = $xpos"
     foreach nid $a_nodes {
 	if {![info exists VISIBLE_NODES($nid)]} {continue}
-	# puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
+	puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
     	if {($DISPLAYMODE == $MESSAGE && [group-node-p $nid]) || \
 		($DISPLAYMODE == $DISCUSSION && [egroup-node-p $nid])} {
+	    puts stderr "x-layout: xlayout-group-node $nid";
     	    set xpos [xlayout-group-node $nid $xpos [expr ($DISPLAYMODE == $DISCUSSION)]];
     	} else {
     	    set NODES($nid,xpos) $xpos;
+	    puts stderr "x-layout: NODES($nid,xpos) == $NODES($nid,xpos)";
     	    set xpos [expr $xpos+$xinc];
     	}
     }
@@ -125,11 +127,11 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos {a_external {}
     }
     # place all left children of the node
     set start {};
-    # puts stderr "xlayout-group-node: a_external == $a_external";
-    # puts stderr "xlayout-group-node: NODES($a_nid,${chld_prfx}children) = $NODES($a_nid,${chld_prfx}children);"
-    # puts stderr "xlayout-group-node: eparent-msgid-p = [eparent-msgid-p $NID2MSGID($a_nid)]"
+    puts stderr "xlayout-group-node: a_external == $a_external";
+    puts stderr "xlayout-group-node: NODES($a_nid,${chld_prfx}children) = $NODES($a_nid,${chld_prfx}children);"
+    puts stderr "xlayout-group-node: eparent-msgid-p = [eparent-msgid-p $NID2MSGID($a_nid)]"
     foreach dep $NODES($a_nid,${chld_prfx}children) {
-	# puts stderr "xlayout-group-node: dep = $dep;"
+	puts stderr "xlayout-group-node: dep = $dep;"
 	#  [group-relation-p $node($dep,relname)]
 	if {$a_external} {
 	    if {[eparent-msgid-p $NID2MSGID($dep)]} {
@@ -142,15 +144,16 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos {a_external {}
 	} else {
 	    set start [get-start $dep]
 	}
-	# puts stderr "xlayout-group-node: NODES($dep,${prnt_prfx}reltype) = $NODES($dep,${prnt_prfx}reltype);"
-	# puts stderr "xlayout-group-node: start = $start; istart = $istart;"
-	# puts stderr "xlayout-group-node: VISIBLE_NODES = [info exists VISIBLE_NODES($dep)];"
+	puts stderr "xlayout-group-node: $dep eparent = [eparent-msgid-p $NID2MSGID($dep)];"
+	puts stderr "xlayout-group-node: NODES($dep,${prnt_prfx}reltype) = $NODES($dep,${prnt_prfx}reltype);"
+	puts stderr "xlayout-group-node: start = $start; istart = $istart;"
+	puts stderr "xlayout-group-node: VISIBLE_NODES = [info exists VISIBLE_NODES($dep)];"
 	if {![info exists VISIBLE_NODES($dep)] || \
 		($start > $istart && ![group-relation-p $NODES($dep,${prnt_prfx}reltype)])} {
-	    # puts stderr "xlayout-group-node: continue;"
+	    puts stderr "xlayout-group-node: continue;"
 	    continue;
 	}
-	# puts stderr "***xlayout-group-node: dep = $dep, dep start = [get-start $dep], istart = $istart";
+	puts stderr "***xlayout-group-node: dep = $dep, dep start = $start, istart = $istart";
 	set xpos [xlayout-group-node $dep $xpos $a_external];
 	if {[group-relation-p $NODES($dep,${prnt_prfx}reltype)]} {
 	    # we want to place the node over its members, not satelites
@@ -178,23 +181,23 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos {a_external {}
 	    set imsgid $NID2MSGID($dep);
 	    if {[eparent-msgid-p $imsgid]} {
 		set prnt_prfx "";
-		# puts stderr "***xlayout-group-node: start = -1"
+		puts stderr "***xlayout-group-node: start = -1"
 		set start -1;
 	    } else {
 		set prnt_prfx "e";
-		# puts stderr "***xlayout-group-node: start = get-child-pos = [get-child-pos $dep]"
+		puts stderr "***xlayout-group-node: start = get-child-pos = [get-child-pos $dep]"
 		set start [get-child-pos $dep];
 	    }
 	} else {
 	    set start [get-start $dep]
 	}
 
-	# puts stderr "***xlayout-group-node: right child dep = $dep, visible = [info exists VISIBLE_NODES($dep)]";
-	# puts stderr "***xlayout-group-node: group-relation = [group-relation-p $NODES($dep,${prnt_prfx}reltype)]";
-	# puts stderr "***xlayout-group-node: start = $start <= istart = $istart";
+	puts stderr "***xlayout-group-node: right child dep = $dep, visible = [info exists VISIBLE_NODES($dep)]";
+	puts stderr "***xlayout-group-node: group-relation = [group-relation-p $NODES($dep,${prnt_prfx}reltype)]";
+	puts stderr "***xlayout-group-node: start = $start <= istart = $istart";
 	if {![info exists VISIBLE_NODES($dep)] || \
 		$start <= $istart || [group-relation-p $NODES($dep,${prnt_prfx}reltype)]} {
-	    # puts stderr "***xlayout-group-node: right child continue";
+	    puts stderr "***xlayout-group-node: right child continue";
 	    continue;
 	}
 	set xpos [xlayout-group-node $dep $xpos $a_external];

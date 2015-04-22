@@ -761,8 +761,8 @@ proc ::rsttool::treeditor::tree::node::eparent-msgid-p {a_msgid} {
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::PRNT_MSGID;
 
-    return [expr ([string equal "$PRNT_MSGID" ""] && [string equal "$a_msgid" "$PRNT_MSGID"]) || \
-		(![string equal "$PRNT_MSGID" ""] || [string equal "$a_msgid" "$CRNT_MSGID"])];
+    return [expr ([string equal "$PRNT_MSGID" ""] && [string equal "$a_msgid" "$CRNT_MSGID"]) || \
+		(![string equal "$PRNT_MSGID" ""] && [string equal "$a_msgid" "$PRNT_MSGID"])];
 }
 
 proc ::rsttool::treeditor::tree::node::is-prnt-p {prnt_nid chld_nid} {
