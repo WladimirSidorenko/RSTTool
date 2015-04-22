@@ -239,7 +239,6 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     variable ::rsttool::treeditor::DISPLAYMODE;
 
     namespace import ::rsttool::treeditor::tree::node::show-nodes;
-    # puts stderr "next-mesage: direction = $direction;\nMSG_QUEUE = $MSG_QUEUE;\nMSG_PREV_QUEUE = $MSG_PREV_QUEUE"
 
     # remember current message id
     set prev_msg_id $CRNT_MSGID
@@ -289,6 +288,8 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     }
     set PRNT_MSGID [lindex $crnt_msg 1];	# obtain id of the parent of current message
 
+    puts stderr "next-mesage: CRNT_MSGID = $CRNT_MSGID; PRNT_MSGID = $PRNT_MSGID"
+    puts stderr "next-mesage: direction = $direction;\nMSG_QUEUE = $MSG_QUEUE;\nMSG_PREV_QUEUE = $MSG_PREV_QUEUE"
     # puts stderr "next-message: show-sentences";
     ############################################
     ## Redisplay parent text, if necessary
@@ -318,9 +319,13 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 	show-nodes $prev_msg_id 0;
 	show-nodes $CRNT_MSGID 1;
     } elseif {$PRNT_MSGID == {}} {
+	show-nodes $prev_prnt_msg_id 0;
+	show-nodes $prev_msg_id 0;
 	show-nodes $CRNT_MSGID 1;
 	# puts stderr "next-message: show-nodes crnt_msgid = $CRNT_MSGID 1";
-    } elseif {$prev_prnt_msg_id != {} && $PRNT_MSGID != $prev_prnt_msg_id} {
+    } elseif {$PRNT_MSGID != $prev_prnt_msg_id} {
+	show-nodes $prev_prnt_msg_id 0;
+	show-nodes $prev_msg_id 0;
 	show-nodes $PRNT_MSGID 1;
     }
     # puts stderr "next-message: redisplay-net";

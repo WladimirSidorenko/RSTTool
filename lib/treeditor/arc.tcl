@@ -146,35 +146,36 @@ proc ::rsttool::treeditor::tree::arc::change {nid {relname {}} } {
     variable ::rsttool::NODES;
     variable ::rsttool::relations::RELATIONS;
     variable ::rsttool::treeditor::CURRENTMODE;
+    namespace import ::rsttool::treeditor::tree::node::redisplay;
 
     set cmode $CURRENTMODE
     set par $NODES($nid,parent)
     if {$par != {} && $NODES($nid,relname) != "span"} {
 	if {$relname == {}} {
-	    if {[member $node($nid,relname) $relations(multinuc)]} {
+	    if {[member $NODES($nid,relname) $RELATIONS(multinuc)]} {
 		set type multinuc
-	    } elseif {[member $node($nid,relname) $relations(constit)]} {
+	    } elseif {[member $NODES($nid,relname) $RELATIONS(constit)]} {
 		set type constit
-	    } elseif {[member $node($nid,relname) $relations(embedded)]} {
+	    } elseif {[member $NODES($nid,relname) $RELATIONS(embedded)]} {
 		set type embedded
 	    } else {
 		set type rst
 	    }
 	    set relname [choose-label $nid $type]
 	}
-	if {[member $node($nid,relname) $relations(multinuc)]} {
-	    foreach child $node($par,children) {
-		set child_rel $node($child,relname)
-		if {[member $child_rel $relations(multinuc)]} {
-		    set node($child,relname) $relname
-		    redisplay-node $child
+	if {[member $NODES($nid,relname) $RELATIONS(multinuc)]} {
+	    foreach child $NODES($par,children) {
+		set child_rel $NODES($child,relname)
+		if {[member $child_rel $RELATIONS(multinuc)]} {
+		    set NODES($child,relname) $relname
+		    redisplay $child
 		}
 	    }
 	} else {
 	    set node($nid,relname) $relname
 	}
 	#    redisplay-net
-	node::redisplay-node $nid
+	redisplay $nid
     }
     set-mode $cmode
 }

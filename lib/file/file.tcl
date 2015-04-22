@@ -446,6 +446,8 @@ proc ::rsttool::file::read-relations {a_relations} {
     variable ::rsttool::relations::PARATACTIC;
     namespace import ::rsttool::utils::ldelete;
     namespace import ::rsttool::treeditor::tree::node::get-start;
+    namespace import ::rsttool::treeditor::tree::node::egroup-node-p;
+    namespace import ::rsttool::treeditor::tree::node::get-eterminal;
 
     set relname ""; set chld_prfx "";
     set ispan {}; set inuc {}; set isat {};
@@ -479,6 +481,24 @@ proc ::rsttool::file::read-relations {a_relations} {
 		# add parent to span's children
 		set NODES($ispan_id,${chld_prfx}children) [insort $NODES($ispan_id,${chld_prfx}children) \
 							       [get-start $inuc_id] $inuc_id];
+		# remove child and parent from the list of message roots
+		set nuc_msgid $NID2MSGID($inuc_id);
+		set sat_msgid $NID2MSGID($isat_id);
+		if {$nuc_msgid != $sat_msgid} {
+		    variable ::rsttool::MSGID2EROOTS;
+		    # if satellite is not the terminal, get its corresponding terminal
+		    set isat_id [get-eterminal $isat_id];
+		    # puts stderr "read-relations: ispan_id = $ispan_id";
+		    # puts stderr "read-relations: inuc_id = $inuc_id";
+		    # puts stderr "read-relations: isat_id = $isat_id";
+		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 1;
+		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 1;
+		    # puts stderr "read-relations: 1) MSGID2EROOTS($nuc_msgid) = $MSGID2EROOTS($nuc_msgid)";
+		} else {
+		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 0;
+		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 0;
+		    # puts stderr "read-relations: MSGID2ROOTS($nuc_msgid) = $MSGID2ROOTS($nuc_msgid)";
+		}
 		# link parent to span
 		set NODES($inuc_id,parent) $ispan_id;
 		set NODES($inuc_id,relname) {span};
@@ -489,22 +509,6 @@ proc ::rsttool::file::read-relations {a_relations} {
 		set NODES($isat_id,${chld_prfx}parent) $inuc_id;
 		set NODES($isat_id,${chld_prfx}relname) $relname;
 		set NODES($isat_id,${chld_prfx}reltype) $HYPOTACTIC;
-		# remove child and parent from the list of message roots
-		set nuc_msgid $NID2MSGID($inuc_id);
-		set sat_msgid $NID2MSGID($isat_id);
-		if {$nuc_msgid != $sat_msgid} {
-		    variable ::rsttool::MSGID2EROOTS;
-		    puts stderr "read-relations: 0) MSGID2EROOTS($nuc_msgid) = $MSGID2EROOTS($nuc_msgid)";
-		    puts stderr "read-relations: update-roots $nuc_msgid $inuc_id {remove} 1";
-		    puts stderr "read-relations: update-roots $nuc_msgid $isat_id {remove} 1";
-		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 1;
-		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 1;
-		    puts stderr "read-relations: 1) MSGID2EROOTS($nuc_msgid) = $MSGID2EROOTS($nuc_msgid)";
-		} else {
-		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 0;
-		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 0;
-		    # puts stderr "read-relations: MSGID2ROOTS($nuc_msgid) = $MSGID2ROOTS($nuc_msgid)";
-		}
 	    }
 	    "parrelation" {
 		if {[set relname [xml-get-attr $irel {relname}]] == {}} {

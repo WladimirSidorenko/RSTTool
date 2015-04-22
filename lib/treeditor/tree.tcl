@@ -120,8 +120,8 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     # prevent non-projective edges, i.e. given node can only be linked
     # to its adjacent span
     # puts stderr "link-nodes: MSGID2ROOTS(clicked_msgid) = $MSGID2ROOTS($clicked_msgid)"
-    set clicked_idx [node::bisearch [get-visible-parent $clicked_nid] $MSGID2ROOTS($clicked_msgid)]
-    set dragged_idx [node::bisearch [get-visible-parent $dragged_nid] $MSGID2ROOTS($dragged_msgid)]
+    set clicked_idx [node::bisearch [get-visible-parent $clicked_nid] $MSGID2ROOTS($clicked_msgid)];
+    set dragged_idx [node::bisearch [get-visible-parent $dragged_nid] $MSGID2ROOTS($dragged_msgid)];
     # puts stderr "link-nodes: clicked_prnt = [get-visible-parent $clicked_nid]"
     # puts stderr "link-nodes: dragged_prnt = [get-visible-parent $dragged_nid]"
     # puts stderr "link-nodes: clicked_idx = $clicked_idx; dragged_idx = $dragged_idx"
@@ -417,11 +417,11 @@ proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype
     }
     set VISIBLE_NODES($span_nid) 1;
 
-    ::rsttool::treeditor::update-roots $prnt_msgid $a_prnt_nid {remove} $a_external;
-    ::rsttool::treeditor::update-roots $chld_msgid $a_chld_nid {remove} $a_external;
+    ::rsttool::treeditor::update-roots $span_msgid $a_prnt_nid {remove} $a_external;
+    ::rsttool::treeditor::update-roots $span_msgid $a_chld_nid {remove} $a_external;
     # insort new span node
     if {! $a_replace} {
-	::rsttool::treeditor::update-roots $prnt_msgid $span_nid {add} $a_external;
+	::rsttool::treeditor::update-roots $span_msgid $span_nid {add} $a_external;
     }
     return $span_nid;
 }

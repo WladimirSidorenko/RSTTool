@@ -82,14 +82,14 @@ proc ::rsttool::treeditor::layout::x-layout {a_nodes {xpos {}}} {
     # puts stderr "x-layout: xpos = $xpos"
     foreach nid $a_nodes {
 	if {![info exists VISIBLE_NODES($nid)]} {continue}
-	puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
+	# puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
     	if {($DISPLAYMODE == $MESSAGE && [group-node-p $nid]) || \
 		($DISPLAYMODE == $DISCUSSION && [egroup-node-p $nid])} {
-	    puts stderr "x-layout: xlayout-group-node $nid";
+	    # puts stderr "x-layout: xlayout-group-node $nid";
     	    set xpos [xlayout-group-node $nid $xpos [expr ($DISPLAYMODE == $DISCUSSION)]];
     	} else {
     	    set NODES($nid,xpos) $xpos;
-	    puts stderr "x-layout: NODES($nid,xpos) == $NODES($nid,xpos)";
+	    # puts stderr "x-layout: NODES($nid,xpos) == $NODES($nid,xpos)";
     	    set xpos [expr $xpos+$xinc];
     	}
     }
@@ -127,11 +127,11 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos {a_external {}
     }
     # place all left children of the node
     set start {};
-    puts stderr "xlayout-group-node: a_external == $a_external";
-    puts stderr "xlayout-group-node: NODES($a_nid,${chld_prfx}children) = $NODES($a_nid,${chld_prfx}children);"
-    puts stderr "xlayout-group-node: eparent-msgid-p = [eparent-msgid-p $NID2MSGID($a_nid)]"
+    # puts stderr "xlayout-group-node: a_external == $a_external";
+    # puts stderr "xlayout-group-node: NODES($a_nid,${chld_prfx}children) = $NODES($a_nid,${chld_prfx}children);"
+    # puts stderr "xlayout-group-node: eparent-msgid-p = [eparent-msgid-p $NID2MSGID($a_nid)]"
     foreach dep $NODES($a_nid,${chld_prfx}children) {
-	puts stderr "xlayout-group-node: dep = $dep;"
+	# puts stderr "xlayout-group-node: dep = $dep;"
 	#  [group-relation-p $node($dep,relname)]
 	if {$a_external} {
 	    if {[eparent-msgid-p $NID2MSGID($dep)]} {
@@ -144,16 +144,16 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos {a_external {}
 	} else {
 	    set start [get-start $dep]
 	}
-	puts stderr "xlayout-group-node: $dep eparent = [eparent-msgid-p $NID2MSGID($dep)];"
-	puts stderr "xlayout-group-node: NODES($dep,${prnt_prfx}reltype) = $NODES($dep,${prnt_prfx}reltype);"
-	puts stderr "xlayout-group-node: start = $start; istart = $istart;"
-	puts stderr "xlayout-group-node: VISIBLE_NODES = [info exists VISIBLE_NODES($dep)];"
+	# puts stderr "xlayout-group-node: $dep eparent = [eparent-msgid-p $NID2MSGID($dep)];"
+	# puts stderr "xlayout-group-node: NODES($dep,${prnt_prfx}reltype) = $NODES($dep,${prnt_prfx}reltype);"
+	# puts stderr "xlayout-group-node: start = $start; istart = $istart;"
+	# puts stderr "xlayout-group-node: VISIBLE_NODES = [info exists VISIBLE_NODES($dep)];"
 	if {![info exists VISIBLE_NODES($dep)] || \
 		($start > $istart && ![group-relation-p $NODES($dep,${prnt_prfx}reltype)])} {
-	    puts stderr "xlayout-group-node: continue;"
+	    # puts stderr "xlayout-group-node: continue;"
 	    continue;
 	}
-	puts stderr "***xlayout-group-node: dep = $dep, dep start = $start, istart = $istart";
+	# puts stderr "***xlayout-group-node: dep = $dep, dep start = $start, istart = $istart";
 	set xpos [xlayout-group-node $dep $xpos $a_external];
 	if {[group-relation-p $NODES($dep,${prnt_prfx}reltype)]} {
 	    # we want to place the node over its members, not satelites
@@ -181,23 +181,23 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos {a_external {}
 	    set imsgid $NID2MSGID($dep);
 	    if {[eparent-msgid-p $imsgid]} {
 		set prnt_prfx "";
-		puts stderr "***xlayout-group-node: start = -1"
+		# puts stderr "***xlayout-group-node: start = -1"
 		set start -1;
 	    } else {
 		set prnt_prfx "e";
-		puts stderr "***xlayout-group-node: start = get-child-pos = [get-child-pos $dep]"
+		# puts stderr "***xlayout-group-node: start = get-child-pos = [get-child-pos $dep]"
 		set start [get-child-pos $dep];
 	    }
 	} else {
 	    set start [get-start $dep]
 	}
 
-	puts stderr "***xlayout-group-node: right child dep = $dep, visible = [info exists VISIBLE_NODES($dep)]";
-	puts stderr "***xlayout-group-node: group-relation = [group-relation-p $NODES($dep,${prnt_prfx}reltype)]";
-	puts stderr "***xlayout-group-node: start = $start <= istart = $istart";
+	# puts stderr "***xlayout-group-node: right child dep = $dep, visible = [info exists VISIBLE_NODES($dep)]";
+	# puts stderr "***xlayout-group-node: group-relation = [group-relation-p $NODES($dep,${prnt_prfx}reltype)]";
+	# puts stderr "***xlayout-group-node: start = $start <= istart = $istart";
 	if {![info exists VISIBLE_NODES($dep)] || \
 		$start <= $istart || [group-relation-p $NODES($dep,${prnt_prfx}reltype)]} {
-	    puts stderr "***xlayout-group-node: right child continue";
+	    # puts stderr "***xlayout-group-node: right child continue";
 	    continue;
 	}
 	set xpos [xlayout-group-node $dep $xpos $a_external];
@@ -248,18 +248,18 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     set chld_prfx ""; set prnt_prfx "";
     if {$DISPLAYMODE == $DISCUSSION} {
 	set chld_prfx "e";
-	if {![eparent-msgid-p $NID2MSGID($a_nid)]} {set prnt_prfx "e"}
     }
     set chld_ypos [expr [lindex [$RSTW bbox [ntw $a_nid]] 3] + 30]
     foreach cid $NODES($a_nid,${chld_prfx}children) {
-	puts stderr "y-layout-subtree: cid = $cid";
     	if {[info exists VISIBLE_NODES($cid)] && $cid != $a_nid} {
-	    # puts stderr "y-layout-subtree: cid is visible";
+	    if {$DISPLAYMODE == $DISCUSSION && ![eparent-msgid-p $NID2MSGID($cid)]} {set prnt_prfx "e"}
 	    # paratactic child nodes should keep the y position of
 	    # their parent
 	    if {[group-relation-p $NODES($cid,${prnt_prfx}reltype)]} {
+		# puts stderr "y-layout-subtree: y-layout-subtree cid = $cid chld_ypos = $chld_ypos"
 		y-layout-subtree $cid $chld_ypos;
 	    } else {
+		# puts stderr "y-layout-subtree: y-layout-subtree cid = $cid a_ypos = $a_ypos"
 		y-layout-subtree $cid $a_ypos;
 	    }
 	    # puts stderr "y-layout-subtree: display arc between $a_nid and $cid with type $NODES($cid,reltype)";
@@ -338,71 +338,6 @@ proc ::rsttool::treeditor::layout::resize-display {change} {
     $RSTW configure -scrollregion "0 1 [expr $xmax + $NODE_WIDTH]\
 	     [expr $ymax + $SIZE_FACTOR]"
 }
-
-# proc ::rsttool::treeditor::layout::adjust-after-change {nuc sat {redraw 0}} {
-#     # Adjust nucleus
-#     # puts stderr "link-par-to-child: restructure-upwards nuc = $nuc redraw = $redraw"
-#     restructure-upwards $nuc $redraw
-
-#     # Ajust satellite
-#     if $redraw {
-# 	# puts stderr "link-par-to-child: y-layout-subtree sat = $sat"
-# 	y-layout-subtree $sat
-#     }
-# }
-
-# proc ::rsttool::treeditor::layout::restructure-upwards {nid {redraw 0}} {
-#     variable ::rsttool::NODES;
-#     variable ::rsttool::treeditor::VISIBLE_NODES;
-
-#     # puts stderr "restructure-upwards: $nid $redraw"
-
-#     # stop when no change in span nor in pos of node
-#     set adjust_needed 0
-
-#     # 1. if the current node is a group node, its pos and span may
-#     # need to be adjusted
-#     if { [::rsttool::treeditor::tree::node::group-node-p $nid] } {
-
-# 	# a) If a group node, adjust its x position
-# 	if { $redraw } {
-# 	    set NODES($nid,xpos) 0
-# 	    xlayout-group-node $nid
-# 	    set adjust_needed 1
-# 	}
-
-# 	# b) Adjust span of this node
-# 	set span [tree::node::find-node-span $nid]
-
-# 	if {$span != $NODES($nid,span)} {
-# 	    # span has changed
-# 	    set NODES($nid,span) $span
-# 	    # change the displayed text
-# 	    set NODES($nid,text) [make-span-label $span]
-# 	    # mark a change has taken place
-# 	    set adjust_needed 1
-# 	}
-
-# 	#  c) redraw this node if needed
-# 	if { $adjust_needed && $redraw && [info exists VISIBLE_NODES($nid)]} {
-# 	    # check if the node has been drawn before
-# 	    tree::node::redisplay-node $nid
-# 	    tree::arcs::redraw-child-arcs $nid
-# 	}
-
-#     } else {
-# 	# redisplay-node $nid
-# 	set adjust_needed 1
-#     }
-
-#     # 2. adjusts the span of parent nodes considering the expansion
-#     # of the current node.
-#     # Apply to parent also
-#     set par $NODES($nid,parent)
-#     if { $adjust_needed  && $par != {} && $par != $nid} {
-# 	restructure-upwards $par $redraw
-#     }
-# }
 
 proc ::rsttool::treeditor::layout::visible-children-p {nid} {
     variable ::rsttool::NODES;

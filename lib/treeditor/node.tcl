@@ -10,6 +10,7 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export get-child-pos;
     namespace export get-end-node;
     namespace export get-end;
+    namespace export get-eterminal;
     namespace export get-start-node;
     namespace export get-start;
     namespace export get-visible-parent;
@@ -239,6 +240,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
     # set visibility status for all internal nodes belonging to the message
     # `$msg_id` to $show
     variable ::rsttool::NODES;
+    variable ::rsttool::FORREST;
     variable ::rsttool::NID2MSGID
     variable ::rsttool::CRNT_MSGID;
     variable ::rsttool::PRNT_MSGID;
@@ -261,8 +263,8 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    set chld_prfx "e";
 	}
 	# puts stderr "show-nodes: 0) DISPLAYMODE = $DISPLAYMODE, msg_id = $msg_id, inodes = $inodes";
-	set inid {};
 	array set seen_nodes {};
+	set inid {}; set imsgid {}; set iprnt_msgid {};
 	while {$inodes != {}} {
 	    # pop first node on the queue
 	    set inid [lindex $inodes 0];
@@ -274,8 +276,15 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 		set seen_nodes($inid) 1;
 	    }
 	    # pop first node on the queue
-	    if {$DISPLAYMODE == $MESSAGE && $NID2MSGID($inid) != $msg_id} {continue;}
-	    if {$DISPLAYMODE == $DISCUSSION && !$NODES($inid,external)} {continue;}
+	    set imsgid $NID2MSGID($inid);
+	    set iprnt_msgid [lindex $FORREST($imsgid) 1];
+	    # puts stderr "show-nodes: msg_id = $msg_id, imsgid = $imsgid"
+	    if {$DISPLAYMODE == $MESSAGE && $imsgid != $msg_id} {continue;}
+	    if {$DISPLAYMODE == $DISCUSSION && \
+		    (!$NODES($inid,external) || \
+			 ($imsgid != $CRNT_MSGID && $imsgid != $PRNT_MSGID && \
+			      (($PRNT_MSGID != {} && $iprnt_msgid != $PRNT_MSGID) || \
+				   ($PRNT_MSGID == {} && $iprnt_msgid != $CRNT_MSGID))))} {continue;}
 	    set VISIBLE_NODES($inid) 1
 	    set inodes [concat $inodes $NODES($inid,${chld_prfx}children)];
 	}
@@ -642,7 +651,7 @@ proc ::rsttool::treeditor::tree::node::disconnect_node {clicked_node method} {
 	#disconnect node from parent
 	set node($clicked_node,parent) {}
 	set node($clicked_node,relname) {}
-	redisplay-node $clicked_node
+	redisplay $clicked_node
 
 	#disconnect parent from node
 	set index [lsearch $NODES($par,children) $clicked_node]
@@ -771,6 +780,32 @@ proc ::rsttool::treeditor::tree::node::is-prnt-p {prnt_nid chld_nid} {
 
     return [string equal "$NID2MSGID($prnt_nid)" "[lindex $FORREST($NID2MSGID($chld_nid)) 1]"];
 }
+
+proc ::rsttool::treeditor::tree::node::get-eterminal {a_nid} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::FORREST;
+    variable ::rsttool::NID2MSGID;
+
+    # return first non-terminal
+    # puts stderr "get-eterminal: a_nid = $a_nid, egroup = [egroup-node-p $a_nid]"
+    if {![egroup-node-p $a_nid]} {return $a_nid;}
+    # descend into children if necessary
+    set cid {};
+    set imsgid $NID2MSGID($a_nid);
+    foreach icid $NODES($a_nid,echildren) {
+	# puts stderr "get-eterminal: icid = $icid";
+	if {$NID2MSGID($icid) == $imsgid} {
+	    if {$cid != {}} {error "Ambiguous external terminals found for node '$a_nid'.";}
+	    set cid $icid;
+	} elseif {![is-prnt-p $a_nid $icid]} {
+	    return $a_nid;
+	}
+    }
+    # puts stderr "get-eterminal: cid = $cid";
+    if {$cid == {}} {error "No external terminal found for node '$a_nid'.";}
+    return [get-eterminal $cid];
+}
+
 
 proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list {a_start -1} \
 						     {a_get_start ::rsttool::treeditor::tree::node::get-start}} {
