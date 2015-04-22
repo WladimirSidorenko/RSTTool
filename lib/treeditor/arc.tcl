@@ -70,12 +70,15 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
     variable ::rsttool::treeditor::DISPLAYMODE;
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
+    variable ::rsttool::treeditor::VISIBLE_NODES;
 
     namespace import ::rsttool::treeditor::tree::ntw;
     namespace import ::rsttool::treeditor::tree::node::draw-text;
     namespace import ::rsttool::utils::add-points;
     namespace import ::rsttool::utils::subtract-points;
     namespace import ::rsttool::utils::mid-point;
+
+    if {![info exists VISIBLE_NODES($a_nuc_nid)] || ![info exists VISIBLE_NODES($a_sat_nid)]} {return}
 
     set nuc_wdgt [ntw $a_nuc_nid];
     set sat_wdgt [ntw $a_sat_nid];

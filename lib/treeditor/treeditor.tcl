@@ -260,6 +260,7 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 	{add} {
 	    # define appropriate insertion operation
 	    if {$a_external} {
+		puts stderr "update-roots: msgid = $a_msgid, nid = $a_nid, add, external;";
 		proc insort {a_list a_nid} {
 		    variable ::rsttool::NID2MSGID;
 		    namespace import ::rsttool::treeditor::tree::node::get-child-pos;
@@ -295,8 +296,8 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 		    # puts stderr "update-roots: 0) MSGID2EROOTS($a_msgid) = $MSGID2EROOTS($a_msgid)";
 		}
 	    } else {
-		if {$MSGID2EROOTS($a_msgid) != {} && [lindex $MSGID2EROOTS($a_msgid) 0] == \
-			$MSGID2ENID($a_msgid)} {
+		if {$MSGID2EROOTS($a_msgid) != {} && \
+			$NID2MSGID([lindex $MSGID2EROOTS($a_msgid) 0]) == $a_msgid} {
 		    set MSGID2EROOTS($a_msgid) [concat [lindex $MSGID2EROOTS($a_msgid) 0] \
 						    [$op [lrange $MSGID2EROOTS($a_msgid) 1 end] \
 							 $a_nid]];

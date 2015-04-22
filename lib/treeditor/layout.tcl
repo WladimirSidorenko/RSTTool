@@ -25,8 +25,6 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::utils::max;
 
-    # puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
-
     # 1. Clean up from earlier structures
     $RSTW delete all;
     array unset WTN;
@@ -43,8 +41,9 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
 	if {! [info exists MSGID2EROOTS($PRNT_MSGID)]} {set MSGID2EROOTS($PRNT_MSGID) {}}
 	set roots2display $MSGID2EROOTS($PRNT_MSGID);
     }
-    puts stderr "redisplay-net: roots2display = $roots2display";
-    puts stderr "redisplay-net: visible_nodes = [array names VISIBLE_NODES]";
+
+    puts stderr "*** roots2display: roots2display = $roots2display";
+    puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
     # 3. layout and draw
     # puts stderr "*** redisplay-net: x-layout: roots2display == $roots2display"
     x-layout $roots2display;
@@ -167,7 +166,7 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
 
     puts stderr "y-layout-subtree: a_nid = $a_nid";
-    puts stderr "y-layout-subtree: VISIBLE_NODES = [array names VISIBLE_NODES]";
+    # puts stderr "y-layout-subtree: VISIBLE_NODES = [array names VISIBLE_NODES]";
     # 1. Re-layout this node
     if {$a_ypos != {}} {
 	set NODES($a_nid,ypos) $a_ypos;
@@ -184,13 +183,13 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
 
     # 2. Re-layout children
     set chld_prfx ""; set prnt_prfx "";
-    if {"$DISPLAYMODE" == "$DISCUSSION"} {
+    if {$DISPLAYMODE == $DISCUSSION} {
 	set chld_prfx "e";
 	if {![eparent-msgid-p $NID2MSGID($a_nid)]} {set prnt_prfx "e"}
     }
     set chld_ypos [expr [lindex [$RSTW bbox [ntw $a_nid]] 3] + 30]
     foreach cid $NODES($a_nid,${chld_prfx}children) {
-	# puts stderr "y-layout-subtree: cid = $cid";
+	puts stderr "y-layout-subtree: cid = $cid";
     	if {[info exists VISIBLE_NODES($cid)] && $cid != $a_nid} {
 	    # puts stderr "y-layout-subtree: cid is visible";
 	    # paratactic child nodes should keep the y position of

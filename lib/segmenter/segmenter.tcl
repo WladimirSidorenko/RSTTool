@@ -245,6 +245,7 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     set prev_msg_id $CRNT_MSGID
     # remember the old parent
     set prev_prnt_msg_id $PRNT_MSGID;
+    puts stderr "next-message: forward";
     # check direction to which we should proceed
     if {$direction == {forward}} {
 	# if we have exhausted the queue of messages for current
@@ -288,6 +289,7 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     }
     set PRNT_MSGID [lindex $crnt_msg 1];	# obtain id of the parent of current message
 
+    puts stderr "next-message: show-sentences";
     ############################################
     ## Redisplay parent text, if necessary
     if {$PRNT_MSGID != $prev_prnt_msg_id} {
@@ -306,6 +308,8 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     # make suggestion for the boundary of the next segment
     next-sentence;
 
+    puts stderr "next-message: show-nodes";
+
     ############################################
     ## Show/Hide nodes corresponding to messages
     # puts stderr "next-mesage: VISIBLE_NODES = [array names VISIBLE_NODES]"
@@ -322,7 +326,9 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 	show-nodes $CRNT_MSGID 1;
 	puts stderr "next-message: show-nodes crnt_msgid = $CRNT_MSGID 1";
     }
+    puts stderr "next-message: redisplay-net";
     ::rsttool::treeditor::layout::redisplay-net;
+    puts stderr "next-message: redisplay-net finished";
 }
 
 proc ::rsttool::segmenter::segment {{my_current {}}} {

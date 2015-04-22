@@ -13,7 +13,7 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export get-start-node;
     namespace export get-start;
     namespace export get-visible-parent;
-    namespace export get-eparent;
+    namespace export get-ancestor;
     namespace export egroup-node-p;
     namespace export group-node-p;
     namespace export insort;
@@ -102,8 +102,8 @@ proc ::rsttool::treeditor::tree::node::make-name {a_start a_end a_external} {
 	}
 	incr sname; incr ename;
     } else {
-	puts stderr "make-name: a_start = $a_start: [get-start-node $a_start]"
-	puts stderr "make-name: a_end = $a_end: [get-end-node $a_end]"
+	# puts stderr "make-name: a_start = $a_start: [get-start-node $a_start]"
+	# puts stderr "make-name: a_end = $a_end: [get-end-node $a_end]"
 	set sname $NODES([get-start-node $a_start],name);
 	set ename $NODES([get-end-node $a_end],name);
     }
@@ -125,11 +125,11 @@ proc ::rsttool::treeditor::tree::node::get-visible-parent {a_nid} {
     return $a_nid;
 }
 
-proc ::rsttool::treeditor::tree::node::get-eparent {a_nid} {
+proc ::rsttool::treeditor::tree::node::get-ancestor {a_nid} {
     variable ::rsttool::NODES;
 
-    if {$NODES($a_nid,eparent) != {}} {
-	return [get-eparent $NODES($a_nid,eparent)];
+    if {$NODES($a_nid,parent) != {}} {
+	return [get-ancestor $NODES($a_nid,parent)];
     } else {
 	return $a_nid;
     }
@@ -156,10 +156,10 @@ proc ::rsttool::treeditor::tree::node::get-end {a_nid} {
     variable ::rsttool::NODES;
 
     if {[group-node-p $a_nid]} {
-	puts stderr "node::get-end: a_nid = $a_nid (end = $NODES($a_nid,end))";
+	# puts stderr "node::get-end: a_nid = $a_nid (end = $NODES($a_nid,end))";
 	return [get-end $NODES($a_nid,end)];
     } else {
-	puts stderr "node::get-end: a_nid = $a_nid (NODES($a_nid,children) == $NODES($a_nid,children))";
+	# puts stderr "node::get-end: a_nid = $a_nid (NODES($a_nid,children) == $NODES($a_nid,children))";
 	if {$NODES($a_nid,children) == {}} {
 	    return $NODES($a_nid,end);
 	} else {
@@ -181,9 +181,9 @@ proc ::rsttool::treeditor::tree::node::get-child-pos {a_nid} {
     variable ::rsttool::NID2MSGID;
 
     set msgid $NID2MSGID($a_nid);
-    puts stderr "get-child-pos: a_nid == $a_nid; msgid = $msgid"
+    # puts stderr "get-child-pos: a_nid == $a_nid; msgid = $msgid"
     set prnt_msgid [lindex $FORREST($msgid) 1];
-    puts stderr "get-child-pos: a_nid == $a_nid; prnt_msgid = $prnt_msgid"
+    # puts stderr "get-child-pos: a_nid == $a_nid; prnt_msgid = $prnt_msgid"
     if {$prnt_msgid == {}} {return -1}
     return [lsearch [lindex $FORREST($prnt_msgid) end] $msgid];
 }
@@ -258,18 +258,26 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    if {! [info exists MSGID2EROOTS($msg_id)]} {set MSGID2EROOTS($msg_id) {}}
 	    set inodes $MSGID2EROOTS($msg_id);
 	}
-	puts stderr "show-nodes: 0) DISPLAYMODE = $DISPLAYMODE, msg_id = $msg_id, inodes = $inodes";
+	# puts stderr "show-nodes: 0) DISPLAYMODE = $DISPLAYMODE, msg_id = $msg_id, inodes = $inodes";
 	set inid {};
+	array set seen_nodes {};
 	while {$inodes != {}} {
 	    # pop first node on the queue
 	    set inid [lindex $inodes 0];
 	    set inodes [lreplace $inodes 0 0];
+	    if [info exists seen_nodes($inid)] {
+		::rsttool::segmenter::message "Inifinite loop detected at node $inid";
+		continue;
+	    } else {
+		set seen_nodes($inid) 1;
+	    }
 	    # pop first node on the queue
 	    if {$DISPLAYMODE == $MESSAGE && $NID2MSGID($inid) != $msg_id} {continue;}
 	    if {$DISPLAYMODE == $DISCUSSION && !$NODES($inid,external)} {continue;}
 	    set VISIBLE_NODES($inid) 1
 	    set inodes [concat $inodes $NODES($inid,children)];
 	}
+	array unset seen_nodes;
     } else {
 	namespace import ::rsttool::utils::reset-array;
 	reset-array ::rsttool::treeditor::VISIBLE_NODES;
@@ -729,7 +737,7 @@ proc ::rsttool::treeditor::tree::node::disconnect_node {clicked_node method} {
 
 proc ::rsttool::treeditor::tree::node::group-node-p {nid} {
     variable ::rsttool::NODES;
-    puts stderr "group-node-p: nid = $nid, type = $NODES($nid,type)"
+    # puts stderr "group-node-p: nid = $nid, type = $NODES($nid,type)"
     if {$NODES($nid,type) == "text"} {return 0}
     return 1;
 }
@@ -920,6 +928,7 @@ proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
     }
     # display node
     display $a_nid;
+    puts stderr "node::redisplay: $a_nid displayed"
     # display arc
     set prnt_prfx "";
     set msgid $NID2MSGID($a_nid);
@@ -927,8 +936,10 @@ proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
 	    ($PRNT_MSGID == {} && $msgid != $CRNT_MSGID))} {
 	set prnt_prfx "e";
     }
+    puts stderr "node::redisplay: $a_nid displaying arc, parent = $NODES($a_nid,${prnt_prfx}parent); reltype = $a_nid $NODES($a_nid,${prnt_prfx}reltype)"
     ::rsttool::treeditor::tree::arc::display $NODES($a_nid,${prnt_prfx}parent)\
 	$a_nid $NODES($a_nid,${prnt_prfx}reltype);
+    puts stderr "node::redisplay: $a_nid arc displayed"
 }
 
 proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
@@ -948,7 +959,7 @@ proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
     set min $xpos
     set max $xpos
 
-    puts stderr "draw-span: a_nid = $a_nid; start = $NODES($a_nid,start), end = $NODES($a_nid,end);"
+    # puts stderr "draw-span: a_nid = $a_nid; start = $NODES($a_nid,start), end = $NODES($a_nid,end);"
     if {($DISPLAYMODE == $MESSAGE && [group-node-p $a_nid]) || \
 	    ($DISPLAYMODE == $DISCUSSION && [egroup-node-p $a_nid])} {
 	if {[info exists NODES($a_nid,start)]} {
@@ -973,7 +984,7 @@ proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {
 	    error "Unknown index: NODES($a_nid,end)"
 	}
     }
-    puts stderr "draw-span: min = $min; max = $max;"
+    # puts stderr "draw-span: min = $min; max = $max;"
 
     # draw the span-line
     set NODES($a_nid,spanwgt) [draw-line $RSTW \

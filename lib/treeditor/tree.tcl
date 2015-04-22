@@ -17,7 +17,7 @@ namespace eval ::rsttool::treeditor::tree {
 
 ##################################################################
 proc ::rsttool::treeditor::tree::clicked-node {x y} {
-    puts stderr "clicked-node: wdgt = [clicked-widget $x $y], node = [wtn [clicked-widget $x $y]];"
+    # puts stderr "clicked-node: wdgt = [clicked-widget $x $y], node = [wtn [clicked-widget $x $y]];"
     return [wtn [clicked-widget $x $y]];
 }
 
@@ -109,7 +109,7 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 
     set dragged_msgid $NID2MSGID($dragged_nid);
     set dragged_prnt $NODES($dragged_nid,parent);
-    puts stderr "dragged_prnt = $dragged_prnt";
+    # puts stderr "dragged_prnt = $dragged_prnt";
     if {$dragged_msgid != $clicked_msgid} {set ext_connection 1}
     # forbid multiple roots for one message
     if {$dragged_prnt != {} && [info exists VISIBLE_NODES($dragged_prnt)] && $clicked_is_prnt == 0} {
@@ -119,12 +119,12 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 
     # prevent non-projective edges, i.e. given node can only be linked
     # to its adjacent span
-    puts stderr "link-nodes: MSGID2ROOTS(clicked_msgid) = $MSGID2ROOTS($clicked_msgid)"
+    # puts stderr "link-nodes: MSGID2ROOTS(clicked_msgid) = $MSGID2ROOTS($clicked_msgid)"
     set clicked_idx [node::bisearch [get-visible-parent $clicked_nid] $MSGID2ROOTS($clicked_msgid)]
     set dragged_idx [node::bisearch [get-visible-parent $dragged_nid] $MSGID2ROOTS($dragged_msgid)]
-    puts stderr "link-nodes: clicked_prnt = [get-visible-parent $clicked_nid]"
-    puts stderr "link-nodes: dragged_prnt = [get-visible-parent $dragged_nid]"
-    puts stderr "link-nodes: clicked_idx = $clicked_idx; dragged_idx = $dragged_idx"
+    # puts stderr "link-nodes: clicked_prnt = [get-visible-parent $clicked_nid]"
+    # puts stderr "link-nodes: dragged_prnt = [get-visible-parent $dragged_nid]"
+    # puts stderr "link-nodes: clicked_idx = $clicked_idx; dragged_idx = $dragged_idx"
     if {[expr abs([expr $clicked_idx - $dragged_idx])] > 1} {
 	message "Can't connect non-adjacent nodes."
 	return;
@@ -161,13 +161,13 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
 			   {multinuclear}] \
 		      [expr int([lindex $coords 0])] [expr int([lindex $coords 1])] 1];
     }
-    puts stderr "type = $type";
+    # puts stderr "type = $type";
     if {$type == {}} {return}
 
     # choose relation according to the specified type
     set relation [choose-label $clicked_nid $type $ext_connection];
 
-    puts stderr "relation = $relation";
+    # puts stderr "relation = $relation";
     if {$relation == {}} {return;}
 
     set multinuc 0;
@@ -234,7 +234,7 @@ proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
 			       $NODES([node::get-start-node $a_nid2],xpos))];
 	set a_span_nid [make-span-node $a_nid1 $a_nid2 $a_relation 1];
 	set NODES($a_span_nid,ypos) $ypos;
-	puts stderr "link-multinuc: xlayout-group-node $a_span_nid $xpos";
+	# puts stderr "link-multinuc: xlayout-group-node $a_span_nid $xpos";
 	::rsttool::treeditor::layout::xlayout-group-node $a_span_nid $xpos;
 	# erase both child subtrees
 	erase-subtree $a_nid1;
@@ -270,7 +270,7 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 
     if {$a_chld_msgid == {}} {set a_chld_msgid $NID2MSGID($a_chld_nid)}
 
-    puts stderr "link-chld-to-prnt: a_chld_nid == $a_chld_nid ; a_prnt_nid == $a_prnt_nid"
+    # puts stderr "link-chld-to-prnt: a_chld_nid == $a_chld_nid ; a_prnt_nid == $a_prnt_nid"
     # create a span node for the parent, if it's needed
     set prnt_prfx "";
     set chld_prfx "";
@@ -295,7 +295,7 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
     set NODES($a_chld_nid,${prnt_prfx}relname) $a_relation;
     set NODES($a_chld_nid,${prnt_prfx}reltype) $HYPOTACTIC;
 
-    puts stderr "link-chld-to-prnt: NODES($a_prnt_nid,children) == $NODES($a_prnt_nid,children)";
+    # puts stderr "link-chld-to-prnt: NODES($a_prnt_nid,children) == $NODES($a_prnt_nid,children)";
     if {$a_span_nid == {}} {
 	# 0) there is no span node at all
 	set ypos $NODES($a_prnt_nid,ypos);
@@ -356,7 +356,7 @@ proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype
     set chld_prfx "";
     set prnt_prfx "";
 
-    puts stderr "make-span-node: linking nodes prnt = $a_prnt_nid, chld = $a_chld_nid"
+    # puts stderr "make-span-node: linking nodes prnt = $a_prnt_nid, chld = $a_chld_nid"
     set chld_msgid $NID2MSGID($a_chld_nid);
     set prnt_msgid $NID2MSGID($a_prnt_nid);
     set span_msgid $prnt_msgid;
@@ -386,9 +386,9 @@ proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype
 		      [expr $chld_start < $prnt_start ? $a_chld_nid: $a_prnt_nid] \
 		      [expr $chld_end < $prnt_end ? $a_prnt_nid: $a_chld_nid] \
 		      {} $span_msgid {} $a_external];
-    puts stderr "make-span-node: new span = $span_nid, start = $NODES($span_nid,start), end = $NODES($span_nid,end)"
-    puts stderr "make-span-node: start xpos = $NODES($NODES($span_nid,start),xpos),\
-end = $NODES($NODES($span_nid,end),xpos)"
+#     puts stderr "make-span-node: new span = $span_nid, start = $NODES($span_nid,start), end = $NODES($span_nid,end)"
+#     puts stderr "make-span-node: start xpos = $NODES($NODES($span_nid,start),xpos),\
+# end = $NODES($NODES($span_nid,end),xpos)"
     # set span node as the parent of the parent node
     set NODES($a_prnt_nid,${prnt_prfx}parent) $span_nid;
     # add parent node to the list of span childrens
@@ -430,7 +430,7 @@ proc ::rsttool::treeditor::tree::erase-subtree {a_nid} {
     variable ::rsttool::NODES;
     variable ::rsttool::treeditor::VISIBLE_NODES;
 
-    puts stderr "*** erase-subtree: a_nid = $a_nid"
+    # puts stderr "*** erase-subtree: a_nid = $a_nid"
     node::erase $a_nid;
     foreach chnid $NODES($a_nid,children) {
 	if {[info exists VISIBLE_NODES($chnid)]} {
@@ -575,7 +575,7 @@ proc ::rsttool::treeditor::tree::popup-choose-from-list {Items xpos ypos {put_ca
     .tmpwin unpost;
     if [winfo exists .tmpwin.tooltip] {destroy .tmpwin.tooltip}
 
-    puts stderr "popup-choose-from-list: menu_selection = $menu_selection"
+    # puts stderr "popup-choose-from-list: menu_selection = $menu_selection"
     return $menu_selection
 }
 
@@ -604,7 +604,7 @@ proc ::rsttool::treeditor::tree::choose-label {sat type {external 0}} {
 	    if {$external} {
 		set relations $TYPE2EREL($PARATACTIC);
 	    } else {
-		puts stderr "TYPE2REL($PARATACTIC) = $TYPE2REL($PARATACTIC)"
+		# puts stderr "TYPE2REL($PARATACTIC) = $TYPE2REL($PARATACTIC)"
 		set relations $TYPE2REL($PARATACTIC);
 	    }
 	}
@@ -624,7 +624,7 @@ proc ::rsttool::treeditor::tree::choose-label {sat type {external 0}} {
 proc ::rsttool::treeditor::tree::relation-tooltip {a_ext_reltype a_wdgt} {
     variable ::rsttool::helper::RELHELP;
 
-    puts stderr "::rsttool::treeditor::tree::relation-tooltip called"
+    # puts stderr "::rsttool::treeditor::tree::relation-tooltip called"
     # obtain menu entry
     set mitem [$a_wdgt entrycget active -label];
     set reltype {internal};

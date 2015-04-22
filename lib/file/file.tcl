@@ -155,7 +155,9 @@ proc ::rsttool::file::open {} {
 	return;
     }
     ::rsttool::segmenter::message "Loaded file $CRNT_PRJ_FILE"
+    puts stderr "starting next-message"
     ::rsttool::segmenter::next-message
+    puts stderr "next-message started"
 }
 
 proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
@@ -181,9 +183,7 @@ proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
 	close $ifile;
     } else {
 	set xmldoc [load-xml $ifname];
-	if {[set ret [_read_anno $xmldoc]]} {
-	    return $ret;
-	}
+	if {[set ret [_read_anno $xmldoc]]} {return $ret}
     }
     # puts stderr "_open_anno: ifname = $ifname"
     set CRNT_ANNO_FILE $ifname;
@@ -210,14 +210,21 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
     namespace import ::rsttool::treeditor::tree::node::make-name;
     foreach nid [lsort -integer -increasing [array names NID2MSGID]] {
 	if {[group-node-p $nid]} {
-	    puts stderr "nid = $nid";
 	    set NODES($nid,name) [make-name $NODES($nid,start) $NODES($nid,end) \
 				      [egroup-node-p $nid]];
 	}
     }
     # read relations
     if {[set ret [read-relations [$root selectNodes relations]]]} {return $ret}
-
+    # check that each span node got children
+    namespace import ::rsttool::treeditor::tree::node::egroup-node-p;
+    namespace import ::rsttool::treeditor::tree::node::group-node-p;
+    foreach nid [array names NID2MSGID] {
+	if {([group-node-p $nid] && $NODES($nid,children) == {}) && \
+		(![egroup-node-p $nid] || $NODES($nid,echildren) == {})} {
+	    error "read-relations: span node $nid does not contain children.";
+	}
+    }
     return 0;
 }
 
@@ -289,7 +296,6 @@ proc ::rsttool::file::read-tnode {a_segments} {
 
 proc ::rsttool::file::read-gnode {a_spans} {
     variable ::rsttool::NODES;
-    variable ::rsttool::MSGID2ENID;
     variable ::rsttool::MSGID2ROOTS;
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::GROUP_NODE_CNT;
@@ -337,9 +343,9 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	set NID2MSGID($nid) $msgid;
 
 	if {[info exists MSGID2ROOTS($msgid)]} {
-	    puts stderr "read-gnode: 0) ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external)";
+	    # puts stderr "read-gnode: 0) ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external)";
 	    ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external);
-	    if {$NODES($nid,external) != 1 || ![egroup-node-p $nid]} {
+	    if {! $NODES($nid,external) || ![egroup-node-p $nid]} {
 	    # 	puts stderr "read-gnode: 1) ::rsttool::treeditor::update-roots $msgid $nid {add} 0";
 		::rsttool::treeditor::update-roots $msgid $nid {add} 0;
 	    }
@@ -357,7 +363,7 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
     variable ::rsttool::file::SAVED_PARNUC;
-    namespace import ::rsttool::treeditor::tree::node::get-eparent;
+    namespace import ::rsttool::treeditor::tree::node::get-ancestor;
 
     if {![info exists NODES($a_nid,reltype)]} {return;}
 
@@ -385,7 +391,8 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 		}
 		$xrel setAttribute {relname} $NODES($cid,${chld_prfx}relname);
 		set ichild [$a_xml_doc createElement {satellite}];
-		$ichild setAttribute {idref} [get-eparent $cid];
+		if {$NODES($cid,external)} {set cid [get-ancestor $cid]}
+		$ichild setAttribute {idref} $cid;
 		$xrel appendChild $ichild;
 		$a_relations appendChild $xrel;
 	    }
@@ -481,6 +488,8 @@ proc ::rsttool::file::read-relations {a_relations} {
 		set nuc_msgid $NID2MSGID($inuc_id);
 		set sat_msgid $NID2MSGID($isat_id);
 		if {$nuc_msgid != $sat_msgid} {
+		    puts stderr "read-relations: update-roots $nuc_msgid $inuc_id {remove} 1";
+		    puts stderr "read-relations: update-roots $nuc_msgid $isat_id {remove} 1";
 		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 1;
 		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 1;
 		} else {
