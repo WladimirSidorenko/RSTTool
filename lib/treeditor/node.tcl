@@ -252,11 +252,13 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
     if {! [info exists MSGID2ROOTS($msg_id)]} {return}
     # show/hide internal nodes pertaining to message `msg_id`
     if {$show} {
+	set chld_prfx "";
 	if {$DISPLAYMODE == $MESSAGE} {
 	    set inodes $MSGID2ROOTS($msg_id);
 	} else {
 	    if {! [info exists MSGID2EROOTS($msg_id)]} {set MSGID2EROOTS($msg_id) {}}
 	    set inodes $MSGID2EROOTS($msg_id);
+	    set chld_prfx "e";
 	}
 	# puts stderr "show-nodes: 0) DISPLAYMODE = $DISPLAYMODE, msg_id = $msg_id, inodes = $inodes";
 	set inid {};
@@ -275,7 +277,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    if {$DISPLAYMODE == $MESSAGE && $NID2MSGID($inid) != $msg_id} {continue;}
 	    if {$DISPLAYMODE == $DISCUSSION && !$NODES($inid,external)} {continue;}
 	    set VISIBLE_NODES($inid) 1
-	    set inodes [concat $inodes $NODES($inid,children)];
+	    set inodes [concat $inodes $NODES($inid,${chld_prfx}children)];
 	}
 	array unset seen_nodes;
     } else {
@@ -928,7 +930,7 @@ proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
     }
     # display node
     display $a_nid;
-    puts stderr "node::redisplay: $a_nid displayed"
+    # puts stderr "node::redisplay: $a_nid displayed"
     # display arc
     set prnt_prfx "";
     set msgid $NID2MSGID($a_nid);
@@ -936,10 +938,10 @@ proc ::rsttool::treeditor::tree::node::redisplay {a_nid} {
 	    ($PRNT_MSGID == {} && $msgid != $CRNT_MSGID))} {
 	set prnt_prfx "e";
     }
-    puts stderr "node::redisplay: $a_nid displaying arc, parent = $NODES($a_nid,${prnt_prfx}parent); reltype = $a_nid $NODES($a_nid,${prnt_prfx}reltype)"
+    # puts stderr "node::redisplay: $a_nid displaying arc, parent = $NODES($a_nid,${prnt_prfx}parent); reltype = $a_nid $NODES($a_nid,${prnt_prfx}reltype)"
     ::rsttool::treeditor::tree::arc::display $NODES($a_nid,${prnt_prfx}parent)\
 	$a_nid $NODES($a_nid,${prnt_prfx}reltype);
-    puts stderr "node::redisplay: $a_nid arc displayed"
+    # puts stderr "node::redisplay: $a_nid arc displayed"
 }
 
 proc ::rsttool::treeditor::tree::node::draw-span {a_nid} {

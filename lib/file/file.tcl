@@ -155,9 +155,9 @@ proc ::rsttool::file::open {} {
 	return;
     }
     ::rsttool::segmenter::message "Loaded file $CRNT_PRJ_FILE"
-    puts stderr "starting next-message"
+    # puts stderr "starting next-message"
     ::rsttool::segmenter::next-message
-    puts stderr "next-message started"
+    # puts stderr "next-message started"
 }
 
 proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
@@ -447,7 +447,7 @@ proc ::rsttool::file::read-relations {a_relations} {
     namespace import ::rsttool::utils::ldelete;
     namespace import ::rsttool::treeditor::tree::node::get-start;
 
-    set relname "";
+    set relname ""; set chld_prfx "";
     set ispan {}; set inuc {}; set isat {};
     set ispan_id {}; set inuc_id {}; set isat_id {};
     foreach irel [$a_relations childNodes] {
@@ -457,41 +457,49 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    return -1;
 		}
 		if {[set ispan [$irel selectNodes ./spannode]] == {}} {
-		    error "No span node specified for hypotactic relation."
+		    error "No span node specified for hypotactic relation.";
 		    return -2;
-		};
+		}
 		set ispan_id [xml-get-attr $ispan {idref}];
 		if {[set inuc [$irel selectNodes ./nucleus]] == {}} {
-		    error "No nucleus specified for hypotactic relation."
+		    error "No nucleus specified for hypotactic relation.";
 		    return -3;
-		};
+		}
 		set inuc_id [xml-get-attr $inuc {idref}];
 		if {[set isat [$irel selectNodes ./satellite]] == {}} {
-		    error "No satellite specified for hypotactic relation."
+		    error "No satellite specified for hypotactic relation.";
 		    return -4;
-		};
+		}
 		set isat_id [xml-get-attr $isat {idref}];
+		if {$NODES($inuc_id,external) && $NODES($isat_id,external)} {
+		    set chld_prfx "e";
+		} else {
+		    set chld_prfx "";
+		}
 		# add parent to span's children
-		set NODES($ispan_id,children) [insort $NODES($ispan_id,children) \
-						   [get-start $inuc_id] $inuc_id];
+		set NODES($ispan_id,${chld_prfx}children) [insort $NODES($ispan_id,${chld_prfx}children) \
+							       [get-start $inuc_id] $inuc_id];
 		# link parent to span
 		set NODES($inuc_id,parent) $ispan_id;
 		set NODES($inuc_id,relname) {span};
 		set NODES($inuc_id,reltype) $SPAN;
-		set NODES($inuc_id,children) [insort $NODES($inuc_id,children) \
-						   [get-start $isat_id] $isat_id];
+		set NODES($inuc_id,${chld_prfx}children) [insort $NODES($inuc_id,${chld_prfx}children) \
+							      [get-start $isat_id] $isat_id];
 		# link child to parent
-		lappend NODES($isat_id,parent) $inuc_id;
-		set NODES($isat_id,relname) $relname;
-		set NODES($isat_id,reltype) $HYPOTACTIC;
+		set NODES($isat_id,${chld_prfx}parent) $inuc_id;
+		set NODES($isat_id,${chld_prfx}relname) $relname;
+		set NODES($isat_id,${chld_prfx}reltype) $HYPOTACTIC;
 		# remove child and parent from the list of message roots
 		set nuc_msgid $NID2MSGID($inuc_id);
 		set sat_msgid $NID2MSGID($isat_id);
 		if {$nuc_msgid != $sat_msgid} {
+		    variable ::rsttool::MSGID2EROOTS;
+		    puts stderr "read-relations: 0) MSGID2EROOTS($nuc_msgid) = $MSGID2EROOTS($nuc_msgid)";
 		    puts stderr "read-relations: update-roots $nuc_msgid $inuc_id {remove} 1";
 		    puts stderr "read-relations: update-roots $nuc_msgid $isat_id {remove} 1";
 		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 1;
 		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 1;
+		    puts stderr "read-relations: 1) MSGID2EROOTS($nuc_msgid) = $MSGID2EROOTS($nuc_msgid)";
 		} else {
 		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 0;
 		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 0;

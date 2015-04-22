@@ -335,7 +335,9 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 		# update external roots of the parent message
 		if {$NODES($iroot,parent) != {}} {return}
 		set prnt_msgid [lindex $FORREST($a_msgid) 1];
-		if {$prnt_msgid != {}} {update-roots $prnt_msgid $iroot {add} 1}
+		if {$prnt_msgid != {} && $NODES($iroot,eparent) == {}} {
+		    update-roots $prnt_msgid $iroot {add} 1;
+		}
 	    }
 	} elseif {[info exists MSGID2ENID($a_msgid)]} {
 	    array unset MSGID2ENID $a_msgid;
