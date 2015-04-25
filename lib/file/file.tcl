@@ -23,7 +23,7 @@ proc ::rsttool::file::update_menu {a_menu} {
     $a_menu add command -label [format "Open %s-O" $MKEY] -command \
 	{::rsttool::file::open}
     # $a_menu add command -label [format "New %s-N" $MKEY] -command \
-    # 	{::rsttool::file::open}
+	# 	{::rsttool::file::open}
     $a_menu add command -label [format "Save %s-S" $MKEY] -command \
     	{::rsttool::file::save}
     $a_menu add command -label [format "Quit %s-Q" $MKEY] -command \
@@ -172,13 +172,13 @@ proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
 	set ifile [::open $ifname w 0644];
 	# put minimal XML into the newly created file
 	puts $ifile {<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE annotation SYSTEM "annotation.dtd">
+	    <!DOCTYPE annotation SYSTEM "annotation.dtd">
 
-<annotation>
-<segments></segments>
-<spans></spans>
-<relations></relations>
-</annotation>
+	    <annotation>
+	    <segments></segments>
+	    <spans></spans>
+	    <relations></relations>
+	    </annotation>
 	}
 	close $ifile;
     } else {
@@ -191,6 +191,11 @@ proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
 }
 
 proc ::rsttool::file::_read_anno {a_xmldoc} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::FORREST;
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::MSGID2TNODES;
+
     set root [$a_xmldoc documentElement];
     if {[string tolower [$root nodeName]] != "annotation"} {
 	error "Wrong format of annotation file.";
@@ -199,12 +204,21 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
 
     # read segments
     if {[set ret [read-tnode [$root selectNodes segments]]]} {return $ret}
+    # set names of terminal nodes
+    set imsgid {}; set ilen -1;
+    foreach inid [lsort -integer -increasing [array names NID2MSGID]] {
+	set imsgid $NID2MSGID($inid);
+	set ilen [string length [lindex $FORREST($imsgid) 0]];
+	set NODES($inid,name) [lsearch $MSGID2TNODES($imsgid) $inid];
+	if {$NODES($inid,start) == 0 && $NODES($inid,end) == $ilen} {
+	    set NODES($inid,external) 1;
+	    set NODES($inid,etype) {text};
+	}
+    }
 
     # read spans
     if {[set ret [read-gnode [$root selectNodes spans]]]} {return $ret}
-    # make names for spans
-    variable ::rsttool::NODES;
-    variable ::rsttool::NID2MSGID;
+    # set names of span nodes
     namespace import ::rsttool::treeditor::tree::node::group-node-p;
     namespace import ::rsttool::treeditor::tree::node::egroup-node-p;
     namespace import ::rsttool::treeditor::tree::node::make-name;
@@ -260,36 +274,25 @@ proc ::rsttool::file::read-tnode {a_segments} {
 	if {[set nid [xml-get-attr $child {id}]] == {}} {
 	    return -2;
 	}
-	if {[set name [xml-get-attr $child {name}]] == {}} {
+	if {[set msgid [xml-get-attr $child {msgid}]] == {}} {
 	    return -3;
 	}
-	if {[set msgid [xml-get-attr $child {msgid}]] == {}} {
+	if {[set start [xml-get-attr $child {start}]] == {}} {
 	    return -4;
 	}
-	if {[set start [xml-get-attr $child {start}]] == {}} {
-	    return -5;
-	}
 	if {[set end [xml-get-attr $child {end}]] == {}} {
-	    return -6;
+	    return -5;
 	}
 
 	# check if this node has not already been defined
 	if {[info exists NODES($nid)]} {
 	    error "Duplicate node id $nid."
-	    return -7;
-	} else {
-	    if {[info exists NAME2NID($msgid,$name)]} {
-		error "Duplicate node name '$name' for message $msgid."
-		return -8;
-	    }
-	    ::rsttool::treeditor::tree::node::make {text} $start $end $name $msgid $nid;
-	    ::rsttool::treeditor::update-roots $msgid $nid {add};
 	}
+	::rsttool::treeditor::tree::node::make {text} $start $end "-1" $msgid $nid;
+	::rsttool::treeditor::update-roots $msgid $nid {add};
 
 	# update counter of text nodes
-	if {$nid > $TXT_NODE_CNT} {
-	    set TXT_NODE_CNT $nid
-	}
+	if {$nid > $TXT_NODE_CNT} {set TXT_NODE_CNT $nid;}
     }
     return 0;
 }
@@ -346,7 +349,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	    # puts stderr "read-gnode: 0) ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external)";
 	    ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external);
 	    if {! $NODES($nid,external) || ![egroup-node-p $nid]} {
-	    # 	puts stderr "read-gnode: 1) ::rsttool::treeditor::update-roots $msgid $nid {add} 0";
+		# 	puts stderr "read-gnode: 1) ::rsttool::treeditor::update-roots $msgid $nid {add} 0";
 		::rsttool::treeditor::update-roots $msgid $nid {add} 0;
 	    }
 	} else {
@@ -406,11 +409,11 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 	    # remember the span node
 	    if {[info exists SAVED_PARNUC($ispan)]} {return;}
 	    set SAVED_PARNUC($ispan) 1;
-	    set xspan [$a_xml_doc createElement {spannode}];
-	    $xspan setAttribute {idref} $ispan;
 	    set xrel [$a_xml_doc createElement {parRelation}];
 	    set irelname $NODES($a_nid,relname);
 	    $xrel setAttribute {relname} $irelname;
+	    set xspan [$a_xml_doc createElement {spannode}];
+	    $xspan setAttribute {idref} $ispan;
 	    $xrel appendChild $xspan;
 	    # append nuclei of the span to the XML relation
 	    set nuc_cnt 0;

@@ -147,6 +147,7 @@ proc ::rsttool::reset {} {
     utils::reset-array ::rsttool::ROOTS;
     utils::reset-array ::rsttool::TEXT_NODES;
     utils::reset-array ::rsttool::treeditor::VISIBLE_NODES;
+    utils::reset-array ::rsttool::file::SAVED_PARNUC;
 
     abbreviations::reset;
     relations::reset;

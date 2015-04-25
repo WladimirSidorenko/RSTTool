@@ -56,13 +56,11 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	# puts stderr "node::make: 0) MSGID2TNODES($msgid) = $MSGID2TNODES($msgid)"
 	set MSGID2TNODES($msgid) [insort $MSGID2TNODES($msgid) $start $nid];
 	# puts stderr "node::make: 1) MSGID2TNODES($msgid) = $MSGID2TNODES($msgid)"
-    } else {
-	if {$nid == {}} {
-	    set nid [unique-gnode-id];
-	    set VISIBLE_NODES($nid) 1;
-	    if {$name == {}} {
-		set name [make-name $start $end $external];
-	    }
+    } elseif {$nid == {}} {
+	set nid [unique-gnode-id];
+	set VISIBLE_NODES($nid) 1;
+	if {$name == {}} {
+	    set name [make-name $start $end $external];
 	}
     }
     # save mapping from node id to message id

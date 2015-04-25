@@ -96,7 +96,7 @@ proc ::rsttool::treeditor::layout::x-layout {a_nodes {xpos {}}} {
     set CURRENT_XPOS $xpos;
 }
 
-proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos {a_external {}}} {
+proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos {a_external 0}} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::treeditor::NODE_WIDTH;
