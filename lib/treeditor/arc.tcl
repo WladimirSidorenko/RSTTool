@@ -142,42 +142,61 @@ proc ::rsttool::treeditor::tree::arc::erase {a_nid} {
     }
 }
 
-proc ::rsttool::treeditor::tree::arc::change {nid {relname {}} } {
+proc ::rsttool::treeditor::tree::arc::change {a_nid {relname {}} } {
     variable ::rsttool::NODES;
-    variable ::rsttool::relations::RELATIONS;
-    variable ::rsttool::treeditor::CURRENTMODE;
-    namespace import ::rsttool::treeditor::tree::node::redisplay;
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::relations::SPAN;
+    variable ::rsttool::relations::HYPOTACTIC;
+    variable ::rsttool::relations::PARATACTIC;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
+    namespace import ::rsttool::treeditor::tree::choose-label;
+    namespace import ::rsttool::treeditor::layout::y-layout-subtree;
+    namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
 
-    set cmode $CURRENTMODE
-    set par $NODES($nid,parent)
-    if {$par != {} && $NODES($nid,relname) != "span"} {
-	if {$relname == {}} {
-	    if {[member $NODES($nid,relname) $RELATIONS(multinuc)]} {
-		set type multinuc
-	    } elseif {[member $NODES($nid,relname) $RELATIONS(constit)]} {
-		set type constit
-	    } elseif {[member $NODES($nid,relname) $RELATIONS(embedded)]} {
-		set type embedded
-	    } else {
-		set type rst
-	    }
-	    set relname [choose-label $nid $type]
-	}
-	if {[member $NODES($nid,relname) $RELATIONS(multinuc)]} {
-	    foreach child $NODES($par,children) {
-		set child_rel $NODES($child,relname)
-		if {[member $child_rel $RELATIONS(multinuc)]} {
-		    set NODES($child,relname) $relname
-		    redisplay $child
-		}
-	    }
-	} else {
-	    set node($nid,relname) $relname
-	}
-	#    redisplay-net
-	redisplay $nid
+    if {$a_nid == {}} {return;}
+
+    # determine prefix of the parent
+    set ext_connection 0;
+    set prnt_prfx ""; set chld_prfx "";
+    if {$DISPLAYMODE == $DISCUSSION} {
+	set chld_prfx "e";
+	set ext_connection 1;
+	if { ![eparent-msgid-p $NID2MSGID($a_nid)]} {set prnt_prfx "e";}
     }
-    set-mode $cmode
+
+    # check if relation change is valid operation in given context
+    set prnt $NODES($a_nid,${prnt_prfx}parent);
+    if {$prnt == {}} {return;}
+
+    switch -nocase -- $NODES($a_nid,${prnt_prfx}reltype) \
+	$SPAN {
+	    return;
+	} \
+	$HYPOTACTIC {
+	    set rtype {satellite};
+	} \
+	$PARATACTIC {
+	    set rtype {multinuclear};
+	}
+
+    set nrelation [choose-label $a_nid $rtype $ext_connection];
+
+    if {$nrelation == {}} {return;}
+
+    if {$NODES($a_nid,${prnt_prfx}reltype) == $PARATACTIC} {
+	foreach child $NODES($prnt,${chld_prfx}children) {
+	    if {$NODES($child,${prnt_prfx}reltype) == $PARATACTIC} {
+		set NODES($child,${prnt_prfx}relname) $nrelation;
+	    }
+	}
+    } else {
+	set NODES($a_nid,${prnt_prfx}relname) $nrelation;
+    }
+
+    y-layout-subtree $prnt;
+    ::rsttool::set-state {changed} "Changed relation for node $a_nid to '$nrelation'.";
+    return;
 }
 
 ##################################################################

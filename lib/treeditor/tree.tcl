@@ -10,6 +10,7 @@ namespace eval ::rsttool::treeditor::tree {
     namespace export wtn;
     namespace export ntw;
     namespace export unlink;
+    namespace export choose-label;
     namespace export clicked-node;
     namespace export clicked-widget;
     namespace export popup-choose-from-list;
