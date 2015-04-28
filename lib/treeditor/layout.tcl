@@ -42,8 +42,8 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
 	set roots2display $MSGID2EROOTS($PRNT_MSGID);
     }
 
-    puts stderr "*** roots2display: roots2display = $roots2display";
-    puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
+    # puts stderr "*** roots2display: roots2display = $roots2display";
+    # puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
     # 3. layout and draw
     # puts stderr "*** redisplay-net: x-layout: roots2display == $roots2display"
     x-layout $roots2display;

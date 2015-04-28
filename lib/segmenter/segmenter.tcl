@@ -116,13 +116,12 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
 
 	set start $NODES($nid,start)
 	set end $NODES($nid,end)
-	# puts stderr "show-sentences: node(nid = $nid,offsets) = $node($nid,offsets)"
 	if {$start == {} || $end == {}} {error "node $nid does not have valid offsets"}
 	incr end -1
 	# obtain text span between offsets
 	set itext [string range $txt $start $end]
-	# insert text portion into the widget, mark it as old text, and add an
-	# EDU ending marker
+	# insert text portion into the widget, mark it as old text,
+	# and add an EDU ending marker
 	$path_name insert end $itext old
 	set bmarker [make-bmarker $NODES($nid,name)]
 	$path_name insert end $bmarker bmarker
@@ -244,7 +243,6 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     set prev_msg_id $CRNT_MSGID
     # remember the old parent
     set prev_prnt_msg_id $PRNT_MSGID;
-    # puts stderr "next-message: forward";
     # check direction to which we should proceed
     if {$direction == {forward}} {
 	# if we have exhausted the queue of messages for current
@@ -268,7 +266,11 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 
 	set MSG_QUEUE [lreplace $MSG_QUEUE 0 0]; # pop message id from the queue
 	set children [lindex $crnt_msg end]; # obtain children of current message
-	set MSG_QUEUE [concat $MSG_QUEUE $children]; # append children to message queue
+	foreach ch $children {
+	    if {[lsearch -exact $MSG_QUEUE $ch] < 0} {
+		lappend MSG_QUEUE $ch;
+	    }
+	}
     } else {
 	# if we have exhausted the queue of processed messages, we
 	# give a warning
@@ -281,15 +283,15 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 	    # remember popped message in `MSG_QUEUE`
 	    set MSG_QUEUE [linsert $MSG_QUEUE[set MSG_QUEUE {}] 0 $CRNT_MSGID];
 	}
-	# assign the leftmost tweet on the queue to crnt_msg and unshift the Queue
-	set CRNT_MSGID [lindex $MSG_PREV_QUEUE end]
-	set crnt_msg $FORREST($CRNT_MSGID)
+	# assign the rightmost tweet on the queue to crnt_msg and unshift the Queue
+	set CRNT_MSGID [lindex $MSG_PREV_QUEUE end];
+	set crnt_msg $FORREST($CRNT_MSGID);
 	set MSG_PREV_QUEUE [lreplace $MSG_PREV_QUEUE end end]; # pop message id from the queue
     }
     set PRNT_MSGID [lindex $crnt_msg 1];	# obtain id of the parent of current message
 
-    puts stderr "next-mesage: CRNT_MSGID = $CRNT_MSGID; PRNT_MSGID = $PRNT_MSGID"
-    puts stderr "next-mesage: direction = $direction;\nMSG_QUEUE = $MSG_QUEUE;\nMSG_PREV_QUEUE = $MSG_PREV_QUEUE"
+    # puts stderr "next-mesage: CRNT_MSGID = $CRNT_MSGID; PRNT_MSGID = $PRNT_MSGID"
+    # puts stderr "next-mesage: direction = $direction;\nMSG_QUEUE = $MSG_QUEUE;\nMSG_PREV_QUEUE = $MSG_PREV_QUEUE"
     # puts stderr "next-message: show-sentences";
     ############################################
     ## Redisplay parent text, if necessary
@@ -309,11 +311,8 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     # make suggestion for the boundary of the next segment
     next-sentence;
 
-    # puts stderr "next-message: show-nodes";
-
     ############################################
     ## Show/Hide nodes corresponding to messages
-    # puts stderr "next-mesage: VISIBLE_NODES = [array names VISIBLE_NODES]"
     if {$DISPLAYMODE == $MESSAGE} {
 	# hide current node and show the next one
 	show-nodes $prev_msg_id 0;
@@ -322,15 +321,12 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
 	show-nodes $prev_prnt_msg_id 0;
 	show-nodes $prev_msg_id 0;
 	show-nodes $CRNT_MSGID 1;
-	# puts stderr "next-message: show-nodes crnt_msgid = $CRNT_MSGID 1";
     } elseif {$PRNT_MSGID != $prev_prnt_msg_id} {
 	show-nodes $prev_prnt_msg_id 0;
 	show-nodes $prev_msg_id 0;
 	show-nodes $PRNT_MSGID 1;
     }
-    # puts stderr "next-message: redisplay-net";
     ::rsttool::treeditor::layout::redisplay-net;
-    # puts stderr "next-message: redisplay-net finished";
 }
 
 proc ::rsttool::segmenter::segment {{my_current {}}} {

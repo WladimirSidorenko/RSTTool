@@ -12,6 +12,7 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export get-end;
     namespace export get-eterminal;
     namespace export get-start-node;
+    namespace export get-estart;
     namespace export get-start;
     namespace export get-visible-parent;
     namespace export get-ancestor;
@@ -134,12 +135,28 @@ proc ::rsttool::treeditor::tree::node::get-ancestor {a_nid} {
     }
 }
 
-proc ::rsttool::treeditor::tree::node::get-start {a_nid} {
+proc ::rsttool::treeditor::tree::node::get-estart {a_nid} {
+    variable ::rsttool::FORREST;
+    variable ::rsttool::NID2MSGID;
+
+    set crnt_msgid $NID2MSGID($a_nid);
+    set prnt_msgid [lindex $FORREST($crnt_msgid) 1];
+    if {$prnt_msgid == {}} {return -1;}
+    return [lsearch [lindex $FORREST($prnt_msgid) end] $crnt_msgid];
+}
+
+proc ::rsttool::treeditor::tree::node::get-start {a_nid {a_seen_nids {[dict create]}}} {
     variable ::rsttool::NODES;
 
+    # if {![array exists a_seen_nids]} {unset a_seen_nids; array set a_seen_nids {};}
     # puts stderr "get-start: a_nid = $a_nid;"
     if {[group-node-p $a_nid]} {
-	return [get-start $NODES($a_nid,start)];
+	if {[dict  exists $a_seen_nids $NODES($a_nid,start)]} {
+	    error "Infinite loop detected while searching for start position of node $a_nid";
+	} else {
+	    dict set a_seen_nids $NODES($a_nid,start) 1;
+	}
+	return [get-start $NODES($a_nid,start) $a_seen_nids];
     }
     return $NODES($a_nid,start);
 }
@@ -151,18 +168,29 @@ proc ::rsttool::treeditor::tree::node::get-start-node {a_nid} {
     return $a_nid;
 }
 
-proc ::rsttool::treeditor::tree::node::get-end {a_nid} {
+proc ::rsttool::treeditor::tree::node::get-end {a_nid {a_seen_nids {[dict create]}}} {
     variable ::rsttool::NODES;
 
     if {[group-node-p $a_nid]} {
 	# puts stderr "node::get-end: a_nid = $a_nid (end = $NODES($a_nid,end))";
-	return [get-end $NODES($a_nid,end)];
+	if {[dict exists $a_seen_nids $NODES($a_nid,end)]} {
+	    error "Infinite loop detected while searching for end position of node $a_nid";
+	} else {
+	    dict set a_seen_nids $NODES($a_nid,end) 1;
+	}
+	return [get-end $NODES($a_nid,end) $a_seen_nids];
     } else {
 	# puts stderr "node::get-end: a_nid = $a_nid (NODES($a_nid,children) == $NODES($a_nid,children))";
 	if {$NODES($a_nid,children) == {}} {
 	    return $NODES($a_nid,end);
 	} else {
-	    set chld_end [get-end [lindex $NODES($a_nid,children) end]];
+	    set echild [lindex $NODES($a_nid,children) end];
+	    if {[dict exists $a_seen_nids $echild]} {
+		error "Infinite loop detected while searching for end position of node $a_nid";
+	    } else {
+		dict set a_seen_nids $echild 1;
+	    }
+	    set chld_end [get-end $echild $a_seen_nids];
 	    return [expr max($NODES($a_nid,end),$chld_end)];
 	}
     }

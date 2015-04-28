@@ -260,7 +260,7 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 	{add} {
 	    # define appropriate insertion operation
 	    if {$a_external} {
-		puts stderr "update-roots: msgid = $a_msgid, nid = $a_nid, add, external;";
+		# puts stderr "update-roots: msgid = $a_msgid, nid = $a_nid, add, external;";
 		proc insort {a_list a_nid} {
 		    variable ::rsttool::NID2MSGID;
 		    namespace import ::rsttool::treeditor::tree::node::get-child-pos;

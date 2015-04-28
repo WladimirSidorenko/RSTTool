@@ -77,22 +77,6 @@ proc ::rsttool::file::open {} {
 		if {[_open_anno [$child text] $prj_dir]} {
 		    set error 1; break;
 		}
-		# puts -nonewline stderr "NODES = ";
-		# parray ::rsttool::NODES;
-		# puts stderr "NAME2NID = ";
-		# parray ::rsttool::NAME2NID;
-		# puts stderr "NID2MSGID = ";
-		# parray ::rsttool::NID2MSGID;
-		# puts stderr "NID2ENID = ";
-		# parray ::rsttool::NID2ENID;
-		# puts stderr "MSGID2ROOTS = ";
-		# parray ::rsttool::MSGID2ROOTS;
-		# puts stderr "MSGID2TNODES = ";
-		# parray ::rsttool::MSGID2TNODES;
-		# puts stderr "MSGID2ENID = ";
-		# parray ::rsttool::MSGID2ENID;
-		# puts stderr "TXT_NODE_CNT = $::rsttool::TXT_NODE_CNT"
-		# puts stderr "GROUP_NODE_CNT = $::rsttool::GROUP_NODE_CNT"
 	    }
 	    "abbreviations" {
 		if {[abbreviations::load [$child text] $prj_dir]} {
@@ -103,25 +87,16 @@ proc ::rsttool::file::open {} {
 		if {[_open_base [$child text] $prj_dir]} {
 		    set error 1; break;
 		}
-		# puts stderr "THREADS = $::rsttool::THREADS";
-		# puts -nonewline stderr "FORREST = ";
-		# parray ::rsttool::FORREST;
 	    }
 	    "erelscheme" {
 		if {[::rsttool::relations::load [$child text]  $prj_dir "external"]} {
 		    set error 1; break;
 		}
-		# puts stderr "ERELATIONS = ";
-		# parray ::rsttool::relations::ERELATIONS;
 	    }
 	    "relscheme" {
 		if {[::rsttool::relations::load [$child text] $prj_dir "internal"]} {
 		    set error 1; break;
 		};
-		# puts stderr "RELATIONS = ";
-		# parray ::rsttool::relations::RELATIONS;
-		# puts stderr "RELHELP = ";
-		# parray ::rsttool::helper::RELHELP;
 	    }
 	    "#comment" {
 		continue;
@@ -155,15 +130,12 @@ proc ::rsttool::file::open {} {
 	return;
     }
     ::rsttool::segmenter::message "Loaded file $CRNT_PRJ_FILE"
-    # puts stderr "starting next-message"
     ::rsttool::segmenter::next-message
-    # puts stderr "next-message started"
 }
 
 proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
     variable ::rsttool::CRNT_ANNO_FILE;
 
-    # puts stderr "_open_anno: a_fname = $a_fname"
     set ifname [search $a_fname $a_dirname];
     # if file does not exist, create an empty one
     if {$ifname == {}} {
@@ -185,7 +157,6 @@ proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
 	set xmldoc [load-xml $ifname];
 	if {[set ret [_read_anno $xmldoc]]} {return $ret}
     }
-    # puts stderr "_open_anno: ifname = $ifname"
     set CRNT_ANNO_FILE $ifname;
     return 0;
 }
@@ -346,10 +317,8 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	set NID2MSGID($nid) $msgid;
 
 	if {[info exists MSGID2ROOTS($msgid)]} {
-	    # puts stderr "read-gnode: 0) ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external)";
 	    ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external);
 	    if {! $NODES($nid,external) || ![egroup-node-p $nid]} {
-		# 	puts stderr "read-gnode: 1) ::rsttool::treeditor::update-roots $msgid $nid {add} 0";
 		::rsttool::treeditor::update-roots $msgid $nid {add} 0;
 	    }
 	} else {
@@ -444,11 +413,13 @@ proc ::rsttool::file::read-relations {a_relations} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::MSGID2ROOTS;
+    variable ::rsttool::MSGID2EROOTS;
     variable ::rsttool::relations::SPAN;
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
     namespace import ::rsttool::utils::ldelete;
     namespace import ::rsttool::treeditor::tree::node::get-start;
+    namespace import ::rsttool::treeditor::tree::node::get-estart;
     namespace import ::rsttool::treeditor::tree::node::egroup-node-p;
     namespace import ::rsttool::treeditor::tree::node::get-eterminal;
 
@@ -482,18 +453,20 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    set chld_prfx "";
 		}
 		# add parent to span's children
-		set NODES($ispan_id,${chld_prfx}children) [insort $NODES($ispan_id,${chld_prfx}children) \
-							       [get-start $inuc_id] $inuc_id];
+		set NODES($ispan_id,${chld_prfx}children) \
+		    [insort $NODES($ispan_id,${chld_prfx}children) \
+			 [get-${chld_prfx}start $inuc_id] $inuc_id 0 \
+			 ::rsttool::treeditor::tree::node::get-${chld_prfx}start];
+		# puts stderr "read-relations: NODES($ispan_id,${chld_prfx}children) = $NODES($ispan_id,${chld_prfx}children)"
 		# remove child and parent from the list of message roots
 		set nuc_msgid $NID2MSGID($inuc_id);
 		set sat_msgid $NID2MSGID($isat_id);
 		if {$nuc_msgid != $sat_msgid} {
-		    variable ::rsttool::MSGID2EROOTS;
 		    # if satellite is not the terminal, get its corresponding terminal
-		    set isat_id [get-eterminal $isat_id];
+		    if {$NODES($isat_id,etype) != {text}} {set isat_id $NODES($isat_id,start);}
 		    # puts stderr "read-relations: ispan_id = $ispan_id";
-		    # puts stderr "read-relations: inuc_id = $inuc_id";
-		    # puts stderr "read-relations: isat_id = $isat_id";
+		    # puts stderr "read-relations: inuc_id = $inuc_id (msgid = $nuc_msgid)";
+		    # puts stderr "read-relations: isat_id = $isat_id (msgid = $sat_msgid)";
 		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 1;
 		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 1;
 		    # puts stderr "read-relations: 1) MSGID2EROOTS($nuc_msgid) = $MSGID2EROOTS($nuc_msgid)";
@@ -507,7 +480,9 @@ proc ::rsttool::file::read-relations {a_relations} {
 		set NODES($inuc_id,relname) {span};
 		set NODES($inuc_id,reltype) $SPAN;
 		set NODES($inuc_id,${chld_prfx}children) [insort $NODES($inuc_id,${chld_prfx}children) \
-							      [get-start $isat_id] $isat_id];
+							      [get-${chld_prfx}start $isat_id] $isat_id 0 \
+							      ::rsttool::treeditor::tree::node::get-${chld_prfx}start];
+		# puts stderr "read-relations: 2) NODES($inuc_id,${chld_prfx}children) = $NODES($inuc_id,${chld_prfx}children)";
 		# link child to parent
 		set NODES($isat_id,${chld_prfx}parent) $inuc_id;
 		set NODES($isat_id,${chld_prfx}relname) $relname;
