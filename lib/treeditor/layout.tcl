@@ -328,15 +328,14 @@ proc ::rsttool::treeditor::layout::resize-display {change} {
     variable ::rsttool::treeditor::VISIBLE_NODES;
     variable SIZE_FACTOR;
 
-    set ymax 0
-    set xmax 0
-    set SIZE_FACTOR [expr $SIZE_FACTOR + $change]
+    $RSTW scale all 0 0 $change $change;
+    set ymax 0; set xmax 0;
     foreach nid [array names VISIBLE_NODES] {
-	set ymax [max $ymax $NODES($nid,ypos)]
-	set xmax [max $xmax $NODES($nid,xpos)]
+	set ymax [max $ymax $NODES($nid,ypos)];
+	set xmax [max $xmax $NODES($nid,xpos)];
     }
     $RSTW configure -scrollregion "0 1 [expr $xmax + $NODE_WIDTH]\
-	     [expr $ymax + $SIZE_FACTOR]"
+            [expr $ymax + $SIZE_FACTOR]";
 }
 
 proc ::rsttool::treeditor::layout::visible-children-p {nid} {
@@ -346,6 +345,7 @@ proc ::rsttool::treeditor::layout::visible-children-p {nid} {
     foreach cid $NODES($nid,children) {
 	if [info exists VISIBLE_NODES($nid)] {return 1}
     }
+
     return 0
 }
 

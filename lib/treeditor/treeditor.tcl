@@ -65,9 +65,9 @@ proc ::rsttool::treeditor::install {} {
     button $RTBAR.rename -text "Rename" -command {
 	::rsttool::treeditor::set-mode rename }
     button $RTBAR.reduce -text "Reduce" -command {
-	::rsttool::treeditor::layout::resize-display -50 }
+	::rsttool::treeditor::layout::resize-display 0.5 }
     button $RTBAR.enlarge -text "Enlarge" -command {
-	::rsttool::treeditor::layout::resize-display 50 }
+	::rsttool::treeditor::layout::resize-display 2 }
     button $RTBAR.discussion -text "Discussion" -command {
 	::rsttool::treeditor::set-display-mode $::rsttool::treeditor::DISCUSSION}
     button $RTBAR.message -text "Message" -command {
