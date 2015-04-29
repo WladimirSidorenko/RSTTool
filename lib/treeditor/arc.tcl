@@ -66,17 +66,20 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
     variable ::rsttool::PRNT_MSGID;
     variable ::rsttool::treeditor::RSTW;
     variable ::rsttool::relations::SPAN;
+    variable ::rsttool::treeditor::MESSAGE;
     variable ::rsttool::treeditor::DISCUSSION;
     variable ::rsttool::treeditor::DISPLAYMODE;
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
     variable ::rsttool::treeditor::VISIBLE_NODES;
+    variable ::rsttool::relations::RELATIONS;
+    variable ::rsttool::relations::ERELATIONS;
 
-    namespace import ::rsttool::treeditor::tree::ntw;
     namespace import ::rsttool::treeditor::tree::node::draw-text;
+    namespace import ::rsttool::treeditor::tree::ntw;
     namespace import ::rsttool::utils::add-points;
-    namespace import ::rsttool::utils::subtract-points;
     namespace import ::rsttool::utils::mid-point;
+    namespace import ::rsttool::utils::subtract-points;
 
     if {![info exists VISIBLE_NODES($a_nuc_nid)] || ![info exists VISIBLE_NODES($a_sat_nid)]} {return}
 
@@ -122,6 +125,11 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
 	    error "Invalid relation type '$a_reltype'."
 	    return;
 	}
+
+    if {($DISPLAYMODE == $MESSAGE && ![info exists RELATIONS($label)]) || \
+	    ($DISPLAYMODE == $DISCUSSION && ![info exists ERELATIONS($label)])} {
+	set color "black";
+    }
 
     if {$a_reltype != $SPAN} {
 	set NODES($a_sat_nid,labelwgt) [draw-text $RSTW $label [lindex $labelpnt 0] \

@@ -174,6 +174,7 @@ proc ::rsttool::treeditor::set-mode {mode} {
 	    bind $RSTW <ButtonRelease-1> {
 		set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
 		if {$iclicked != {}} {
+		    return;
 		    ::rsttool::treeditor::tree::unlink-nodes $iclicked;
 		    ::rsttool::treeditor::layout::redisplay-net;
 		}
