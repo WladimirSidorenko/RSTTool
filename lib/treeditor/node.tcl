@@ -38,13 +38,12 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::treeditor::VISIBLE_NODES;
 
-    if {$msgid == {}} {
-	set msgid $CRNT_MSGID;
-    }
+    if {$msgid == {}} {set msgid $CRNT_MSGID;}
 
-    set prfx "";
+    set prfx {};
     if {$external} {set prfx "e";}
 
+    set etype {};
     if {$type ==  "text"} {
 	if {$name == {}} {set name [unique-tnode-name]};
 	if {$nid == {}} {set nid [unique-tnode-id]; set VISIBLE_NODES($nid) 1};
@@ -54,9 +53,13 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
 	if {![info exists MSGID2TNODES($msgid)]} {set MSGID2TNODES($msgid) {}}
 	# since we might add node after some group nodes were created,
 	# we need to re-sort the node list
-	# puts stderr "node::make: 0) MSGID2TNODES($msgid) = $MSGID2TNODES($msgid)"
+	# puts stderr "node::make: 0) insorting $nid (start = $start) in MSGID2TNODES($msgid) = $MSGID2TNODES($msgid)"
 	set MSGID2TNODES($msgid) [insort $MSGID2TNODES($msgid) $start $nid];
-	# puts stderr "node::make: 1) MSGID2TNODES($msgid) = $MSGID2TNODES($msgid)"
+	# puts stderr "node::make: 1) MSGID2TNODES($msgid) after insort = $MSGID2TNODES($msgid)"
+	if {! $external && $start == 0 && $end >= [string length [lindex $FORREST($msgid) 0]]} {
+	    set external 1;
+	    set etype {text};
+	}
     } elseif {$nid == {}} {
 	set nid [unique-gnode-id];
 	set VISIBLE_NODES($nid) 1;
@@ -79,7 +82,7 @@ proc ::rsttool::treeditor::tree::node::make {type {start {}} {end {}} \
     set NODES($nid,external) $external;
     set NODES($nid,start) $start;
     set NODES($nid,type) {};
-    set NODES($nid,etype) {};
+    set NODES($nid,etype) $etype;
     set NODES($nid,${prfx}type) $type;
     set NAME2NID($msgid,$name) $nid;
     set-text $nid $msgid;
@@ -781,7 +784,7 @@ proc ::rsttool::treeditor::tree::node::group-node-p {nid} {
 
 proc ::rsttool::treeditor::tree::node::egroup-node-p {nid} {
     variable ::rsttool::NODES;
-    if {$NODES($nid,etype) == "text" || $NODES($nid,etype) == {}} {return 0}
+    if {$NODES($nid,etype) == "text" || $NODES($nid,etype) == {}} {return 0;}
     return 1;
 }
 
@@ -852,6 +855,7 @@ proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list {a_start -1} \
 	# puts stderr "bisearch: a_start = $a_start";
 	# puts stderr "bisearch: a_list = $a_list";
 	# puts stderr "bisearch: idx = $idx";
+	# puts stderr "bisearch: llen = $llen";
 	# puts stderr "bisearch: nid = [lindex $a_list $idx]";
 	# puts stderr "bisearch: a_get_start = [$a_get_start [lindex $a_list $idx]]";
 	set jstart [$a_get_start [lindex $a_list $idx]];
@@ -859,7 +863,7 @@ proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list {a_start -1} \
 	if {$a_start == $jstart} {
 	    return $idx;
 	} elseif {$a_start > $jstart} {
-	    set idx [expr $idx + ($llen > 1? 0: 1)]
+	    set idx [expr $idx + ($llen < 1 || $llen % 2 ? 1: 0)];
 	    set lstart $idx;
 	}
     }
@@ -963,17 +967,17 @@ proc ::rsttool::treeditor::tree::node::display {a_nid} {
 	set color "green";
 	set text "$NODES($a_nid,name)";
     } else {
-	set color "black"
-	set text "$NODES($a_nid,name)\n$NODES($a_nid,text)"
+	set color "black";
+	set text "$NODES($a_nid,name)\n$NODES($a_nid,text)";
     }
     set xpos $NODES($a_nid,xpos);
     set ypos [expr $NODES($a_nid,ypos) + 2];
-    set wgt [draw-text $RSTW $text $xpos $ypos "-width $NODE_WIDTH -fill $color"]
+    set wgt [draw-text $RSTW $text $xpos $ypos "-width $NODE_WIDTH -fill $color"];
 
-    set NODES($a_nid,textwgt) $wgt
-    set WTN($wgt) $a_nid
+    set NODES($a_nid,textwgt) $wgt;
+    set WTN($wgt) $a_nid;
 
-    draw-span $a_nid
+    draw-span $a_nid;
     # display-arc $a_nid
 }
 

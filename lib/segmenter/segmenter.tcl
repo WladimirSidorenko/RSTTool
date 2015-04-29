@@ -87,6 +87,7 @@ proc ::rsttool::segmenter::show-sentences {path_name msg_id {show_rest 0}} {
     if {! [info exists FORREST($msg_id)]} {
 	return {0 0};
     } elseif {[info exists MSGID2TNODES($msg_id)]} {
+	# puts stderr "show-sentences: MSGID2TNODES($msg_id) == $MSGID2TNODES($msg_id);"
 	set nids $MSGID2TNODES($msg_id);
     } elseif {$show_rest} {
 	set nids {};

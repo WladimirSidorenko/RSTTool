@@ -95,6 +95,7 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
     }
 
     # set variables
+    set t_opts {};
     set color "red";
     set label $NODES($a_sat_nid,${prnt_prfx}relname);
     set ypos $NODES($a_sat_nid,ypos);
@@ -124,7 +125,7 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
 
     if {$a_reltype != $SPAN} {
 	set NODES($a_sat_nid,labelwgt) [draw-text $RSTW $label [lindex $labelpnt 0] \
-					    [lindex $labelpnt 1] [list -fill $color]]
+					    [lindex $labelpnt 1] [list -fill $color {*}$t_opts]];
     }
 }
 
