@@ -552,6 +552,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	$SPAN {
 	    # if we unlink the nucleus, we also have to unlink the
 	    # satellites
+	    destroy-group-node $nuc 0;
 	    puts stderr "unlink: unlinking span, NODES($sat,${chld_prfx}children) == $NODES($sat,${chld_prfx}children)";
 	    foreach chnid $NODES($sat,${chld_prfx}children) {
 		if { $external && ![eparent-msgid-p $NID2MSGID($chnid)] } {

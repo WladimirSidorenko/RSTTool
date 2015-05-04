@@ -472,7 +472,14 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
     }
 
     # delete `gnid` from the children of its parent and put `replnid` instead
-    if { $replnid != {} } {
+    if { $replnid == {} } {
+	if { $NODES($gnid,parent) != {} && $NODES($gnid,reltype) == $SPAN} {
+	    destroy-group-node $NODES($gnid,parent) $replnid $external;
+	}
+	if { $NODES($gnid,eparent) != {} && $NODES($gnid,ereltype) == $SPAN} {
+	    destroy-group-node $NODES($gnid,eparent) $replnid $external;
+	}
+    } else {
 	# update parents of replacement node
 	set grnd_prnt $NODES($gnid,parent);
 	# set appropriate parent of the replacement node
