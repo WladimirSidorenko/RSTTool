@@ -171,7 +171,6 @@ proc ::rsttool::treeditor::set-mode {mode} {
 		    ::rsttool::treeditor::tree::link-nodes $iclicked } }
 	}
 	disconnect { $RSTW config -cursor X_cursor
-	    return;
 	    bind $RSTW <ButtonPress-1> {}
 	    $RSTW bind nodes <Button-1> {}
 	    bind $RSTW <ButtonRelease-1> {

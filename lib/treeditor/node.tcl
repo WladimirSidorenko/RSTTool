@@ -425,6 +425,7 @@ proc ::rsttool::treeditor::tree::node::copy-children {a_trg a_src {a_external 0}
 
     puts stderr "copy-children: NODES($a_src,${chld_prfx}children) = $NODES($a_src,${chld_prfx}children);"
     foreach chnid $NODES($a_src,${chld_prfx}children) {
+	if { [bfs $chnid $a_trg] } {continue;}
 	puts stderr "copy-children: chnid = $chnid;"
 	if {$a_external && ![eparent-msgid-p $NID2MSGID($chnid)]} {
 	    set chld_prnt_prfx "e";
@@ -433,8 +434,8 @@ proc ::rsttool::treeditor::tree::node::copy-children {a_trg a_src {a_external 0}
 	}
 	set NODES($chnid,${chld_prnt_prfx}parent) $a_trg;
 	if { $a_external } {
-	    set NODES($a_trg,echildren) [insort $NODES($a_trg,echildren) [get-child-pos $chnid] \
-					     $chnid 0 get-child-pos];
+	    set NODES($a_trg,echildren) [insort $NODES($a_trg,echildren) \
+					     [get-child-pos $chnid] $chnid 0 get-child-pos];
 	    puts stderr "copy-children: chnid = $chnid;"
 	} else {
 	    # append child node to the list of the parent's children
@@ -506,16 +507,21 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
 	copy-children $replnid $gnid 0;
 	# update roots
 	if { [lsearch $MSGID2ROOTS($gmsg_id) $gnid] != -1 } {
+	    update-roots $gmsg_id $gnid {remove} 0;
 	    update-roots $gmsg_id $replnid {add} 0;
 	}
 	if { [lindex $MSGID2EROOTS($gmsg_id) 0] == $gnid } {
+	    update-roots $gmsg_id $gnid {remove} 1;
 	    update-roots $gmsg_id $replnid {add} 1;
 	}
 	set pmsg_id [lindex $FORREST($gmsg_id) 1];
-	if { $pmsg_id != {} && [lsearch $MSGID2EROOTS($pmsg_id) 0] != -1 } {
+	if { $pmsg_id != {} && [lsearch $MSGID2EROOTS($pmsg_id) $gnid] != -1 } {
+	    update-roots $pmsg_id $gnid {remove} 1;
 	    update-roots $pmsg_id $replnid {add} 1;
 	}
     }
+    puts stderr "destroy-group-node: NODES($replnid,children) == $NODES($replnid,children);"
+    puts stderr "destroy-group-node: NODES($replnid,echildren) == $NODES($replnid,echildren);"
     # erase group node
     clear $gnid;
 }
@@ -700,7 +706,7 @@ proc ::rsttool::treeditor::tree::node::bfs {a_prnt_nid a_chld_nid} {
 
     set seen_nodes [dict create];
     set inid {};
-    set inodes [concat $NODES($a_prnt_nid,children) $NODES($a_prnt_nid,echildren)];
+    set inodes [list $a_prnt_nid];
     while {$inodes != {}} {
 	set inid [lindex $inodes 0];
 	set inodes [lreplace $inodes 0 0];

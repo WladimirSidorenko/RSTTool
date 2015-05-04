@@ -585,6 +585,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	puts stderr "unlink-node: destroy-group-node spannid = $spannid replnid = $replnid external = $external;"
 	destroy-group-node $spannid $replnid $external;
     }
+    puts stderr "unlink-node: sat = $sat; NODES(sat,children) == $NODES($sat,children); NODES(sat,echildren) == $NODES($sat,echildren)"
 
     # 4. Update upward tree structure
     # puts stderr "unlink-node: restructure-upwards nuc = $nuc redraw = $redraw"
