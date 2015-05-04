@@ -172,7 +172,7 @@ proc ::tk::IconList_DrawSelection {w} {
 
 	set bbox [$data(canvas) bbox $tTag]
         $data(canvas) create rect $bbox -fill \#a0a0ff -outline \#a0a0ff \
-		-tags selection
+	    -tags selection
     }
     $data(canvas) lower selection
     return
@@ -218,9 +218,9 @@ proc ::tk::IconList_Create {w} {
 
     frame $w
     set data(sbar)   [scrollbar $w.sbar -orient horizontal \
-	    -highlightthickness 0 -takefocus 0]
+			  -highlightthickness 0 -takefocus 0]
     set data(canvas) [canvas $w.canvas -bd 2 -relief sunken \
-	    -width 400 -height 120 -takefocus 1]
+			  -width 400 -height 120 -takefocus 1]
     pack $data(sbar) -side bottom -fill x -padx 2
     pack $data(canvas) -expand yes -fill both
 
@@ -257,7 +257,7 @@ proc ::tk::IconList_Create {w} {
     bind $data(canvas) <B1-Enter>	[list tk::CancelRepeat]
     bind $data(canvas) <ButtonRelease-1> [list tk::CancelRepeat]
     bind $data(canvas) <Double-ButtonRelease-1> \
-	    [list tk::IconList_Double1 $w %x %y]
+	[list tk::IconList_Double1 $w %x %y]
 
     bind $data(canvas) <Up>		[list tk::IconList_UpDown $w -1]
     bind $data(canvas) <Down>		[list tk::IconList_UpDown $w  1]
@@ -346,12 +346,12 @@ proc ::tk::IconList_Add {w image items} {
 
     foreach text $items {
 	set iTag [$data(canvas) create image 0 0 -image $image -anchor nw \
-		-tags [list icon $data(numItems) item$data(numItems)]]
+		      -tags [list icon $data(numItems) item$data(numItems)]]
 	set tTag [$data(canvas) create text  0 0 -text  $text  -anchor nw \
-		-font $data(font) -fill $data(fill) \
-		-tags [list text $data(numItems) item$data(numItems)]]
+		      -font $data(font) -fill $data(fill) \
+		      -tags [list text $data(numItems) item$data(numItems)]]
 	set rTag [$data(canvas) create rect  0 0 0 0 -fill "" -outline "" \
-		-tags [list rect $data(numItems) item$data(numItems)]]
+		      -tags [list rect $data(numItems) item$data(numItems)]]
 	
 	foreach {x1 y1 x2 y2} [$data(canvas) bbox $iTag] {
 	    break
@@ -364,7 +364,7 @@ proc ::tk::IconList_Add {w image items} {
 	if {$data(maxIH) < $iH} {
 	    set data(maxIH) $iH
 	}
-    
+	
 	foreach {x1 y1 x2 y2} [$data(canvas) bbox $tTag] {
 	    break
 	}
@@ -376,9 +376,9 @@ proc ::tk::IconList_Add {w image items} {
 	if {$data(maxTH) < $tH} {
 	    set data(maxTH) $tH
 	}
-    
+	
 	lappend data(list) [list $iTag $tTag $rTag $iW $iH $tW \
-		$tH $data(numItems)]
+				$tH $data(numItems)]
 	set itemList($rTag) [list $iTag $tTag $text $data(numItems)]
 	set textList($data(numItems)) [string tolower $text]
 	incr data(numItems)
@@ -401,7 +401,7 @@ proc ::tk::IconList_Arrange {w} {
     set W [winfo width  $data(canvas)]
     set H [winfo height $data(canvas)]
     set pad [expr {[$data(canvas) cget -highlightthickness] + \
-	    [$data(canvas) cget -bd]}]
+		       [$data(canvas) cget -bd]}]
     if {$pad < 2} {
 	set pad 2
     }
@@ -502,7 +502,7 @@ proc ::tk::IconList_See {w rTag} {
 
     set bbox [$data(canvas) bbox item$rTag]
     set pad [expr {[$data(canvas) cget -highlightthickness] + \
-	    [$data(canvas) cget -bd]}]
+		       [$data(canvas) cget -bd]}]
 
     set x1 [lindex $bbox 0]
     set x2 [lindex $bbox 2]
@@ -837,7 +837,7 @@ proc ::tk::dialog::file:: {type args} {
 
     trace variable data(selectPath) w "::tk::dialog::file::SetPath $w"
     $data(dirMenuBtn) configure \
-	    -textvariable ::tk::dialog::file::${dataName}(selectPath)
+	-textvariable ::tk::dialog::file::${dataName}(selectPath)
 
     # Initialize the file types menu
     #
@@ -1003,20 +1003,20 @@ proc ::tk::dialog::file::Create {w class} {
     set data(upBtn) [button $f1.up]
     if {![info exists Priv(updirImage)]} {
 	set Priv(updirImage) [image create bitmap -data {
-#define updir_width 28
-#define updir_height 16
-static char updir_bits[] = {
-   0x00, 0x00, 0x00, 0x00, 0x80, 0x1f, 0x00, 0x00, 0x40, 0x20, 0x00, 0x00,
-   0x20, 0x40, 0x00, 0x00, 0xf0, 0xff, 0xff, 0x01, 0x10, 0x00, 0x00, 0x01,
-   0x10, 0x02, 0x00, 0x01, 0x10, 0x07, 0x00, 0x01, 0x90, 0x0f, 0x00, 0x01,
-   0x10, 0x02, 0x00, 0x01, 0x10, 0x02, 0x00, 0x01, 0x10, 0x02, 0x00, 0x01,
-   0x10, 0xfe, 0x07, 0x01, 0x10, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x01,
-   0xf0, 0xff, 0xff, 0x01};}]
+	    #define updir_width 28
+	    #define updir_height 16
+	    static char updir_bits[] = {
+		0x00, 0x00, 0x00, 0x00, 0x80, 0x1f, 0x00, 0x00, 0x40, 0x20, 0x00, 0x00,
+		0x20, 0x40, 0x00, 0x00, 0xf0, 0xff, 0xff, 0x01, 0x10, 0x00, 0x00, 0x01,
+		0x10, 0x02, 0x00, 0x01, 0x10, 0x07, 0x00, 0x01, 0x90, 0x0f, 0x00, 0x01,
+		0x10, 0x02, 0x00, 0x01, 0x10, 0x02, 0x00, 0x01, 0x10, 0x02, 0x00, 0x01,
+		0x10, 0xfe, 0x07, 0x01, 0x10, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x01,
+		0xf0, 0xff, 0xff, 0x01};}]
     }
     $data(upBtn) config -image $Priv(updirImage)
 
     $f1.menu config -takefocus 1 -highlightthickness 2
- 
+    
     pack $data(upBtn) -side right -padx 4 -fill both
     pack $f1.lab -side left -padx 4 -fill both
     pack $f1.menu -expand yes -fill both -padx 4
@@ -1036,17 +1036,17 @@ static char updir_bits[] = {
 	set iconListCommand [list ::tk::dialog::file::chooseDir::DblClick $w]
     }
     set data(icons) [::tk::IconList $w.icons \
-	    -command	$iconListCommand \
-	    -multiple	$data(-multiple)]
+			 -command	$iconListCommand \
+			 -multiple	$data(-multiple)]
     bind $data(icons) <<ListboxSelect>> \
-	    [list ::tk::dialog::file::ListBrowse $w]
+	[list ::tk::dialog::file::ListBrowse $w]
 
     # f2: the frame with the OK button, cancel button, "file name" field
     #     and file types field.
     #
     set f2 [frame $w.f2 -bd 0]
     bind [::tk::AmpWidget label $f2.lab -text $fNameCaption -anchor e -pady 0]\
-	    <<AltUnderlined>> [list focus $f2.ent]
+	<<AltUnderlined>> [list focus $f2.ent]
     set data(ent) [entry $f2.ent]
 
     # The font to use for the icons. The default Canvas font on Unix
@@ -1062,20 +1062,20 @@ static char updir_bits[] = {
 	# bindtags)
 
 	set data(typeMenuLab) [::tk::AmpWidget button $f2.lab2 \
-		-text $fTypeCaption  -anchor e  -bd [$f2.lab cget -bd] \
-		-highlightthickness [$f2.lab cget -highlightthickness] \
-		-relief [$f2.lab cget -relief] \
-		-padx [$f2.lab cget -padx] \
-		-pady [$f2.lab cget -pady]]
+				   -text $fTypeCaption  -anchor e  -bd [$f2.lab cget -bd] \
+				   -highlightthickness [$f2.lab cget -highlightthickness] \
+				   -relief [$f2.lab cget -relief] \
+				   -padx [$f2.lab cget -padx] \
+				   -pady [$f2.lab cget -pady]]
 	bindtags $data(typeMenuLab) [list $data(typeMenuLab) Label \
-		[winfo toplevel $data(typeMenuLab)] all]
+					 [winfo toplevel $data(typeMenuLab)] all]
 	set data(typeMenuBtn) [menubutton $f2.menu -indicatoron 1 \
-		-menu $f2.menu.m]
+				   -menu $f2.menu.m]
 	set data(typeMenu) [menu $data(typeMenuBtn).m -tearoff 0]
 	$data(typeMenuBtn) config -takefocus 1 -highlightthickness 2 \
-		-relief raised -bd 2 -anchor w
+	    -relief raised -bd 2 -anchor w
         bind $data(typeMenuLab) <<AltUnderlined>> [list \
-		focus $data(typeMenuBtn)]
+						       focus $data(typeMenuBtn)]
     }
 
     # the okBtn is created after the typeMenu so that the keyboard traversal
@@ -1085,10 +1085,10 @@ static char updir_bits[] = {
     # once will do). [Bug 987169]
 
     set data(okBtn)     [::tk::AmpWidget button $f2.ok \
-	    -text "[mc "&OK"]"     -default active -pady 3]
+			     -text "[mc "&OK"]"     -default active -pady 3]
     bind $data(okBtn) <Destroy> [list ::tk::dialog::file::Destroyed $w]
     set data(cancelBtn) [::tk::AmpWidget button $f2.cancel \
-	    -text "[mc "&Cancel"]" -default normal -pady 3]
+			     -text "[mc "&Cancel"]" -default normal -pady 3]
 
     # grid the widgets in f2
     #
@@ -1096,7 +1096,7 @@ static char updir_bits[] = {
     grid configure $f2.ent -padx 2
     if { [string equal $class TkFDialog] } {
 	grid $data(typeMenuLab) $data(typeMenuBtn) $data(cancelBtn) \
-		-padx 4 -sticky ew
+	    -padx 4 -sticky ew
 	grid configure $data(typeMenuBtn) -padx 0
     } else {
 	grid x x $data(cancelBtn) -padx 4 -sticky ew
@@ -1165,7 +1165,7 @@ proc ::tk::dialog::file::SetSelectMode {w multi} {
     set iconListCommand [list ::tk::dialog::file::OkCmd $w]
     ::tk::SetAmpText $w.f2.lab $fNameCaption 
     ::tk::IconList_Config $data(icons) \
-	    [list -multiple $multi -command $iconListCommand]
+	[list -multiple $multi -command $iconListCommand]
     return
 }
 
@@ -1212,11 +1212,11 @@ proc ::tk::dialog::file::Update {w} {
 
     if {![info exists Priv(folderImage)]} {
 	set Priv(folderImage) [image create photo -data {
-R0lGODlhEAAMAKEAAAD//wAAAPD/gAAAACH5BAEAAAAALAAAAAAQAAwAAAIghINhyycvVFsB
-QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
+	    R0lGODlhEAAMAKEAAAD//wAAAPD/gAAAACH5BAEAAAAALAAAAAAQAAwAAAIghINhyycvVFsB
+	    QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
 	set Priv(fileImage)   [image create photo -data {
-R0lGODlhDAAMAKEAALLA3AAAAP//8wAAACH5BAEAAAAALAAAAAAMAAwAAAIgRI4Ha+IfWHsO
-rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
+	    R0lGODlhDAAMAKEAALLA3AAAAP//8wAAACH5BAEAAAAALAAAAAAMAAwAAAIgRI4Ha+IfWHsO
+	    rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     }
     set folder $Priv(folderImage)
     set file   $Priv(fileImage)
@@ -1363,7 +1363,7 @@ proc ::tk::dialog::file::SetFilter {w type} {
 	set index [lsearch -regexp $data(filter) {^\*\.\w+$}]
 	if {$index >= 0} {
 	    set data(-defaultextension) \
-		    [string trimleft [lindex $data(filter) $index] "*"]
+		[string trimleft [lindex $data(filter) $index] "*"]
 	} else {
 	    # Couldn't find anything!  Reset to a safe default...
 	    set data(-defaultextension) ""
@@ -1538,7 +1538,7 @@ proc ::tk::dialog::file::VerifyFileName {w filename} {
     upvar ::tk::dialog::file::[winfo name $w] data
 
     set list [::tk::dialog::file::ResolveFile $data(selectPath) $filename \
-	    $data(-defaultextension)]
+		  $data(-defaultextension)]
     foreach {flag path file} $list {
 	break
     }
@@ -1587,14 +1587,14 @@ proc ::tk::dialog::file::VerifyFileName {w filename} {
 	}
 	CHDIR {
 	    tk_messageBox -type ok -parent $w -message \
-	       "[mc "Cannot change to the directory \"%1\$s\".\nPermission denied." $path]"\
+		"[mc "Cannot change to the directory \"%1\$s\".\nPermission denied." $path]"\
 		-icon warning
 	    $data(ent) selection range 0 end
 	    $data(ent) icursor end
 	}
 	ERROR {
 	    tk_messageBox -type ok -parent $w -message \
-	       "[mc "Invalid file name \"%1\$s\"." $path]"\
+		"[mc "Invalid file name \"%1\$s\"." $path]"\
 		-icon warning
 	    $data(ent) selection range 0 end
 	    $data(ent) icursor end
@@ -1732,14 +1732,14 @@ proc ::tk::dialog::file::ListInvoke {w filenames} {
     }
 
     set file [::tk::dialog::file::JoinFile $data(selectPath) \
-	    [lindex $filenames 0]]
+		  [lindex $filenames 0]]
     
     set class [winfo class $w]
     if {[string equal $class TkChooseDir] || [file isdirectory $file]} {
 	set appPWD [pwd]
 	if {[catch {cd $file}]} {
 	    tk_messageBox -type ok -parent $w -message \
-	       "[mc "Cannot change to the directory \"%1\$s\".\nPermission denied." $file]"\
+		"[mc "Cannot change to the directory \"%1\$s\".\nPermission denied." $file]"\
 		-icon warning
 	} else {
 	    cd $appPWD
@@ -1772,23 +1772,23 @@ proc ::tk::dialog::file::Done {w {selectFilePath ""}} {
 	    set selectFilePath {}
 	    foreach f $data(selectFile) {
 		lappend selectFilePath [::tk::dialog::file::JoinFile \
-		    $data(selectPath) $f]
+					    $data(selectPath) $f]
 	    }
 	} else {
 	    set selectFilePath [::tk::dialog::file::JoinFile \
-		    $data(selectPath) $data(selectFile)]
+				    $data(selectPath) $data(selectFile)]
 	}
-	
+
 	set Priv(selectFile)     $data(selectFile)
 	set Priv(selectPath)     $data(selectPath)
 
 	if {[string equal $data(type) save]} {
 	    if {[file exists $selectFilePath]} {
-	    set reply [tk_messageBox -icon warning -type yesno\
-		    -parent $w -message \
-			"[mc "File \"%1\$s\" already exists.\nDo you want to overwrite it?" $selectFilePath]"]
-	    if {[string equal $reply "no"]} {
-		return
+		set reply [tk_messageBox -icon warning -type yesno\
+			       -parent $w -message \
+			       "[mc "File \"%1\$s\" already exists.\nDo you want to overwrite it?" $selectFilePath]"]
+		if {[string equal $reply "no"]} {
+		    return
 		}
 	    }
 	}

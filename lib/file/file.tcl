@@ -270,8 +270,8 @@ proc ::rsttool::file::read-tnode {a_segments} {
 
 proc ::rsttool::file::read-gnode {a_spans} {
     variable ::rsttool::NODES;
-    variable ::rsttool::MSGID2ROOTS;
     variable ::rsttool::NID2MSGID;
+    variable ::rsttool::MSGID2ROOTS;
     variable ::rsttool::GROUP_NODE_CNT;
     namespace import ::rsttool::treeditor::tree::node::insort;
     namespace import ::rsttool::treeditor::tree::node::get-start;
@@ -412,8 +412,6 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 proc ::rsttool::file::read-relations {a_relations} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2MSGID;
-    variable ::rsttool::MSGID2ROOTS;
-    variable ::rsttool::MSGID2EROOTS;
     variable ::rsttool::relations::SPAN;
     variable ::rsttool::relations::HYPOTACTIC;
     variable ::rsttool::relations::PARATACTIC;
@@ -469,11 +467,9 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    # puts stderr "read-relations: isat_id = $isat_id (msgid = $sat_msgid)";
 		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 1;
 		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 1;
-		    # puts stderr "read-relations: 1) MSGID2EROOTS($nuc_msgid) = $MSGID2EROOTS($nuc_msgid)";
 		} else {
 		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 0;
 		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 0;
-		    # puts stderr "read-relations: MSGID2ROOTS($nuc_msgid) = $MSGID2ROOTS($nuc_msgid)";
 		}
 		# link parent to span
 		set NODES($inuc_id,parent) $ispan_id;

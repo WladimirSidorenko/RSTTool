@@ -7,13 +7,14 @@ package require rsttool::treeditor::tree::node;
 
 ##################################################################
 namespace eval ::rsttool::treeditor::tree {
-    namespace export wtn;
-    namespace export ntw;
-    namespace export unlink;
     namespace export choose-label;
     namespace export clicked-node;
     namespace export clicked-widget;
+    namespace export erase-subtree;
+    namespace export ntw;
     namespace export popup-choose-from-list;
+    namespace export unlink;
+    namespace export wtn;
 }
 
 ##################################################################
@@ -83,6 +84,8 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     variable ::rsttool::treeditor::RSTW;
     variable ::rsttool::treeditor::DRAGGED_NID;
     variable ::rsttool::treeditor::VISIBLE_NODES;
+    variable ::rsttool::treeditor::MESSAGE;
+    variable ::rsttool::treeditor::DISPLAYMODE;
     namespace import ::rsttool::segmenter::message;
     namespace import ::rsttool::treeditor::tree::node::get-visible-parent;
 
@@ -113,9 +116,14 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     # puts stderr "dragged_prnt = $dragged_prnt";
     if {$dragged_msgid != $clicked_msgid} {set ext_connection 1}
     # forbid multiple roots for one message
-    if {$dragged_prnt != {} && [info exists VISIBLE_NODES($dragged_prnt)] && $clicked_is_prnt == 0} {
-	message "Node $NODES($clicked_nid,name) already has a parent.";
-	return;
+    if { $dragged_prnt != {} && [info exists VISIBLE_NODES($dragged_prnt)] } {
+	if { $clicked_is_prnt == 0 } {
+	    message "Node $NODES($clicked_nid,name) already has a parent.";
+	    return;
+	} elseif { [node::bfs $clicked_nid $dragged_nid] } {
+	    message "Node $NODES($dragged_nid,name) is a descendant of node $NODES($clicked_nid,name).";
+	    return;
+	}
     }
 
     # prevent non-projective edges, i.e. given node can only be linked
@@ -126,7 +134,7 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     # puts stderr "link-nodes: clicked_prnt = [get-visible-parent $clicked_nid]"
     # puts stderr "link-nodes: dragged_prnt = [get-visible-parent $dragged_nid]"
     # puts stderr "link-nodes: clicked_idx = $clicked_idx; dragged_idx = $dragged_idx"
-    if {[expr abs([expr $clicked_idx - $dragged_idx])] > 1} {
+    if { $DISPLAYMODE == $MESSAGE && [expr abs([expr $clicked_idx - $dragged_idx])] > 1 } {
 	message "Can't connect non-adjacent nodes."
 	return;
     }
@@ -430,10 +438,16 @@ proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype
 proc ::rsttool::treeditor::tree::erase-subtree {a_nid} {
     variable ::rsttool::NODES;
     variable ::rsttool::treeditor::VISIBLE_NODES;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
 
+    set chld_prfx "";
+    if {$DISPLAYMODE == $DISCUSSION} {
+	set chld_prfx "e";
+    }
     # puts stderr "*** erase-subtree: a_nid = $a_nid"
     node::erase $a_nid;
-    foreach chnid $NODES($a_nid,children) {
+    foreach chnid $NODES($a_nid,${chld_prfx}children) {
 	if {[info exists VISIBLE_NODES($chnid)]} {
 	    erase-subtree $chnid;
 	}
@@ -443,68 +457,142 @@ proc ::rsttool::treeditor::tree::erase-subtree {a_nid} {
 proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
     variable ::rsttool::NODES;
     variable ::rsttool::NID2MSGID;
+    variable ::rsttool::CRNT_MSGID;
+    variable ::rsttool::PRNT_MSGID;
+    variable ::rsttool::relations::SPAN;
+    variable ::rsttool::relations::HYPOTACTIC;
+    variable ::rsttool::relations::PARATACTIC;
+    variable ::rsttool::treeditor::DISCUSSION;
+    variable ::rsttool::treeditor::DISPLAYMODE;
+
     namespace import ::rsttool::utils::ldelete;
-    namespace import ::rsttool::treeditor::destroy-group-node;
+    namespace import ::rsttool::treeditor::update-roots;
+    namespace import ::rsttool::treeditor::tree::node::destroy;
+    namespace import ::rsttool::treeditor::tree::node::destroy-group-node;
     namespace import ::rsttool::treeditor::tree::node::group-node-p;
+    namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
+    namespace import ::rsttool::treeditor::layout::redisplay-net;
 
-    return;
-    # 1. handle missed clicks
-    if {$sat == {} || $NODES($sat,parent) == {}} {return}
+    # 0. handle missed clicks and set appropriate prefixes
+    if {$sat == {}} {return;}
 
-    # 1. Delete connection between `sat` and its parent
-    set nuc $NODES($sat,parent)
-    set node($nuc,children) [ldelete $NODES($nuc,children) $sat]
-    set node($sat,parent) {}
-    set node($sat,relname) {}
-    set spannid {}
-    if {[info exists NODES($nuc,parent)] && $NODES($nuc,relname) == "span"} {
-	set spannid $NODES($nuc,parent)
+    set nuc_prfx ""; set sat_prfx ""; set chld_prfx "";
+    set external [expr { $DISPLAYMODE eq $DISCUSSION }];
+    if {$external} {
+	set chld_prfx "e";
+	if {![eparent-msgid-p $NID2MSGID($sat)]} {set sat_prfx "e";}
+	if {$PRNT_MSGID == {}} {
+	    set imsgid $CRNT_MSGID;
+	} else {
+	    set imsgid $PRNT_MSGID;
+	}
+    } else {
+	set imsgid $CRNT_MSGID;
     }
-    # puts stderr "unlink-node: sat = $sat (children: $NODES($sat,children))"
-    # puts stderr "unlink-node: nuc = $nuc (children: $NODES($nuc,children))"
-    # if {$spannid != {}} {puts stderr "unlink-node: spannid = $spannid  (children: $NODES($spannid,children))"}
+    set nuc $NODES($sat,${sat_prfx}parent);
+    if {$nuc == {}} {return;}
+    if {$external && ![eparent-msgid-p $NID2MSGID($nuc)]} {set nuc_prfx "e";}
 
-    # 2. Redraw satellite substructure
-    if {$redraw} {layout::y-layout-subtree $sat}
-    # 3. If parent has no more children, delete span node and shift
-    # the parent up the structure
-    set dgn 0
-    # puts stderr "unlink-node: node($nuc,children) = $NODES($nuc,children)"
-    if {$NODES($nuc,children) == {}} {
-	set dgn 1
-	# puts stderr "unlink-node: 1) set dgn 1"
-    } elseif [group-node-p $nuc] {
-	set dgn 1
-	# puts stderr "unlink-node: 2) set dgn 1"
-	# here, we have to differentiate between cases where `nuc` and
-	# `sat` belong to same or to different messages
-	if {$NID2MSGID($nuc) == $NID2MSGID($sat)} {
-	    foreach chnid $NODES($nuc,children) {
-		if {$NODES($chnid,relname) != "span"} {
-		    set dgn 0
-		    break
+    # 0. Remove clicked node from the list of its parent's children.
+    set NODES($nuc,${chld_prfx}children) [ldelete $NODES($nuc,${chld_prfx}children) $sat];
+    update-roots $imsgid $sat {add} $external;
+
+    # 1. Determine span node of the nucleus and check if it should be deleted too.
+    set delete_span 0;			# delete group node
+    set spannid {}; set replnid {};
+    set reltype $NODES($sat,${sat_prfx}reltype);
+
+    switch -nocase -- $reltype \
+	$PARATACTIC {
+	    # for multi-nuclear relations, check if there are other
+	    # multinuclear children connected to the given parent
+	    set spannid $nuc;
+	    if { [llength $NODES($nuc,${chld_prfx}children)] < 2 } {
+		set delete_span 1;
+	    } else {
+		set ch_prfx "";
+		set mnuc_cnt 0;
+		set delete_span 1;
+		foreach chnid $NODES($nuc,${chld_prfx}children) {
+		    if {$external && ![eparent-msgid-p $NID2MSGID($chnid)]} {
+			set ch_prfx "e";
+		    } else {
+			set ch_prfx "";
+		    }
+		    switch -nocase -- $NODES($chnid,${ch_prfx}reltype) \
+			$PARATACTIC {set replnid $chnid; incr mnuc_cnt;} \
+			$HYPOTACTIC {set delete_span 0; break;} \
+			default { error "Invalid relation type specified for node $chnid: \
+'$NODES($chnid,${ch_prfx}reltype)'."}
+		}
+		if { ! $delete_span && $mnuc_cnt == 1 } {
+		    set delete_span 1;
 		}
 	    }
-	    if {[llength $NODES($nuc,children)] == 1} {
-		set dgn 1
-		destroy $nuc
-		# puts stderr "unlink-node: calling destroy-node $nuc"
+	} \
+	$HYPOTACTIC {
+	    # for mono-nuclear relations, check if there are other
+	    # children left
+	    set ch_prfx "";
+	    set delete_span 1;
+	    set replnid $nuc;
+	    set spannid $NODES($nuc,${nuc_prfx}parent);
+	    foreach chnid $NODES($nuc,${chld_prfx}children) {
+		if {$external && ![eparent-msgid-p $NID2MSGID($chnid)]} {
+		    set ch_prfx "e";
+		} else {
+		    set ch_prfx "";
+		}
+		if { $NODES($chnid,${ch_prfx}reltype) == $HYPOTACTIC } {
+		    set delete_span 0;
+		    break;
+		}
+	    }
+	} \
+	$SPAN {
+	    # if we unlink the nucleus, we also have to unlink the
+	    # satellites
+	    puts stderr "unlink: unlinking span, NODES($sat,${chld_prfx}children) == $NODES($sat,${chld_prfx}children)";
+	    foreach chnid $NODES($sat,${chld_prfx}children) {
+		if { $external && ![eparent-msgid-p $NID2MSGID($chnid)] } {
+		    set ch_prfx "e";
+		} else {
+		    set ch_prfx "";
+		}
+		if { $NODES($chnid,${ch_prfx}reltype) == $HYPOTACTIC } {
+		    puts stderr "unlink: chnid == $chnid";
+		    unlink $chnid 0;
+		}
 	    }
 	}
+
+    puts stderr "unlink-node: sat = $sat";
+    if { [info exists NODES($nuc,${chld_prfx}children)] } {
+	puts stderr "unlink-node: nuc = $nuc (${chld_prfx}children: $NODES($nuc,${chld_prfx}children))";
+    }
+    if {$spannid != {}} {
+	puts stderr "unlink-node: span = $spannid (children: $NODES($spannid,${chld_prfx}children))";
     }
 
-    # puts stderr "unlink-node: dgn = $dgn"
-    if {$dgn} {
-	if {$spannid != {} && [info exists nid2msgid($spannid)]} {
-	    # puts stderr "unlink-node: destroy-group-node spannid = $spannid nuc = $nuc redraw = $redraw"
-	    destroy-group-node $spannid $nuc $redraw
-	} elseif [group-node-p $nuc] {
-	    # puts stderr "unlink-node: destroy-node nuc = $nuc redraw = $redraw"
-	    destroy $nuc $redraw
-	}
+    # 2. Delete connection between clicked node and its parent.
+    set NODES($sat,${sat_prfx}parent) {};
+    set NODES($sat,${sat_prfx}relname) {};
+    set NODES($sat,${sat_prfx}reltype) {};
+
+    # 3. Delete span node, if necessary
+    puts stderr "unlink-node: delete_span = $delete_span"
+    if { $delete_span && $spannid != {} } {
+	puts stderr "unlink-node: destroy-group-node spannid = $spannid replnid = $replnid external = $external;"
+	destroy-group-node $spannid $replnid $external;
     }
+
+    # 4. Update upward tree structure
     # puts stderr "unlink-node: restructure-upwards nuc = $nuc redraw = $redraw"
-    update-upwards $nuc $redraw
+    # update-upwards $nuc;
+
+    # 5. Redraw satellite substructure
+    ::rsttool::set-state {changed} "Unlinked node $NODES($sat,name)";
+    if {$redraw} {redisplay-net;}
 }
 
 proc rsttool::treeditor::tree::screen-coords {item canvas} {

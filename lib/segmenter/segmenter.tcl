@@ -366,26 +366,26 @@ proc ::rsttool::segmenter::segment {{my_current {}}} {
     # if we pointed with the mouse to an already analyzed area, then do nothing
     if {[.editor.text tag ranges new] == {} || \
 	    [.editor.text compare new.first >= $my_current]} {
-	return
+	return;
     }
     # remove tag `my_sel` from the whole text area
-    .editor.text tag remove my_sel 1.0 end
-    .editor.text tag add sel new.first "insert wordend"
-    .editor.text tag add my_sel new.first "insert wordend"
+    .editor.text tag remove my_sel 1.0 end;
+    .editor.text tag add sel new.first "insert wordend";
+    .editor.text tag add my_sel new.first "insert wordend";
 
     # obtain indices of the last char in selection and the end of the text
-    set x [.editor.text index my_sel.last]
-    set y [.editor.text index end]
+    set x [.editor.text index my_sel.last];
+    set y [.editor.text index end];
     # put mark `last_sel` just before the last character in `my_sel`
-    .editor.text mark set last_sel my_sel.last
+    .editor.text mark set last_sel my_sel.last;
     if {$x == $y} {
-	.editor.text mark set last_sel "my_sel.last - 1 chars"
-  	.editor.text tag remove sel last_sel sel.last
-  	.editor.text tag remove my_sel last_sel my_sel.last
+	.editor.text mark set last_sel "my_sel.last - 1 chars";
+  	.editor.text tag remove sel last_sel sel.last;
+  	.editor.text tag remove my_sel last_sel my_sel.last;
     }
 
-    set start_pos [expr [.editor.text count -chars 1.0 sel.first] - $OFFSET_SHIFT]
-    set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $OFFSET_SHIFT]
+    set start_pos [expr [.editor.text count -chars 1.0 sel.first] - $OFFSET_SHIFT];
+    set end_pos [expr [.editor.text count -chars 1.0 sel.last] - $OFFSET_SHIFT];
 
     set inid [::rsttool::treeditor::tree::node::make {text} $start_pos $end_pos {} $CRNT_MSGID];
     ::rsttool::treeditor::update-roots $CRNT_MSGID $inid {add};

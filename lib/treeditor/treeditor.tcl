@@ -35,6 +35,8 @@ namespace eval ::rsttool::treeditor {
     array set ERASED_NODES {};
     variable COLLAPSED_NODES;
     array set COLLAPSED_NODES {};
+
+    namespace export update-roots;
 }
 
 ##################################################################
@@ -174,9 +176,7 @@ proc ::rsttool::treeditor::set-mode {mode} {
 	    bind $RSTW <ButtonRelease-1> {
 		set iclicked [::rsttool::treeditor::tree::clicked-node %x %y];
 		if {$iclicked != {}} {
-		    return;
-		    ::rsttool::treeditor::tree::unlink-nodes $iclicked;
-		    ::rsttool::treeditor::layout::redisplay-net;
+		    ::rsttool::treeditor::tree::unlink $iclicked 1;
 		}
 	    }
 	}
@@ -252,6 +252,7 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
     variable ::rsttool::treeditor::DISPLAYMODE;
     namespace import ::rsttool::utils::ldelete;
 
+    # puts stderr "update-roots: msgid = $a_msgid, nid = $a_nid, a_operation = $a_operation, a_external = $a_external;";
     # perform given operation on all messages
     set op {};
     switch -nocase -- $a_operation {
@@ -261,7 +262,6 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 	{add} {
 	    # define appropriate insertion operation
 	    if {$a_external} {
-		# puts stderr "update-roots: msgid = $a_msgid, nid = $a_nid, add, external;";
 		proc insort {a_list a_nid} {
 		    variable ::rsttool::NID2MSGID;
 		    namespace import ::rsttool::treeditor::tree::node::get-child-pos;

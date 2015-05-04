@@ -3,20 +3,22 @@
 
 ##################################################################
 namespace eval ::rsttool::treeditor::tree::node {
+    namespace export bfs;
     namespace export bisearch;
+    namespace export destroy-group-node;
     namespace export draw-span;
     namespace export draw-text;
+    namespace export egroup-node-p;
     namespace export eparent-msgid-p;
+    namespace export get-ancestor;
     namespace export get-child-pos;
     namespace export get-end-node;
     namespace export get-end;
+    namespace export get-estart;
     namespace export get-eterminal;
     namespace export get-start-node;
-    namespace export get-estart;
     namespace export get-start;
     namespace export get-visible-parent;
-    namespace export get-ancestor;
-    namespace export egroup-node-p;
     namespace export group-node-p;
     namespace export insort;
     namespace export make-name;
@@ -291,7 +293,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    set inodes $MSGID2EROOTS($msg_id);
 	    set chld_prfx "e";
 	}
-	# puts stderr "show-nodes: 0) DISPLAYMODE = $DISPLAYMODE, msg_id = $msg_id, inodes = $inodes";
+	puts stderr "show-nodes: 0) DISPLAYMODE = $DISPLAYMODE, msg_id = $msg_id, inodes = $inodes";
 	array set seen_nodes {};
 	set inid {}; set imsgid {}; set iprnt_msgid {};
 	while {$inodes != {}} {
@@ -309,12 +311,14 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    set iprnt_msgid [lindex $FORREST($imsgid) 1];
 	    # puts stderr "show-nodes: msg_id = $msg_id, imsgid = $imsgid"
 	    if {$DISPLAYMODE == $MESSAGE && $imsgid != $msg_id} {continue;}
+	    puts stderr "show-nodes: 0) inid == $inid, NODES($inid,external) == $NODES($inid,external)";
 	    if {$DISPLAYMODE == $DISCUSSION && \
 		    (!$NODES($inid,external) || \
 			 ($imsgid != $CRNT_MSGID && $imsgid != $PRNT_MSGID && \
 			      (($PRNT_MSGID != {} && $iprnt_msgid != $PRNT_MSGID) || \
 				   ($PRNT_MSGID == {} && $iprnt_msgid != $CRNT_MSGID))))} {continue;}
 	    set VISIBLE_NODES($inid) 1
+	    puts stderr "show-nodes: 1) add NODES($inid,${chld_prfx}children) = $NODES($inid,${chld_prfx}children) to inodes";
 	    set inodes [concat $inodes $NODES($inid,${chld_prfx}children)];
 	}
 	array unset seen_nodes;
@@ -351,14 +355,14 @@ proc ::rsttool::treeditor::tree::node::erase {a_nid} {
 
 proc ::rsttool::treeditor::tree::node::destroy {nid {redraw 1}} {
     # 1. unlink node if still connected
-    ::rsttool::treeditor::tree::unlink $nid 0
+    ::rsttool::treeditor::tree::unlink $nid 0;
 
     # 2. delete the graphic presentation
-    erase $nid
+    erase $nid;
 
     # 3. remove node from visible node list and drop all its
     # structural information
-    clear $nid
+    clear $nid;
 }
 
 proc ::rsttool::treeditor::legal-node {the_node {prev_node {}} } {
@@ -409,259 +413,115 @@ proc ::rsttool::treeditor::ymove-node {nid ydelta} {
     }
 }
 
-# Delete node `nid` and re-link its possible child to the parent of node `nid`
-proc ::rsttool::treeditor::destroy-group-node {gnid {replnid {}} {redraw 1}} {
-    global node nid2msgid msgs2extnid
+proc ::rsttool::treeditor::tree::node::copy-children {a_trg a_src {a_external 0}} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::NID2MSGID;
 
-    if {$gnid == {}} {return}
-    set prnt_msg_id $nid2msgid($gnid)
-    # remove group node which connects two messages from msgs2extnid
-    if {[llength $prnt_msg_id] > 1} {
-	set msgkey [join $prnt_msg_id ","]
-	# puts stderr "destroy-group-node: msgs2extnid($msgkey)"
-	if [info exists msgs2extnid($msgkey)] {
-	    # puts stderr "destroy-group-node: msgs2extnid($msgkey) exists - deleting"
-	    unset msgs2extnid($msgkey)
+    puts stderr "copy-children: a_src = $a_src, a_trg = $a_trg, a_external == $a_external;"
+    set chld_prfx ""; set chld_prnt_prfx "";
+    if { $a_external } {
+	set chld_prfx "e";
+    }
+
+    puts stderr "copy-children: NODES($a_src,${chld_prfx}children) = $NODES($a_src,${chld_prfx}children);"
+    foreach chnid $NODES($a_src,${chld_prfx}children) {
+	puts stderr "copy-children: chnid = $chnid;"
+	if {$a_external && ![eparent-msgid-p $NID2MSGID($chnid)]} {
+	    set chld_prnt_prfx "e";
+	} else {
+	    set chld_prnt_prfx "";
 	}
-    }
-    # delete `gnid` from the list of children of its parent
-    set gprnt $NODES($gnid,parent)
-    set node($gnid,parent) {}
-    if {$gprnt != {}} {
-	set node($gprnt,children) [concat [ldelete $NODES($gprnt,children) $gnid] $replnid]
-    }
-    # append relacement node to the list of grand parent's children;
-    # re-link all children of `gnid` to `replnid` except `replnid`
-    # itself
-    if {$replnid != {}} {
-	set node($replnid,parent) $gprnt
-	set node($gnid,children) [ldelete $NODES($gnid,children) $replnid]
-	set node($replnid,children) [lsort -integer [concat $NODES($replnid,children) \
-							 $NODES($gnid,children)]]
-	if {$NODES($replnid,relname) == "span"} {
-	    set node($replnid,relname) $NODES($gnid,relname)
+	set NODES($chnid,${chld_prnt_prfx}parent) $a_trg;
+	if { $a_external } {
+	    set NODES($a_trg,echildren) [insort $NODES($a_trg,echildren) [get-child-pos $chnid] \
+					     $chnid 0 get-child-pos];
+	    puts stderr "copy-children: chnid = $chnid;"
+	} else {
+	    # append child node to the list of the parent's children
+	    set NODES($a_trg,children) [insort $NODES($a_trg,children) $NODES($chnid,start) $chnid];
 	}
-    }
-    foreach chnid $NODES($gnid,children) {
-	set node($chnid,parent) $replnid
-	set chld_msg_id $nid2msgid($chnid)
-	# if `gnid` has children in other messages, then update
-	# information stored in msgs2extnid
-	if {[llength $prnt_msg_id] == 1 && $prnt_msg_id != $chld_msg_id} {
-	    set msgkey "$prnt_msg_id,$chld_msg_id"
-	    # puts stderr "destroy-group-node: msgkey = $msgkey"
-	    if [info exists msgs2extnid($msgkey)] {
-		# puts stderr "destroy-group-node: msgs2extnid($msgkey) exists"
-		while {[set idx [lsearch -exact $msgs2extnid($msgkey) $gnid]] != -1} {
-		    set msgs2extnid($msgkey) [lreplace $msgs2extnid($msgkey) $idx $idx $replnid]
-		}
-		# update children in external nodes that connect
-		# multiple messages
-		foreach {prntid chldid relname} $msgs2extnid($msgkey) {
-		    if {$chldid == $replnid && $prntid != $gprnt} {
-			set idx [lsearch -exact $NODES($prntid,children) $gnid]
-			set node($prntid,children) [lreplace $NODES($prntid,children) \
-							$idx $idx $replnid]
-			# update span information of the parent
-			restructure-upwards $prntid 0
-		    }
-		}
-	    }
-	}
-    }
-    # remove all children from `gnid`
-    # puts stderr "destroy-group-node: erase-subtree $gnid"
-    erase-subtree $gnid
-    set node($gnid,children) {}
-    # puts stderr "destroy-group-node: destroy-node $gnid $redraw"
-    destroy-node $gnid $redraw
-}
-
-proc ::rsttool::treeditor::set-subtree-node-span {nid} {
-    global node
-
-    # this function is like reset-parent-node-span, but works downwards
-
-    #1. Ensure span of all children is known
-    foreach child $NODES($nid,children) {
-	if { $NODES($child,span) == {} || [text-node-p $child]} {
-	    set-subtree-node-span $child
-	}
-    }
-
-    #2. Set span of present node
-    set node($nid,span) [find-node-span $nid]
-
-    #3. change the displayed text
-    if { $NODES($nid,type) != "text" } {
-	set node($nid,text) [make-span-label $NODES($nid,span)]
     }
 }
 
-proc ::rsttool::treeditor::make-span-label {span} {
-    # returns a text-label for the span
-    if { [lindex $span 0] == [lindex $span 1] } {
-	return "[lindex $span 0]"
-    } else {
-	return "[lindex $span 0]-[lindex $span 1]"
-    }
-}
+# Delete group node `gnid` and replace it with `replnid`
+proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {external 0}} {
+    variable ::rsttool::NODES;
+    variable ::rsttool::FORREST;
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::MSGID2ENID;
+    variable ::rsttool::MSGID2ROOTS;
+    variable ::rsttool::MSGID2EROOTS;
+    variable ::rsttool::relations::SPAN;
 
+    namespace import ::rsttool::utils::ldelete;
+    namespace import ::rsttool::treeditor::update-roots;
+    namespace import ::rsttool::treeditor::tree::erase-subtree;
 
-proc ::rsttool::treeditor::find-node-span {nid} {
-    global node nid2msgid
+    puts stderr "destroy-group-node: gnid == $gnid, replnid == $replnid, external == $external;"
 
-    # Span depends on node-type
-    switch -- $NODES($nid,type) {
-
-	span { # span is min/max of nuc and all satellites
-	    set min Inf
-	    set max -1
-	    set msgids $nid2msgid($nid)
-	    foreach child $NODES($nid,children) {
-		if { ($NODES($child,relname) == "span" \
-			  || [constit-relation-p $NODES($child,relname)]) && \
-			 [lsearch -exact $msgids $nid2msgid($child)] != -1} {
-		    set min [min [lindex $NODES($child,span) 0] $min]
-		    set max [max [lindex $NODES($child,span) 1] $max]
-		    foreach sat $NODES($child,children) {
-			set min [min [lindex $NODES($sat,span) 0] $min]
-			set max [max [lindex $NODES($sat,span) 1] $max]
-		    }
-		}
-	    }
-	    # if no span node yet (not yet read in)
-	    # use the existingb rel (there must be an rst rel)
-	    if {$min == Inf} {
-		set min [lindex $NODES($nid,children) 0]
-		set max $min
-	    }
-	}
-	text { set min $nid; set max $nid }
-	default { # dealing with multinuc or constit node
-	    set min 99999
-	    set max  0
-	    foreach child $NODES($nid,children) {
-		#come back here
-		#               set min [min $child $min]
-		#	       if { $child <= 5000 } {
-		#                 set max [max $child $max]
-		#	       }
-		if [group-relation-p $NODES($child,relname)] {
-		    set min [min [lindex $NODES($child,span) 0] $min]
-		    if { [lindex $NODES($child,span) 1] <= 5000 } {
-			set max [max [lindex $NODES($child,span) 1] $max]
-		    }
-		}
-	    }
+    if {$gnid == {}} {return;}
+    set gmsg_id $NID2MSGID($gnid);
+    set chld_prfx ""; set prnt_prfx ""; set repl_prnt_prfx "";
+    if { $external } {
+	set chld_prfx "e";
+	if { ![eparent-msgid-p $gmsg_id] } {set prnt_prfx "e";}
+	if { $replnid != {} && ![eparent-msgid-p $NID2MSGID($replnid)] } {
+	    set repl_prnt_prfx "e";
 	}
     }
 
-    set result "$min $max"
-    return "$min $max"
-}
+    # delete `gnid` from the children of its parent and put `replnid` instead
+    if { $replnid != {} } {
+	# update parents of replacement node
+	set grnd_prnt $NODES($gnid,parent);
+	# set appropriate parent of the replacement node
+	set NODES($replnid,parent) $grnd_prnt;
+	set NODES($replnid,relname) $NODES($gnid,relname);
+	set NODES($replnid,reltype) $NODES($gnid,reltype);
 
+	set grnd_eprnt $NODES($gnid,eparent);
+	# set appropriate parent of the replacement node
+	set NODES($replnid,eparent) $grnd_eprnt;
+	set NODES($replnid,erelname) $NODES($gnid,erelname);
+	set NODES($replnid,ereltype) $NODES($gnid,ereltype);
+	set NODES($replnid,external) $NODES($gnid,external);
+	set NODES($replnid,etype) $NODES($gnid,etype);
+	puts stderr "destroy-group-node: NODES($replnid,external) == $NODES($replnid,external);"
+	puts stderr "destroy-group-node: NODES($replnid,etype) == $NODES($replnid,etype);"
+
+	# add `replnid` to the children of grand-parent
+	if { $grnd_prnt != {} } {
+	    if {  $external || $NODES($grnd_prnt,etype) == $SPAN } {
+		set NODES($grnd_prnt,echildren) [insort $NODES($grnd_prnt,echildren) \
+						     [get-child-pos $replnid] $replnid 0 \
+						     get-child-pos];
+	    } else {
+		# append child node to the list of the parent's children
+		set NODES($grnd_prnt,children) [insort $NODES($grnd_prnt,children) \
+						    $NODES($replnid,start) $replnid];
+	    }
+	}
+	# add children of `gnid` to `replnid`
+	copy-children $replnid $gnid 1;
+	copy-children $replnid $gnid 0;
+	# update roots
+	if { [lsearch $MSGID2ROOTS($gmsg_id) $gnid] != -1 } {
+	    update-roots $gmsg_id $replnid {add} 0;
+	}
+	if { [lindex $MSGID2EROOTS($gmsg_id) 0] == $gnid } {
+	    update-roots $gmsg_id $replnid {add} 1;
+	}
+	set pmsg_id [lindex $FORREST($gmsg_id) 1];
+	if { $pmsg_id != {} && [lsearch $MSGID2EROOTS($pmsg_id) 0] != -1 } {
+	    update-roots $pmsg_id $replnid {add} 1;
+	}
+    }
+    # erase group node
+    clear $gnid;
+}
 
 ##################################################
 #  Collapse or Expand Nodes
-
-proc ::rsttool::treeditor::collapse {nid {really {}} } {
-    variable RSTW
-    global node collapsed_nodes
-
-    if {![info exists node($nid,text)]} {return}
-
-    #  if { [legal-node $nid] != 0 } {
-    #    foreach child  $NODES($nid,children) {
-    #      collapse $child really
-    #    }
-    #  } else {
-    # try to collapse all children
-    foreach child  $NODES($nid,children) {
-	if $NODES($child,visible) {
-	    set in_list [lsearch -exact $collapsed_nodes $nid]
-	    if { "$in_list" == "-1" } {
-		lappend collapsed_nodes $nid
-	    }
-	    hide-node $child
-	    set really fake
-	}
-    }
-
-    # Scroll to new position
-    xscrollto [max [expr $NODES($nid,xpos) - 50] 0]
-    #  }
-}
-
-proc ::rsttool::treeditor::expand {nid {really {}} } {
-    variable RSTW
-    global node collapsed_nodes
-
-    if {![info exists node($nid,text)]} {return}
-
-    foreach child  $NODES($nid,children) {
-	expand $child really
-
-	set junk [lsearch -exact $collapsed_nodes $nid]
-	if { "$junk" != "-1" } {
-	    set collapsed_nodes [lreplace $collapsed_nodes $junk $junk]
-	}
-	foreach child  $NODES($nid,children) {
-	    show-node $child
-	}
-
-	# Scroll to new position
-	# collapsed - scroll to the new node position
-	xscrollto [max [expr $NODES($nid,xpos) - 50] 0]
-    }
-}
-#END
-
-proc ::rsttool::treeditor::hide-node {nid} {
-    global node visible_nodes
-    if {[info exists visible_nodes($nid)]} {
-	unset visible_nodes($nid)
-	foreach cid $NODES($nid,children) {
-	    hide-node $cid
-	}
-    } else {
-	return
-    }
-}
-
-proc ::rsttool::treeditor::show-node {nid} {
-    global node visible_nodes
-    set visible_nodes($nid) 1
-    foreach cid $NODES($nid,children) {
-	show-node $cid
-    }
-}
-
-proc ::rsttool::treeditor::describe-node {nid} {
-
-    global node
-    puts "id $nid"
-    puts "text $NODES($nid,text)"
-    puts "type $NODES($nid,type)"
-    puts "textwgt $NODES($nid,textwgt)"
-    puts "labelwgt $NODES($nid,labelwgt)"
-    puts "arrowwgt $NODES($nid,arrowwgt)"
-    puts "spanwgt $NODES($nid,spanwgt)"
-    puts "relname $NODES($nid,relname)"
-    puts "children $NODES($nid,children)"
-    puts "parent $NODES($nid,parent)"
-    puts "constituents $NODES($nid,constituents)"
-    puts "visible $NODES($nid,visible)"
-    puts "span $NODES($nid,span)"
-    puts "xpos $NODES($nid,xpos)"
-    puts "ypos $NODES($nid,ypos)"
-    puts "oldindex $NODES($nid,oldindex)"
-    puts "newindex $NODES($nid,newindex)"
-    puts "promotion $NODES($nid,promotion)"
-}
-
-proc ::rsttool::treeditor::dn {nid} {describe-node $nid}
-
 proc ::rsttool::treeditor::tree::node::disconnect_node {clicked_node method} {
     variable ::rsttool::NODES;
     variable ::rsttool::treeditor::DISCO_NODE;
@@ -835,6 +695,27 @@ proc ::rsttool::treeditor::tree::node::get-eterminal {a_nid} {
     return [get-eterminal $cid];
 }
 
+proc ::rsttool::treeditor::tree::node::bfs {a_prnt_nid a_chld_nid} {
+    variable ::rsttool::NODES;
+
+    set seen_nodes [dict create];
+    set inid {};
+    set inodes [concat $NODES($a_prnt_nid,children) $NODES($a_prnt_nid,echildren)];
+    while {$inodes != {}} {
+	set inid [lindex $inodes 0];
+	set inodes [lreplace $inodes 0 0];
+	if { $inid == $a_chld_nid } {
+	    return 1;
+	} elseif { [dict exists $seen_nodes $inid] } {
+	    error "Infinite loop detected at node '$inid'.";
+	} else {
+	    dict set seen_nodes $inid 1;
+	    set inodes [concat $inodes $NODES($inid,children) $NODES($inid,echildren)];
+	}
+
+    }
+    return 0;
+}
 
 proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list {a_start -1} \
 						     {a_get_start ::rsttool::treeditor::tree::node::get-start}} {
@@ -875,6 +756,9 @@ proc ::rsttool::treeditor::tree::node::insort {a_list a_start a_nid \
 						   {a_get_start ::rsttool::treeditor::tree::node::get-start}} {
     set ins_idx [bisearch $a_nid $a_list $a_start $a_get_start]
 
+    if { $ins_idx < [llength $a_list] } {
+	puts stderr "node::insort: a_list = $a_list, a_nid = $a_nid, ins_idx = $ins_idx, el = [lindex $a_list $ins_idx];"
+    }
     # do not insert duplicates
     if {$a_allow_dup == 0 && $ins_idx < [llength $a_list] && \
 	    [lindex $a_list $ins_idx] == $a_nid} {return $a_list;}
@@ -882,13 +766,14 @@ proc ::rsttool::treeditor::tree::node::insort {a_list a_start a_nid \
 }
 
 proc ::rsttool::treeditor::tree::node::clear {nid} {
-    variable ::rsttool::NODES
-    variable ::rsttool::ROOTS
-    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::MSGID2ENID;
+    variable ::rsttool::MSGID2EROOTS;
     variable ::rsttool::MSGID2ROOTS;
     variable ::rsttool::MSGID2TNODES;
-    variable ::rsttool::MSGID2ENID;
     variable ::rsttool::NAME2NID;
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::NODES
+    variable ::rsttool::ROOTS
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::utils::ldelete;
 
@@ -917,9 +802,17 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
     if {[info exists NODES($nid,parent)] && $NODES($nid,parent) != {}} {
 	set NODES($NODES($nid,parent),children) \
 	    [ldelete $NODES($NODES($nid,parent),children) $nid]
+	set NODES($NODES($nid,parent),echildren) \
+	    [ldelete $NODES($NODES($nid,parent),echildren) $nid]
     }
     array unset NODES $nid,parent;
+    if {[info exists NODES($nid,eparent)] && $NODES($nid,eparent) != {}} {
+	set NODES($NODES($nid,eparent),echildren) \
+	    [ldelete $NODES($NODES($nid,eparent),echildren) $nid]
+    }
+    array unset NODES $nid,eparent;
 
+    # update children
     if {[info exists NODES($nid,children)] && $NODES($nid,children) != {}} {
 	foreach child_nid $NODES($nid,children) {
 	    if {$NODES($child_nid,parent) == $nid} {
@@ -928,6 +821,22 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
 	}
     }
     array unset NODES $nid,children;
+    set prnt_prfx "";
+    if {[info exists NODES($nid,echildren)] && $NODES($nid,echildren) != {}} {
+	foreach child_nid $NODES($nid,echildren) {
+	    if {$NODES($child_nid,parent) == $nid} {
+		array unset NODES $child_nid,parent;
+	    } elseif { $NODES($child_nid,eparent) == $nid } {
+		array unset NODES $child_nid,eparent;
+	    }
+	}
+    }
+    array unset NODES $nid,echildren;
+
+    # update roots
+    set MSGID2ROOTS($msgid) [ldelete $MSGID2ROOTS($msgid) $nid];
+    set MSGID2EROOTS($msgid) [ldelete $MSGID2EROOTS($msgid) $nid];
+
     array unset NID2MSGID $nid;
 
     # remove this node from the set of visible nodes
