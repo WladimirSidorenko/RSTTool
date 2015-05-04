@@ -7,7 +7,7 @@ package require rsttool::appearance::bindings;
 ##################################################################
 namespace eval ::rsttool::file {
     variable HOME $::env(HOME);
-    variable FTYPES {{{RST XML Files} {.rstprj.xml}}};
+    variable FTYPES {{{XML Files} {.xml}}};
     variable SAVED_PARNUC;
     array set SAVED_PARNUC {};
 

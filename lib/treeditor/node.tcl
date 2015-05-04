@@ -293,7 +293,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    set inodes $MSGID2EROOTS($msg_id);
 	    set chld_prfx "e";
 	}
-	puts stderr "show-nodes: 0) DISPLAYMODE = $DISPLAYMODE, msg_id = $msg_id, inodes = $inodes";
+	# puts stderr "show-nodes: 0) DISPLAYMODE = $DISPLAYMODE, msg_id = $msg_id, inodes = $inodes";
 	array set seen_nodes {};
 	set inid {}; set imsgid {}; set iprnt_msgid {};
 	while {$inodes != {}} {
@@ -318,7 +318,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 			      (($PRNT_MSGID != {} && $iprnt_msgid != $PRNT_MSGID) || \
 				   ($PRNT_MSGID == {} && $iprnt_msgid != $CRNT_MSGID))))} {continue;}
 	    set VISIBLE_NODES($inid) 1
-	    puts stderr "show-nodes: 1) add NODES($inid,${chld_prfx}children) = $NODES($inid,${chld_prfx}children) to inodes";
+	    # puts stderr "show-nodes: 1) add NODES($inid,${chld_prfx}children) = $NODES($inid,${chld_prfx}children) to inodes";
 	    set inodes [concat $inodes $NODES($inid,${chld_prfx}children)];
 	}
 	array unset seen_nodes;
@@ -756,9 +756,9 @@ proc ::rsttool::treeditor::tree::node::insort {a_list a_start a_nid \
 						   {a_get_start ::rsttool::treeditor::tree::node::get-start}} {
     set ins_idx [bisearch $a_nid $a_list $a_start $a_get_start]
 
-    if { $ins_idx < [llength $a_list] } {
-	puts stderr "node::insort: a_list = $a_list, a_nid = $a_nid, ins_idx = $ins_idx, el = [lindex $a_list $ins_idx];"
-    }
+    # if { $ins_idx < [llength $a_list] } {
+    # 	puts stderr "node::insort: a_list = $a_list, a_nid = $a_nid, ins_idx = $ins_idx, el = [lindex $a_list $ins_idx];"
+    # }
     # do not insert duplicates
     if {$a_allow_dup == 0 && $ins_idx < [llength $a_list] && \
 	    [lindex $a_list $ins_idx] == $a_nid} {return $a_list;}
