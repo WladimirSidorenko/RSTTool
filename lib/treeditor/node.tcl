@@ -300,6 +300,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    # pop first node on the queue
 	    set inid [lindex $inodes 0];
 	    set inodes [lreplace $inodes 0 0];
+	    puts stderr "show-nodes: 0) inid == $inid, NODES($inid,${chld_prfx}children) == $NODES($inid,${chld_prfx}children), inodes = $inodes";
 	    if [info exists seen_nodes($inid)] {
 		::rsttool::segmenter::message "Inifinite loop detected at node $inid";
 		continue;
@@ -311,7 +312,6 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    set iprnt_msgid [lindex $FORREST($imsgid) 1];
 	    # puts stderr "show-nodes: msg_id = $msg_id, imsgid = $imsgid"
 	    if {$DISPLAYMODE == $MESSAGE && $imsgid != $msg_id} {continue;}
-	    puts stderr "show-nodes: 0) inid == $inid, NODES($inid,external) == $NODES($inid,external)";
 	    if {$DISPLAYMODE == $DISCUSSION && \
 		    (!$NODES($inid,external) || \
 			 ($imsgid != $CRNT_MSGID && $imsgid != $PRNT_MSGID && \
@@ -520,8 +520,36 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
 	    update-roots $pmsg_id $replnid {add} 1;
 	}
     }
-    puts stderr "destroy-group-node: NODES($replnid,children) == $NODES($replnid,children);"
-    puts stderr "destroy-group-node: NODES($replnid,echildren) == $NODES($replnid,echildren);"
+    # climb up the tree and update start and end nodes, if necessary
+    set pnode {}; set need_update 0;
+    set pnodes [list $NODES($replnid,eparent) $NODES($replnid,parent)]
+    while { $pnodes != {} } {
+	set need_update 0;
+	# pop first node from the parent
+	set pnode [lindex $pnodes 0];
+	set pnodes [lrange $pnodes 1 end];
+	if { $pnode == {} } {continue;}
+	# replace start and end nodes
+	if {[group-node-p $pnode] || [egroup-node-p $pnode]} {
+	    if { $NODES($pnode,start) == $gnid } {
+		set NODES($pnode,start) $replnid;
+		set need_update 1;
+	    }
+	    if { $NODES($pnode,end) == $gnid } {
+		set NODES($pnode,end) $replnid;
+		set need_update 1;
+	    }
+	}
+	if { $need_update } {
+	    lappend pnodes $NODES($pnode,parent);
+	    lappend pnodes $NODES($pnode,eparent);
+	}
+    }
+
+    puts stderr "destroy-group-node: NODES(replnid = $replnid,external) == $NODES($replnid,external);"
+    puts stderr "destroy-group-node: NODES(replnid = $replnid,etype) == $NODES($replnid,etype);"
+    puts stderr "destroy-group-node: NODES(replnid = $replnid,children) == $NODES($replnid,children);"
+    puts stderr "destroy-group-node: NODES(replnid = $replnid,echildren) == $NODES($replnid,echildren);"
     # erase group node
     clear $gnid;
 }

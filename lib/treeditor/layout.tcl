@@ -297,7 +297,7 @@ proc ::rsttool::treeditor::layout::update-upwards {a_gnid a_chld_nid} {
     namespace import ::rsttool::treeditor::tree::node::draw-span;
     namespace import ::rsttool::treeditor::tree::node::group-node-p;
 
-    if {[group-node-p $a_gnid]} {
+    if {[group-node-p $a_gnid] || [egroup-node-p $a_gnid]} {
 	set istart $NODES($NODES($a_gnid,start),start);
 	set iend $NODES($NODES($a_gnid,end),end);
 

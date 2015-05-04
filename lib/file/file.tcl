@@ -222,7 +222,7 @@ proc ::rsttool::file::write-node {a_nid a_prnt_elem a_xml_doc {a_type segment}} 
     $node setAttribute {msgid} $NID2MSGID($a_nid);
     $node setAttribute {start} $NODES($a_nid,start);
     $node setAttribute {end} $NODES($a_nid,end);
-    if {$a_type == {segment}} {$node setAttribute {name} $NODES($a_nid,name)}
+    if { $a_type == {segment} } {$node setAttribute {name} $NODES($a_nid,name)}
     $node setAttribute {external} $NODES($a_nid,external);
     $node setAttribute {etype} $NODES($a_nid,etype);
     $a_prnt_elem appendChild $node;
@@ -254,6 +254,8 @@ proc ::rsttool::file::read-tnode {a_segments} {
 	if {[set end [xml-get-attr $child {end}]] == {}} {
 	    return -5;
 	}
+	set external [$child getAttribute {external}];
+	set etype [$child getAttribute {etype}];
 
 	# check if this node has not already been defined
 	if {[info exists NODES($nid)]} {
@@ -262,6 +264,8 @@ proc ::rsttool::file::read-tnode {a_segments} {
 	::rsttool::treeditor::tree::node::make {text} $start $end "-1" $msgid $nid;
 	::rsttool::treeditor::update-roots $msgid $nid {add};
 
+	if { $NODES($nid,external) == 0} {set NODES($nid,external) $external;}
+	if { $NODES($nid,etype) == {}} {set NODES($nid,etype) $etype;}
 	# update counter of text nodes
 	if {$nid > $TXT_NODE_CNT} {set TXT_NODE_CNT $nid;}
     }
@@ -445,6 +449,8 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    return -4;
 		}
 		set isat_id [xml-get-attr $isat {idref}];
+		puts stderr "read-relations: inuc_id == $inuc_id, NODES($inuc_id,external) == $NODES($inuc_id,external)"
+		puts stderr "read-relations: isat_id == $isat_id, NODES($isat_id,external) == $NODES($isat_id,external)"
 		if {$NODES($inuc_id,external) && $NODES($isat_id,external)} {
 		    set chld_prfx "e";
 		} else {
@@ -455,7 +461,7 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    [insort $NODES($ispan_id,${chld_prfx}children) \
 			 [get-${chld_prfx}start $inuc_id] $inuc_id 0 \
 			 ::rsttool::treeditor::tree::node::get-${chld_prfx}start];
-		# puts stderr "read-relations: NODES($ispan_id,${chld_prfx}children) = $NODES($ispan_id,${chld_prfx}children)"
+		puts stderr "read-relations: NODES($ispan_id,${chld_prfx}children) = $NODES($ispan_id,${chld_prfx}children)"
 		# remove child and parent from the list of message roots
 		set nuc_msgid $NID2MSGID($inuc_id);
 		set sat_msgid $NID2MSGID($isat_id);
