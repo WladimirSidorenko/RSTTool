@@ -162,10 +162,11 @@ proc ::rsttool::file::_open_anno {a_fname {a_dirname {}}} {
 }
 
 proc ::rsttool::file::_read_anno {a_xmldoc} {
-    variable ::rsttool::NODES;
     variable ::rsttool::FORREST;
-    variable ::rsttool::NID2MSGID;
     variable ::rsttool::MSGID2TNODES;
+    variable ::rsttool::NAME2NID;
+    variable ::rsttool::NID2MSGID;
+    variable ::rsttool::NODES;
 
     set root [$a_xmldoc documentElement];
     if {[string tolower [$root nodeName]] != "annotation"} {
@@ -181,6 +182,8 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
 	set imsgid $NID2MSGID($inid);
 	set ilen [string length [lindex $FORREST($imsgid) 0]];
 	set NODES($inid,name) [lsearch $MSGID2TNODES($imsgid) $inid];
+	set NAME2NID($imsgid,$NODES($inid,name)) $inid;
+
 	if {$NODES($inid,start) == 0 && $NODES($inid,end) == $ilen} {
 	    set NODES($inid,external) 1;
 	    set NODES($inid,etype) {text};
@@ -230,7 +233,6 @@ proc ::rsttool::file::write-node {a_nid a_prnt_elem a_xml_doc {a_type segment}} 
 
 proc ::rsttool::file::read-tnode {a_segments} {
     variable ::rsttool::NODES;
-    variable ::rsttool::NAME2NID;
     variable ::rsttool::TXT_NODE_CNT;
     namespace import ::rsttool::treeditor::tree::node::insort;
 

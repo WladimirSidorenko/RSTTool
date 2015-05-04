@@ -533,9 +533,8 @@ proc ::rsttool::segmenter::move {a_path x y} {
 
     	set delta_txt [$a_path get "$new_idx" "$old_idx -1 chars"]
 	set delta [string length "$delta_txt"]
-	# puts stderr "move-boundary: delta_txt = '$delta_txt'"
-	# puts stderr "move-boundary: delta = '$delta'"
-    	set NODES($inid,end) [expr $NODES($inid,end) - $delta]
+	puts stderr "move-boundary: 0) delta_txt = '$delta_txt'"
+	puts stderr "move-boundary: 0) delta = '$delta'"
     	if {$nxt_nid == {}} {
 	    $a_path tag remove my_sel "$new_idx" "end"
 	    $a_path tag remove sel "$new_idx" "end"
@@ -548,13 +547,17 @@ proc ::rsttool::segmenter::move {a_path x y} {
 	    if {[.editor.text tag ranges my_sel] != {} && [$a_path compare my_sel.first <= $iend]} {
 		$a_path tag add my_sel "$new_idx" "$iend"
 	    }
+	    puts stderr "move-boundary: NODES($nxt_nid,start) before = '$NODES($nxt_nid,start)'"
 	    set NODES($nxt_nid,start) [expr $NODES($nxt_nid,start) - $delta]
 	    set-text $nxt_nid;
-	    set NODES($inid,end) [expr $NODES($inid,end) - $delta]
-	    set-text $inid;
+	    puts stderr "move-boundary: NODES($nxt_nid,start) after = '$NODES($nxt_nid,start)'"
 	    $a_path delete $istart $iend;		  # delete segment marker
 	    $a_path insert "$new_idx" "$segmarker" bmarker; # insert segment marker at new position
     	}
+	puts stderr "move-boundary: NODES($inid,end) before = '$NODES($inid,end)'"
+    	set NODES($inid,end) [expr $NODES($inid,end) - $delta]
+	set-text $inid;
+	puts stderr "move-boundary: NODES($inid,end) after = '$NODES($inid,end)'"
     } else {
     	# if the node has shrunk, set the minimum possible index of
     	# the new shrunk node to the end of the first word in the
@@ -568,9 +571,14 @@ proc ::rsttool::segmenter::move {a_path x y} {
 	}
 	set delta_txt [$a_path get "$iend" "$new_idx"]
 	set delta [string length "$delta_txt"]
+	puts stderr "move-boundary: 1) delta_txt = '$delta_txt'"
+	puts stderr "move-boundary: 1) delta = '$delta'"
 	# append delta text to adjacent node, if one exists, or simply
 	# remove `old` tags otherwise
+	puts stderr "move-boundary: NODES($inid,end) before = '$NODES($inid,end)'"
 	set NODES($inid,end) [expr $NODES($inid,end) + $delta]
+	set-text $inid;
+	puts stderr "move-boundary: NODES($inid,end) after = '$NODES($inid,end)'"
 	if {$nxt_nid == {}} {
 	    $a_path tag add my_sel "$iend" "$new_idx"
 	    $a_path tag add old "$iend" "$new_idx"
@@ -580,7 +588,9 @@ proc ::rsttool::segmenter::move {a_path x y} {
 	    $a_path tag remove bmarker "$iend" "end"
 	} else {
 	    $a_path tag remove my_sel "$iend" "$new_idx"
+	    puts stderr "move-boundary: NODES($nxt_nid,start) before = '$NODES($nxt_nid,start)'"
 	    set NODES($nxt_nid,start) [expr $NODES($nxt_nid,start) + $delta]
+	    puts stderr "move-boundary: NODES($nxt_nid,start) after = '$NODES($nxt_nid,start)'"
 	    set-text $nxt_nid;
 	}
 	# do not change the order of deletions and insertions below
@@ -591,7 +601,7 @@ proc ::rsttool::segmenter::move {a_path x y} {
     ::rsttool::treeditor::layout::redisplay-net;
     # puts stderr "2) move: VISIBLE_NODES =";
     # parray ::rsttool::treeditor::VISIBLE_NODES;
-    # puts stderr "move-boundary: compare new_idx < old_idx = '[$a_path compare $new_idx < $old_idx]'"
+    puts stderr "move-boundary: compare new_idx < old_idx = '[$a_path compare $new_idx < $old_idx]'"
     ::rsttool::set-state {changed} "Moved boundary of segment $NODES($inid,name)";
 }
 
@@ -620,6 +630,7 @@ proc ::rsttool::segmenter::rename-segments {a_nid a_msgid a_diff} {
 proc ::rsttool::segmenter::get-seg-nid {a_path x y {start {}} \
 					    {msgid {}}} {
     variable ::rsttool::NAME2NID;
+
     if {$msgid == {}} {set msgid $::rsttool::CRNT_MSGID;}
     # set default return values
     set nnumber {}
