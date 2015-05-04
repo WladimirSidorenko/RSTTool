@@ -818,6 +818,8 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::utils::ldelete;
 
+    puts stderr "node::clear: nid = $nid;"
+
     # remove this node from MSGID's
     set msgid $NID2MSGID($nid);
     if [info exists MSGID2ROOTS($msgid)] {
@@ -857,7 +859,8 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
     if {[info exists NODES($nid,children)] && $NODES($nid,children) != {}} {
 	foreach child_nid $NODES($nid,children) {
 	    if {$NODES($child_nid,parent) == $nid} {
-		array unset NODES $child_nid,parent;
+		set NODES($child_nid,parent) {};
+		puts stderr "node::clear: NODES($child_nid,parent) = $NODES($child_nid,parent);"
 	    }
 	}
     }
@@ -866,9 +869,11 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
     if {[info exists NODES($nid,echildren)] && $NODES($nid,echildren) != {}} {
 	foreach child_nid $NODES($nid,echildren) {
 	    if {$NODES($child_nid,parent) == $nid} {
-		array unset NODES $child_nid,parent;
+		set NODES($child_nid,parent) {};
+		puts stderr "node::clear: NODES($child_nid,parent) = $NODES($child_nid,parent);"
 	    } elseif { $NODES($child_nid,eparent) == $nid } {
-		array unset NODES $child_nid,eparent;
+		set NODES($child_nid,eparent) {};
+		puts stderr "node::clear: NODES($child_nid,eparent) = $NODES($child_nid,eparent);"
 	    }
 	}
     }

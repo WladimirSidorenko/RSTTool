@@ -473,6 +473,8 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
     namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
     namespace import ::rsttool::treeditor::layout::redisplay-net;
 
+    puts stderr "unlink-node: 0) sat = $sat";
+
     # 0. handle missed clicks and set appropriate prefixes
     if {$sat == {}} {return;}
 
@@ -537,6 +539,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	    set delete_span 1;
 	    set replnid $nuc;
 	    set spannid $NODES($nuc,${nuc_prfx}parent);
+	    puts stderr "unlink: spannid == $spannid, nuc == $nuc"
 	    foreach chnid $NODES($nuc,${chld_prfx}children) {
 		if {$external && ![eparent-msgid-p $NID2MSGID($chnid)]} {
 		    set ch_prfx "e";
@@ -550,10 +553,11 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	    }
 	} \
 	$SPAN {
-	    # if we unlink the nucleus, we also have to unlink the
-	    # satellites
-	    destroy-group-node $nuc 0;
-	    puts stderr "unlink: unlinking span, NODES($sat,${chld_prfx}children) == $NODES($sat,${chld_prfx}children)";
+	    # if we unlink the nucleus, we have to unlink the span nid
+	    # first and then unlink all the hypotactic satellites
+	    puts stderr "unlink: node::destroy nuc == $nuc";
+	    node::destroy $nuc;
+	    set NODES($sat,${sat_prfx}parent) {};
 	    foreach chnid $NODES($sat,${chld_prfx}children) {
 		if { $external && ![eparent-msgid-p $NID2MSGID($chnid)] } {
 		    set ch_prfx "e";
@@ -567,13 +571,13 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	    }
 	}
 
-    puts stderr "unlink-node: sat = $sat";
-    if { [info exists NODES($nuc,${chld_prfx}children)] } {
-	puts stderr "unlink-node: nuc = $nuc (${chld_prfx}children: $NODES($nuc,${chld_prfx}children))";
-    }
-    if {$spannid != {}} {
-	puts stderr "unlink-node: span = $spannid (children: $NODES($spannid,${chld_prfx}children))";
-    }
+    # puts stderr "unlink-node: 1) sat = $sat";
+    # if { [info exists NODES($nuc,${chld_prfx}children)] } {
+    # 	puts stderr "unlink-node: 1) nuc = $nuc (${chld_prfx}children: $NODES($nuc,${chld_prfx}children))";
+    # }
+    # if {$spannid != {}} {
+    # 	puts stderr "unlink-node: 1) span = $spannid (children: $NODES($spannid,${chld_prfx}children))";
+    # }
 
     # 2. Delete connection between clicked node and its parent.
     set NODES($sat,${sat_prfx}parent) {};
@@ -581,19 +585,19 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
     set NODES($sat,${sat_prfx}reltype) {};
 
     # 3. Delete span node, if necessary
-    puts stderr "unlink-node: delete_span = $delete_span"
+    puts stderr "unlink-node: 2) delete_span = $delete_span"
     if { $delete_span && $spannid != {} } {
-	puts stderr "unlink-node: destroy-group-node spannid = $spannid replnid = $replnid external = $external;"
+	puts stderr "unlink-node: 2) destroy-group-node spannid = $spannid replnid = $replnid external = $external;"
 	destroy-group-node $spannid $replnid $external;
     }
-    puts stderr "unlink-node: sat = $sat; NODES(sat,children) == $NODES($sat,children); NODES(sat,echildren) == $NODES($sat,echildren)"
+    # puts stderr "unlink-node: 2) sat = $sat; NODES(sat,children) == $NODES($sat,children); NODES(sat,echildren) == $NODES($sat,echildren)"
 
     # 4. Update upward tree structure
     # puts stderr "unlink-node: restructure-upwards nuc = $nuc redraw = $redraw"
     # update-upwards $nuc;
 
     # 5. Redraw satellite substructure
-    ::rsttool::set-state {changed} "Unlinked node $NODES($sat,name)";
+    ::rsttool::set-state {changed} "unlink-node: unlinked node $NODES($sat,name)";
     if {$redraw} {redisplay-net;}
 }
 

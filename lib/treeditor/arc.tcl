@@ -81,7 +81,7 @@ proc ::rsttool::treeditor::tree::arc::display {a_nuc_nid a_sat_nid \
     namespace import ::rsttool::utils::mid-point;
     namespace import ::rsttool::utils::subtract-points;
 
-    puts stderr "arc::display: a_nuc_nid = $a_nuc_nid, a_sat_nid = $a_sat_nid"
+    # puts stderr "arc::display: a_nuc_nid = $a_nuc_nid, a_sat_nid = $a_sat_nid"
     if {![info exists VISIBLE_NODES($a_nuc_nid)] || ![info exists VISIBLE_NODES($a_sat_nid)]} {return}
 
     set nuc_wdgt [ntw $a_nuc_nid];

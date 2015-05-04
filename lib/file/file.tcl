@@ -449,8 +449,8 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    return -4;
 		}
 		set isat_id [xml-get-attr $isat {idref}];
-		puts stderr "read-relations: inuc_id == $inuc_id, NODES($inuc_id,external) == $NODES($inuc_id,external)"
-		puts stderr "read-relations: isat_id == $isat_id, NODES($isat_id,external) == $NODES($isat_id,external)"
+		# puts stderr "read-relations: inuc_id == $inuc_id, NODES($inuc_id,external) == $NODES($inuc_id,external)"
+		# puts stderr "read-relations: isat_id == $isat_id, NODES($isat_id,external) == $NODES($isat_id,external)"
 		if {$NODES($inuc_id,external) && $NODES($isat_id,external)} {
 		    set chld_prfx "e";
 		} else {
@@ -461,7 +461,7 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    [insort $NODES($ispan_id,${chld_prfx}children) \
 			 [get-${chld_prfx}start $inuc_id] $inuc_id 0 \
 			 ::rsttool::treeditor::tree::node::get-${chld_prfx}start];
-		puts stderr "read-relations: NODES($ispan_id,${chld_prfx}children) = $NODES($ispan_id,${chld_prfx}children)"
+		# puts stderr "read-relations: NODES($ispan_id,${chld_prfx}children) = $NODES($ispan_id,${chld_prfx}children)"
 		# remove child and parent from the list of message roots
 		set nuc_msgid $NID2MSGID($inuc_id);
 		set sat_msgid $NID2MSGID($isat_id);
