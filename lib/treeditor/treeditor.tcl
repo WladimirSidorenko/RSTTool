@@ -252,7 +252,7 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
     variable ::rsttool::treeditor::DISPLAYMODE;
     namespace import ::rsttool::utils::ldelete;
 
-    # puts stderr "update-roots: msgid = $a_msgid, nid = $a_nid, a_operation = $a_operation, a_external = $a_external;";
+    puts stderr "update-roots: msgid = $a_msgid, nid = $a_nid, a_operation = $a_operation, a_external = $a_external;";
     # perform given operation on all messages
     set op {};
     switch -nocase -- $a_operation {

@@ -300,7 +300,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    # pop first node on the queue
 	    set inid [lindex $inodes 0];
 	    set inodes [lreplace $inodes 0 0];
-	    # puts stderr "show-nodes: 0) inid == $inid, NODES($inid,${chld_prfx}children) == $NODES($inid,${chld_prfx}children), inodes = $inodes";
+	    puts stderr "show-nodes: 0) inid == $inid, NODES($inid,${chld_prfx}children) == $NODES($inid,${chld_prfx}children), inodes = $inodes";
 	    if [info exists seen_nodes($inid)] {
 		::rsttool::segmenter::message "Inifinite loop detected at node $inid";
 		continue;
@@ -900,8 +900,7 @@ proc ::rsttool::treeditor::tree::node::display {a_nid} {
 	set imsgid $NID2MSGID($a_nid);
 	if {$NODES($a_nid,etype) == {text}} {
 	    set color "black";
-	    if {$imsgid == $PRNT_MSGID || \
-		    ($PRNT_MSGID == {} && $imsgid == $CRNT_MSGID)} {
+	    if { [eparent-msgid-p $imsgid] } {
 		set text "0";
 	    } else {
 		set text "[expr [get-child-pos $a_nid] + 1]";
