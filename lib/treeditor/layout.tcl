@@ -7,6 +7,7 @@ namespace eval ::rsttool::treeditor::layout {
 
     namespace export redisplay-net;
     namespace export update-upwards;
+    namespace export xlayout-group-node;
     namespace export y-layout-subtree;
 }
 
@@ -80,17 +81,17 @@ proc ::rsttool::treeditor::layout::x-layout {a_nodes {xpos {}}} {
     if {$xpos == {}} {
 	set xpos [expr $NODE_WIDTH / 2 + 30];
     }
-    # puts stderr "x-layout: xpos = $xpos"
+    puts stderr "x-layout: xpos = $xpos"
     foreach nid $a_nodes {
 	if {![info exists VISIBLE_NODES($nid)]} {continue}
-	# puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
+	puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
     	if {($DISPLAYMODE == $MESSAGE && [group-node-p $nid]) || \
 		($DISPLAYMODE == $DISCUSSION && [egroup-node-p $nid])} {
-	    # puts stderr "x-layout: xlayout-group-node $nid";
+	    puts stderr "x-layout: xlayout-group-node $nid";
     	    set xpos [xlayout-group-node $nid $xpos [expr ($DISPLAYMODE == $DISCUSSION)]];
     	} else {
     	    set NODES($nid,xpos) $xpos;
-	    # puts stderr "x-layout: NODES($nid,xpos) == $NODES($nid,xpos)";
+	    puts stderr "x-layout: NODES($nid,xpos) == $NODES($nid,xpos)";
     	    set xpos [expr $xpos+$xinc];
     	}
     }
