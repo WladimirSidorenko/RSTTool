@@ -38,11 +38,16 @@ proc ::rsttool::segmenter::install {} {
     grid $w_name.title -row 0  -sticky "ew"
     # add buttons for navigating around discussions
     set navibar [frame $w_name.navibar]
-    set btnNext [button $w_name.btnNextMsg -text "Next Message" -command {
+    set btnNextMsg [button $w_name.btnNextMsg -text "Next Message" -command {
 	::rsttool::segmenter::next-message}];
-    set btnPrev [button $w_name.btnPrevMsg -text "Previous Message" -command {
+    set btnPrevMsg [button $w_name.btnPrevMsg -text "Previous Message" -command {
 	::rsttool::segmenter::next-message backward}];
-    pack $btnPrev $btnNext -in $navibar -side left -expand true -fill x;
+    set btnNextThrd [button $w_name.btnNextThrd -text "Next Thread" -command {
+	::rsttool::segmenter::next-thread}];
+    set btnPrevThrd [button $w_name.btnPrevThrd -text "Previous Thread" -command {
+	::rsttool::segmenter::next-thread backward}];
+    pack $btnPrevThrd $btnPrevMsg $btnNextMsg $btnNextThrd -in $navibar -side left \
+	-expand true -fill x;
     grid config $navibar -in $w_name -sticky "ew" -row 1;
     # actually draw the window for the text of the parent message
     frame $w_name.textWindowPrnt;
@@ -214,6 +219,23 @@ proc ::rsttool::segmenter::next-sentence {{trgframe .editor.text}} {
     # $trgframe tag remove new new.first "new.first + $nextCutoff chars"
     if {[$trgframe compare new.first < "end -1 chars"]} {
 	$trgframe tag add next new.first "new.first + $nextCutoff chars"
+    }
+}
+
+proc ::rsttool::segmenter::next-thread {{direction {forward}}} {
+    variable ::rsttool::MSG_QUEUE;
+    variable ::rsttool::MSG_PREV_QUEUE;
+    variable ::rsttool::PRNT_MSGID;
+
+    next-message $direction;
+    if { $direction == {forward} } {
+	while { $PRNT_MSGID != {} && $MSG_QUEUE != {} } {
+	    next-message $direction;
+	}
+    } else {
+	while { $PRNT_MSGID != {} && $MSG_PREV_QUEUE != {} } {
+	    next-message $direction;
+	}
     }
 }
 

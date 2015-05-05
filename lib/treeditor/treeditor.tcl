@@ -80,7 +80,7 @@ proc ::rsttool::treeditor::install {} {
 
     pack $RTBAR -side top
     pack $RTBAR.link $RTBAR.disconnect $RTBAR.rename \
-	$RTBAR.reduce $RTBAR.enlarge $RTBAR.message $RTBAR.discussion \
+	$RTBAR.enlarge $RTBAR.reduce $RTBAR.message $RTBAR.discussion \
 	-in $RTBAR -side left -fill y -expand 1
 
     set RSTW [canvas .rstframe.canvas  -bg white -relief sunken\

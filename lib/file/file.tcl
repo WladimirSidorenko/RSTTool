@@ -256,8 +256,9 @@ proc ::rsttool::file::read-tnode {a_segments} {
 	if {[set end [xml-get-attr $child {end}]] == {}} {
 	    return -5;
 	}
-	set external [$child getAttribute {external}];
-	set etype [$child getAttribute {etype}];
+	set external 0; set etype {};
+	catch { set external [$child getAttribute {external}]; }
+	catch { set etype [$child getAttribute {etype}]; }
 
 	# check if this node has not already been defined
 	if {[info exists NODES($nid)]} {
