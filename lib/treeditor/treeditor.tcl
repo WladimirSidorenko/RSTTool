@@ -252,7 +252,7 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
     variable ::rsttool::treeditor::DISPLAYMODE;
     namespace import ::rsttool::utils::ldelete;
 
-    puts stderr "update-roots: msgid = $a_msgid, nid = $a_nid, a_operation = $a_operation, a_external = $a_external;";
+    # puts stderr "update-roots: msgid = $a_msgid, nid = $a_nid, a_operation = $a_operation, a_external = $a_external;";
     # perform given operation on all messages
     set op {};
     switch -nocase -- $a_operation {
@@ -323,15 +323,15 @@ proc ::rsttool::treeditor::update-roots {a_msgid a_nid a_operation {a_external 0
 	    if {[info exists NODES($iroot,parent)] && $NODES($iroot,parent) != {}} {return}
 
 	    namespace import ::rsttool::treeditor::tree::node::get-end;
-	    puts stderr "update-roots: iroot == $iroot, start = [get-start $iroot]";
-	    puts stderr "update-roots: iroot == $iroot end = [get-end $iroot]";
-	    puts stderr "update-roots: message length = [string length [lindex $FORREST($a_msgid) 0]]";
+	    # puts stderr "update-roots: iroot == $iroot, start = [get-start $iroot]";
+	    # puts stderr "update-roots: iroot == $iroot end = [get-end $iroot]";
+	    # puts stderr "update-roots: message length = [string length [lindex $FORREST($a_msgid) 0]]";
 	    if {[get-start $iroot] == 0 && \
 		    [get-end $iroot] >= [string length [lindex $FORREST($a_msgid) 0]]} {
 		set NODES($iroot,external) 1;
 		set NODES($iroot,etype) {text};
 		set MSGID2ENID($a_msgid) $iroot;
-		puts stderr "update-roots: adding node $iroot to the list of message $a_msgid enids";
+		# puts stderr "update-roots: adding node $iroot to the list of message $a_msgid enids";
 		# update external roots of the current message
 		update-roots $a_msgid $iroot {add} 1;
 		# update external roots of the parent message

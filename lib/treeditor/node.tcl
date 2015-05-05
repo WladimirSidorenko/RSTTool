@@ -21,6 +21,7 @@ namespace eval ::rsttool::treeditor::tree::node {
     namespace export get-visible-parent;
     namespace export group-node-p;
     namespace export insort;
+    namespace export is-adjacent;
     namespace export make-name;
     namespace export redisplay;
     namespace export set-text;
@@ -327,6 +328,13 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	reset-array ::rsttool::treeditor::VISIBLE_NODES;
     }
     # puts stderr "show-nodes: 1) DISPLAYMODE = $DISPLAYMODE; VISIBLE_NODES = [array names VISIBLE_NODES];";
+}
+
+proc ::rsttool::treeditor::tree::node::is-adjacent {a_nid1 a_nid2} {
+    set start1 [get-start $a_nid1]; set end1 [get-end $a_nid1];
+    set start2 [get-start $a_nid2]; set end2 [get-end $a_nid2];
+
+    return [expr ($end1 == $start2) || ($end2 == $start1)];
 }
 
 proc ::rsttool::treeditor::tree::node::erase {a_nid} {
