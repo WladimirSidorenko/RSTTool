@@ -196,10 +196,18 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
     namespace import ::rsttool::treeditor::tree::node::group-node-p;
     namespace import ::rsttool::treeditor::tree::node::egroup-node-p;
     namespace import ::rsttool::treeditor::tree::node::make-name;
-    foreach nid [lsort -integer -increasing [array names NID2MSGID]] {
-	if {[group-node-p $nid]} {
-	    set NODES($nid,name) [make-name $NODES($nid,start) $NODES($nid,end) \
-				      [egroup-node-p $nid]];
+    set msgid -1;
+    foreach nid [lsort -integer -decreasing [array names NID2MSGID]] {
+	if { ![group-node-p $nid] } { continue;}
+	# set name
+	set NODES($nid,name) [make-name $NODES($nid,start) $NODES($nid,end) \
+				  [egroup-node-p $nid]];
+	# update roots
+	set msgid $NID2MSGID($nid);
+
+	::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external);
+	if {! $NODES($nid,external) || ![egroup-node-p $nid]} {
+	    ::rsttool::treeditor::update-roots $msgid $nid {add} 0;
 	}
     }
     # read relations
@@ -256,9 +264,9 @@ proc ::rsttool::file::read-tnode {a_segments} {
 	if {[set end [xml-get-attr $child {end}]] == {}} {
 	    return -5;
 	}
-	set external 0; set etype {};
-	catch { set external [$child getAttribute {external}]; }
-	catch { set etype [$child getAttribute {etype}]; }
+
+	if { [catch { set external [$child getAttribute {external}]; }] } { set external 0; }
+	if { [catch { set etype [$child getAttribute {etype}]; } ] } { set etype {}; }
 
 	# check if this node has not already been defined
 	if {[info exists NODES($nid)]} {
@@ -323,12 +331,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
 	}
 	set NID2MSGID($nid) $msgid;
 
-	if {[info exists MSGID2ROOTS($msgid)]} {
-	    ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external);
-	    if {! $NODES($nid,external) || ![egroup-node-p $nid]} {
-		::rsttool::treeditor::update-roots $msgid $nid {add} 0;
-	    }
-	} else {
+	if { ![info exists MSGID2ROOTS($msgid)] } {
 	    error "Non-terminal node ($nid) defined for message without terminal nodes ($msgid).";
 	}
 	if {$nid < $GROUP_NODE_CNT} {set GROUP_NODE_CNT $nid}

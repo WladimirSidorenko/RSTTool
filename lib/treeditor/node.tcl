@@ -677,10 +677,7 @@ proc ::rsttool::treeditor::tree::node::disconnect_node {clicked_node method} {
 }
 
 proc ::rsttool::treeditor::tree::node::group-node-p {nid} {
-    variable ::rsttool::NODES;
-    # puts stderr "group-node-p: nid = $nid, type = $NODES($nid,type)"
-    if {$NODES($nid,type) == "text"} {return 0}
-    return 1;
+    return [expr $nid < 0];
 }
 
 proc ::rsttool::treeditor::tree::node::egroup-node-p {nid} {

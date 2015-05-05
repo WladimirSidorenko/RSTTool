@@ -34,6 +34,10 @@ proc ::rsttool::appearance::bindings::set_default {{text_w .editor.text}} {
     bind $TXTW <ButtonRelease-2> {break}
     bind $TXTW <$MODKEY-c> {continue}
 
+    # scroll functions
+    bind all <$MODKEY-Left> { ::rsttool::segmenter::next-message {backward}; }
+    bind all <$MODKEY-Right> { ::rsttool::segmenter::next-message; }
+
     # node creation functions
     $TXTW tag bind new <ButtonRelease-1> {
 	::rsttool::segmenter::segment
