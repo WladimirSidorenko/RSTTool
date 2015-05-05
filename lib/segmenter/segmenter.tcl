@@ -255,7 +255,6 @@ proc ::rsttool::segmenter::next-message {{direction {forward}}} {
     variable ::rsttool::MSG_GRP_NODE_CNT;
 
     variable ::rsttool::NODES;
-    variable ::rsttool::MSGID2ENID;
     variable ::rsttool::treeditor::MESSAGE;
     variable ::rsttool::treeditor::DISCUSSION;
     variable ::rsttool::treeditor::DISPLAYMODE;

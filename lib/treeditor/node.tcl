@@ -300,7 +300,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    # pop first node on the queue
 	    set inid [lindex $inodes 0];
 	    set inodes [lreplace $inodes 0 0];
-	    puts stderr "show-nodes: 0) inid == $inid, NODES($inid,${chld_prfx}children) == $NODES($inid,${chld_prfx}children), inodes = $inodes";
+	    # puts stderr "show-nodes: 0) inid == $inid, NODES($inid,${chld_prfx}children) == $NODES($inid,${chld_prfx}children), inodes = $inodes";
 	    if [info exists seen_nodes($inid)] {
 		::rsttool::segmenter::message "Inifinite loop detected at node $inid";
 		continue;
@@ -492,8 +492,13 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
 	set NODES($replnid,eparent) $grnd_eprnt;
 	set NODES($replnid,erelname) $NODES($gnid,erelname);
 	set NODES($replnid,ereltype) $NODES($gnid,ereltype);
-	set NODES($replnid,external) $NODES($gnid,external);
-	set NODES($replnid,etype) $NODES($gnid,etype);
+	if { $NODES($gnid,etype) == {text} && $NODES($gnid,parent) == {} } {
+	    set NODES($replnid,external) 0;
+	    set NODES($replnid,etype) {};
+	} else {
+	    set NODES($replnid,external) $NODES($gnid,external);
+	    set NODES($replnid,etype) $NODES($gnid,etype);
+	}
 	puts stderr "destroy-group-node: NODES($replnid,external) == $NODES($replnid,external);"
 	puts stderr "destroy-group-node: NODES($replnid,etype) == $NODES($replnid,etype);"
 
@@ -529,7 +534,11 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
     }
     # climb up the tree and update start and end nodes, if necessary
     set pnode {}; set need_update 0;
-    set pnodes [list $NODES($replnid,eparent) $NODES($replnid,parent)]
+    if { $replnid == {} } {
+	set pnodes {};
+    } else {
+	set pnodes [list $NODES($replnid,eparent) $NODES($replnid,parent)];
+    }
     while { $pnodes != {} } {
 	set need_update 0;
 	# pop first node from the parent
@@ -553,10 +562,12 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
 	}
     }
 
-    puts stderr "destroy-group-node: NODES(replnid = $replnid,external) == $NODES($replnid,external);"
-    puts stderr "destroy-group-node: NODES(replnid = $replnid,etype) == $NODES($replnid,etype);"
-    puts stderr "destroy-group-node: NODES(replnid = $replnid,children) == $NODES($replnid,children);"
-    puts stderr "destroy-group-node: NODES(replnid = $replnid,echildren) == $NODES($replnid,echildren);"
+    if { $replnid != {} } {
+	puts stderr "destroy-group-node: NODES(replnid = $replnid,external) == $NODES($replnid,external);"
+	puts stderr "destroy-group-node: NODES(replnid = $replnid,etype) == $NODES($replnid,etype);"
+	puts stderr "destroy-group-node: NODES(replnid = $replnid,children) == $NODES($replnid,children);"
+	puts stderr "destroy-group-node: NODES(replnid = $replnid,echildren) == $NODES($replnid,echildren);"
+    }
     # erase group node
     clear $gnid;
 }
@@ -874,7 +885,10 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
 
     # update roots
     set MSGID2ROOTS($msgid) [ldelete $MSGID2ROOTS($msgid) $nid];
-    set MSGID2EROOTS($msgid) [ldelete $MSGID2EROOTS($msgid) $nid];
+    puts stderr "MSGID2EROOTS($msgid) == $MSGID2EROOTS($msgid)";
+    if { [info exists MSGID2EROOTS($msgid)] } {
+	set MSGID2EROOTS($msgid) [ldelete $MSGID2EROOTS($msgid) $nid];
+    }
 
     array unset NID2MSGID $nid;
 

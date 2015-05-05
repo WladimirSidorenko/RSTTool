@@ -86,11 +86,11 @@ proc ::rsttool::treeditor::layout::x-layout {a_nodes {xpos {}}} {
 	# puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
     	if {($DISPLAYMODE == $MESSAGE && [group-node-p $nid]) || \
 		($DISPLAYMODE == $DISCUSSION && [egroup-node-p $nid])} {
-	    puts stderr "x-layout: xlayout-group-node $nid";
+	    # puts stderr "x-layout: xlayout-group-node $nid";
     	    set xpos [xlayout-group-node $nid $xpos [expr ($DISPLAYMODE == $DISCUSSION)]];
     	} else {
     	    set NODES($nid,xpos) $xpos;
-	    puts stderr "x-layout: NODES($nid,xpos) == $NODES($nid,xpos)";
+	    # puts stderr "x-layout: NODES($nid,xpos) == $NODES($nid,xpos)";
     	    set xpos [expr $xpos+$xinc];
     	}
     }
@@ -128,9 +128,9 @@ proc ::rsttool::treeditor::layout::xlayout-group-node {a_nid xpos {a_external 0}
     }
     # place all left children of the node
     set start {};
-    puts stderr "xlayout-group-node: a_external == $a_external";
-    puts stderr "xlayout-group-node: NODES($a_nid,${chld_prfx}children) = $NODES($a_nid,${chld_prfx}children);"
-    puts stderr "xlayout-group-node: eparent-msgid-p = [eparent-msgid-p $NID2MSGID($a_nid)]"
+    # puts stderr "xlayout-group-node: a_external == $a_external";
+    # puts stderr "xlayout-group-node: NODES($a_nid,${chld_prfx}children) = $NODES($a_nid,${chld_prfx}children);"
+    # puts stderr "xlayout-group-node: eparent-msgid-p = [eparent-msgid-p $NID2MSGID($a_nid)]"
     foreach dep $NODES($a_nid,${chld_prfx}children) {
 	# puts stderr "xlayout-group-node: dep = $dep;"
 	#  [group-relation-p $node($dep,relname)]
@@ -229,8 +229,8 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     namespace import ::rsttool::treeditor::tree::arc::group-relation-p;
     namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
 
-    puts stderr "y-layout-subtree: a_nid = $a_nid, a_ypos = $a_ypos";
-    puts stderr "y-layout-subtree: VISIBLE_NODES = [array names VISIBLE_NODES]";
+    # puts stderr "y-layout-subtree: a_nid = $a_nid, a_ypos = $a_ypos";
+    # puts stderr "y-layout-subtree: VISIBLE_NODES = [array names VISIBLE_NODES]";
     # 1. Re-layout this node
     if {$a_ypos != {}} {
 	set NODES($a_nid,ypos) $a_ypos;
@@ -254,15 +254,15 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
 	    if {$DISPLAYMODE == $DISCUSSION && ![eparent-msgid-p $NID2MSGID($cid)]} {set prnt_prfx "e"}
 	    # paratactic child nodes should keep the y position of
 	    # their parent
-	    puts stderr "y-layout-subtree: cid = $cid, group-relation-p ($NODES($cid,${prnt_prfx}reltype)) NODES($cid,${prnt_prfx}reltype) = [group-relation-p $NODES($cid,${prnt_prfx}reltype)]";
+	    # puts stderr "y-layout-subtree: cid = $cid, group-relation-p ($NODES($cid,${prnt_prfx}reltype)) NODES($cid,${prnt_prfx}reltype) = [group-relation-p $NODES($cid,${prnt_prfx}reltype)]";
 	    if {[group-relation-p $NODES($cid,${prnt_prfx}reltype)]} {
-		puts stderr "y-layout-subtree: y-layout-subtree cid = $cid chld_ypos = $chld_ypos"
+		# puts stderr "y-layout-subtree: y-layout-subtree cid = $cid chld_ypos = $chld_ypos"
 		y-layout-subtree $cid $chld_ypos;
 	    } else {
-		puts stderr "y-layout-subtree: y-layout-subtree cid = $cid a_ypos = $a_ypos"
+		# puts stderr "y-layout-subtree: y-layout-subtree cid = $cid a_ypos = $a_ypos"
 		y-layout-subtree $cid $a_ypos;
 	    }
-	    puts stderr "y-layout-subtree: display arc between $a_nid and $cid with type $NODES($cid,reltype)";
+	    # puts stderr "y-layout-subtree: display arc between $a_nid and $cid with type $NODES($cid,reltype)";
     	}
     }
 }

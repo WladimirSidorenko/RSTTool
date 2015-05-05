@@ -239,6 +239,8 @@ proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
 						    {a_chld_msgid {}} {a_prnt_msgid {}}} {
     variable ::rsttool::NODES;
 
+    puts stderr "link-multinuc: a_nid1 == $a_nid1, a_nid2 == $a_nid2, a_relation == $a_relation, \
+a_span_nid = $a_span_nid, a_ext_rel = $a_ext_rel";
     if {$a_ext_rel} {return;}
 
     set chld1_wdgt [ntw $a_nid1];
@@ -250,6 +252,7 @@ proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
 	set xpos [expr min($NODES([node::get-start-node $a_nid1],xpos),\
 			       $NODES([node::get-start-node $a_nid2],xpos))];
 	set a_span_nid [make-span-node $a_nid1 $a_nid2 $a_relation 1];
+	puts stderr "link-multinuc: NODES($a_span_nid,children) == $NODES($a_span_nid,children)";
 	set NODES($a_span_nid,ypos) $ypos;
 	# puts stderr "link-multinuc: xlayout-group-node $a_span_nid $xpos";
 	::rsttool::treeditor::layout::xlayout-group-node $a_span_nid $xpos;
@@ -497,7 +500,15 @@ proc ::rsttool::treeditor::tree::make-span-node {a_prnt_nid a_chld_nid a_reltype
     # set span node as the parent of the parent node
     set NODES($a_prnt_nid,${prnt_prfx}parent) $span_nid;
     # add parent node to the list of span children
-    set NODES($span_nid,${chld_prfx}children) [list $a_prnt_nid];
+    if {$a_external} {
+	set NODES($span_nid,echildren) \
+	    [insort $NODES($span_nid,echildren) [node::get-child-pos $a_prnt_nid] \
+		 $a_prnt_nid 0 ::rsttool::treeditor::tree::node::get-child-pos];
+    } else {
+	set NODES($span_nid,${chld_prfx}children) \
+	    [insort $NODES($span_nid,${chld_prfx}children) [node::get-start $a_prnt_nid] \
+		 $a_prnt_nid];
+    }
     return $span_nid;
 }
 
@@ -575,7 +586,8 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	    # for multi-nuclear relations, check if there are other
 	    # multinuclear children connected to the given parent
 	    set spannid $nuc;
-	    if { [llength $NODES($nuc,${chld_prfx}children)] < 2 } {
+	    if { [llength $NODES($nuc,${chld_prfx}children)] == 1 } {
+		set replnid $NODES($nuc,${chld_prfx}children);
 		set delete_span 1;
 	    } else {
 		set ch_prfx "";

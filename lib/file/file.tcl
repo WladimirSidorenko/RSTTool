@@ -223,6 +223,8 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
 	    error "read-relations: span node $nid does not contain children.";
 	}
     }
+    variable ::rsttool::MSGID2EROOTS;
+    puts stderr "load-relation: MSGID2EROOTS == [array names MSGID2EROOTS]"
     return 0;
 }
 
