@@ -300,7 +300,7 @@ proc ::rsttool::treeditor::tree::node::show-nodes {msg_id {show 1}} {
 	    # pop first node on the queue
 	    set inid [lindex $inodes 0];
 	    set inodes [lreplace $inodes 0 0];
-	    puts stderr "show-nodes: 0) inid == $inid, NODES($inid,${chld_prfx}children) == $NODES($inid,${chld_prfx}children), inodes = $inodes";
+	    # puts stderr "show-nodes: 0) inid == $inid, NODES($inid,${chld_prfx}children) == $NODES($inid,${chld_prfx}children), inodes = $inodes";
 	    if [info exists seen_nodes($inid)] {
 		::rsttool::segmenter::message "Inifinite loop detected at node $inid";
 		continue;
@@ -792,14 +792,10 @@ proc ::rsttool::treeditor::tree::node::bisearch {a_nid a_list {a_start -1} \
 proc ::rsttool::treeditor::tree::node::insort {a_list a_start a_nid \
 						   {a_allow_dup 0} \
 						   {a_get_start ::rsttool::treeditor::tree::node::get-start}} {
-    set ins_idx [bisearch $a_nid $a_list $a_start $a_get_start]
-
-    # if { $ins_idx < [llength $a_list] } {
-    # 	puts stderr "node::insort: a_list = $a_list, a_nid = $a_nid, ins_idx = $ins_idx, el = [lindex $a_list $ins_idx];"
-    # }
     # do not insert duplicates
-    if {$a_allow_dup == 0 && $ins_idx < [llength $a_list] && \
-	    [lindex $a_list $ins_idx] == $a_nid} {return $a_list;}
+    if {$a_allow_dup == 0 && [lsearch $a_list $a_nid] != -1} {return $a_list;}
+
+    set ins_idx [bisearch $a_nid $a_list $a_start $a_get_start]
     return [linsert $a_list $ins_idx $a_nid];
 }
 

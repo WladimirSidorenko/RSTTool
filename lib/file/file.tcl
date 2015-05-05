@@ -205,8 +205,10 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
 	# update roots
 	set msgid $NID2MSGID($nid);
 
-	::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external);
-	if {! $NODES($nid,external) || ![egroup-node-p $nid]} {
+	if { $NODES($nid,external) } {
+	    ::rsttool::treeditor::update-roots $msgid $nid {add} $NODES($nid,external);
+	}
+	if { ![egroup-node-p $nid] } {
 	    ::rsttool::treeditor::update-roots $msgid $nid {add} 0;
 	}
     }
