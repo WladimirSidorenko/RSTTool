@@ -89,7 +89,7 @@ proc ::rsttool::treeditor::tree::link-nodes {clicked_nid {dragged_nid {}} {type 
     variable ::rsttool::treeditor::DISPLAYMODE;
 
     namespace import ::rsttool::segmenter::message;
-    namespace import ::rsttool::treeditor::eparent-msgid-p;
+    namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
     namespace import ::rsttool::treeditor::tree::node::is-adjacent;
     namespace import ::rsttool::treeditor::tree::node::get-visible-parent;
 
