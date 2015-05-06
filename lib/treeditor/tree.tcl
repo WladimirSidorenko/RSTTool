@@ -7,6 +7,7 @@ package require rsttool::treeditor::tree::node;
 
 ##################################################################
 namespace eval ::rsttool::treeditor::tree {
+    namespace export are-siblings;
     namespace export choose-label;
     namespace export clicked-node;
     namespace export clicked-widget;
@@ -18,8 +19,16 @@ namespace eval ::rsttool::treeditor::tree {
 }
 
 ##################################################################
+proc ::rsttool::treeditor::tree::are-siblings {a_msgid1 a_msgid2} {
+    variable ::rsttool::FORREST;
+
+    set prnt1 [lindex $FORREST($a_msgid1) 1];
+    set prnt2 [lindex $FORREST($a_msgid2) 1];
+
+    return [expr { $prnt1 != {} && $prnt1 == $prnt2 }];
+}
+
 proc ::rsttool::treeditor::tree::clicked-node {x y} {
-    # puts stderr "clicked-node: wdgt = [clicked-widget $x $y], node = [wtn [clicked-widget $x $y]];"
     return [wtn [clicked-widget $x $y]];
 }
 
@@ -310,6 +319,7 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
     namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
     namespace import ::rsttool::treeditor::layout::update-upwards;
     namespace import ::rsttool::treeditor::layout::y-layout-subtree;
+    namespace import ::rsttool::treeditor::update-roots;
 
     set prnt_wdgt [ntw $a_prnt_nid]
     set chld_wdgt [ntw $a_chld_nid]
@@ -341,6 +351,7 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
     set NODES($a_chld_nid,${prnt_prfx}reltype) $HYPOTACTIC;
 
     # puts stderr "link-chld-to-prnt: NODES($a_prnt_nid,children) == $NODES($a_prnt_nid,children)";
+    set imsgid [expr {[string compare $PRNT_MSGID ""] ? "$PRNT_MSGID" : "$CRNT_MSGID"}];
     if {$a_span_nid == {}} {
 	# 0) there is no span node at all
 	set ypos $NODES($a_prnt_nid,ypos);
@@ -348,6 +359,14 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 	# since all subtrees of the parent will shift down, we have to
 	# erase this subtree first
 	erase-subtree $a_prnt_nid;
+	# update roots
+	if { $a_ext_rel } {
+	    update-roots $imsgid $a_chld_nid {remove} $a_ext_rel;
+	    update-roots $imsgid $a_prnt_nid {remove} $a_ext_rel;
+	    update-roots $imsgid $a_span_nid {add} $a_ext_rel;
+	} else {
+	    update-roots $a_chld_msgid $a_chld_nid {remove};
+	}
 	# then, we redraw the subtree from the span nid
 	y-layout-subtree $a_span_nid $ypos;
     } elseif { [group-node-p $a_span_nid] && $NODES($a_prnt_nid,${gprnt_prfx}reltype) == $SPAN && \
@@ -359,13 +378,12 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 	    if {[get-child-pos $NODES($a_span_nid,end)] < [get-child-pos $a_chld_nid]} {
 		set NODES($a_span_nid,end) $a_chld_nid;
 	    }
-	    set imsgid [expr [string compare $PRNT_MSGID ""]] ? $PRNT_MSGID : $CRNT_MSGID;
-	    ::rsttool::treeditor::update-roots $imsgid $a_chld_nid {remove} $a_ext_rel;
+	    update-roots $imsgid $a_chld_nid {remove} $a_ext_rel;
 	} else {
 	    if {[get-end $a_span_nid] < [get-end $a_chld_nid]} {
 		set NODES($a_span_nid,end) $a_chld_nid;
 	    }
-	    ::rsttool::treeditor::update-roots $a_chld_msgid $a_chld_nid {remove};
+	    update-roots $a_chld_msgid $a_chld_nid {remove};
 	}
 	update-upwards $a_span_nid $a_chld_nid;
 	y-layout-subtree $a_prnt_nid;
@@ -384,8 +402,14 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 	update-upwards $a_span_nid $a_chld_nid;
 	y-layout-subtree $span_nid $ypos;
     }
-    # puts stderr "link-chld-to-prnt: 0) span_nid = $span_nid; NODES($span_nid,children) == $NODES($span_nid,children); NODES($span_nid,echildren) == $NODES($span_nid,echildren), NODES($span_nid,parent) == $NODES($span_nid,parent), NODES($span_nid,relname) == $NODES($span_nid,relname), NODES($span_nid,reltype) == $NODES($span_nid,reltype), NODES($span_nid,eparent) == $NODES($span_nid,eparent), NODES($span_nid,erelname) == $NODES($span_nid,erelname), NODES($span_nid,ereltype) == $NODES($span_nid,ereltype)"
-    # puts stderr "link-chld-to-prnt: 1) a_span_nid == $a_span_nid; NODES($a_span_nid,echildren) == $NODES($a_span_nid,echildren), NODES($a_span_nid,parent) == $NODES($a_span_nid,parent), NODES($a_span_nid,relname) == $NODES($a_span_nid,relname), NODES($a_span_nid,reltype) == $NODES($a_span_nid,reltype), NODES($a_span_nid,eparent) == $NODES($a_span_nid,eparent), NODES($a_span_nid,erelname) == $NODES($a_span_nid,erelname), NODES($a_span_nid,ereltype) == $NODES($a_span_nid,ereltype)"
+    # if { [info exists span_nid] && $span_nid != {} } {
+    # 	puts stderr "link-chld-to-prnt: 0) span_nid = $span_nid; NODES($span_nid,children) == $NODES($span_nid,children); NODES($span_nid,echildren) == $NODES($span_nid,echildren), NODES($span_nid,parent) == $NODES($span_nid,parent), NODES($span_nid,relname) == $NODES($span_nid,relname), NODES($span_nid,reltype) == $NODES($span_nid,reltype), NODES($span_nid,eparent) == $NODES($span_nid,eparent), NODES($span_nid,erelname) == $NODES($span_nid,erelname), NODES($span_nid,ereltype) == $NODES($span_nid,ereltype)"
+    # }
+    # if { $a_span_nid != {} } {
+    # 	puts stderr "link-chld-to-prnt: 1) a_span_nid == $a_span_nid; NODES($a_span_nid,echildren) == $NODES($a_span_nid,echildren), NODES($a_span_nid,parent) == $NODES($a_span_nid,parent), NODES($a_span_nid,relname) == $NODES($a_span_nid,relname), NODES($a_span_nid,reltype) == $NODES($a_span_nid,reltype), NODES($a_span_nid,eparent) == $NODES($a_span_nid,eparent), NODES($a_span_nid,erelname) == $NODES($a_span_nid,erelname), NODES($a_span_nid,ereltype) == $NODES($a_span_nid,ereltype)"
+    # }
+    # puts stderr "link-chld-to-prnt: a_prnt_nid == $a_prnt_nid; NODES($a_prnt_nid,parent) == $NODES($a_prnt_nid,parent); NODES($a_prnt_nid,relname) == $NODES($a_prnt_nid,relname); NODES($a_prnt_nid,reltype) == $NODES($a_prnt_nid,reltype); NODES($a_prnt_nid,eparent) == $NODES($a_prnt_nid,eparent); NODES($a_prnt_nid,erelname) == $NODES($a_prnt_nid,erelname); NODES($a_prnt_nid,ereltype) == $NODES($a_prnt_nid,ereltype);";
+    # puts stderr "link-chld-to-prnt: a_chld_nid == $a_chld_nid; NODES($a_chld_nid,parent) == $NODES($a_chld_nid,parent); NODES($a_chld_nid,relname) == $NODES($a_chld_nid,relname); NODES($a_chld_nid,reltype) == $NODES($a_chld_nid,reltype); NODES($a_chld_nid,eparent) == $NODES($a_chld_nid,eparent); NODES($a_chld_nid,erelname) == $NODES($a_chld_nid,erelname); NODES($a_chld_nid,ereltype) == $NODES($a_chld_nid,ereltype);";
     # variable ::rsttool::MSGID2ROOTS;
     # variable ::rsttool::MSGID2EROOTS;
     # if { $PRNT_MSGID != {} } {

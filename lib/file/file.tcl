@@ -45,7 +45,7 @@ proc ::rsttool::file::open {} {
     variable ::rsttool::relations::ERELATIONS;
 
     # clear current data
-    ::rsttool::check-state "Open"
+    if { [::rsttool::check-state "Open"] } { return; }
 
     # set up initial directory
     set idir $HOME;
@@ -223,7 +223,7 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
 	    error "read-relations: span node $nid does not contain children.";
 	}
     }
-    variable ::rsttool::MSGID2EROOTS;
+    # variable ::rsttool::MSGID2EROOTS;
     # puts stderr "load-relation: MSGID2EROOTS == [array names MSGID2EROOTS]"
     return 0;
 }
@@ -343,7 +343,7 @@ proc ::rsttool::file::read-gnode {a_spans} {
     return 0;
 }
 
-proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
+proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc {a_external 0}} {
     variable ::rsttool::NODES;
     variable ::rsttool::relations::SPAN;
     variable ::rsttool::relations::HYPOTACTIC;
@@ -351,24 +351,27 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
     variable ::rsttool::file::SAVED_PARNUC;
     namespace import ::rsttool::treeditor::tree::node::get-ancestor;
 
-    if {![info exists NODES($a_nid,reltype)]} {return;}
+    set prnt_prfx "";
+    if { $a_external } {set prnt_prfx "e";}
+    if {$NODES($a_nid,external)} {
+	set external 1; set chld_prfx "e";
+    } else {
+	set external 0; set chld_prfx "";
+    }
 
-    switch -nocase -- $NODES($a_nid,reltype) \
+    if {![info exists NODES($a_nid,${prnt_prfx}reltype)]} {return;}
+
+    switch -nocase -- $NODES($a_nid,${prnt_prfx}reltype) \
 	$SPAN {
 	    set xrel [$a_xml_doc createElement {hypRelation}];
 	    set ispan [$a_xml_doc createElement {spannode}];
-	    $ispan setAttribute {idref} $NODES($a_nid,parent);
+	    $ispan setAttribute {idref} $NODES($a_nid,${prnt_prfx}parent);
 	    $xrel appendChild $ispan;
 	    set inuc [$a_xml_doc createElement {nucleus}];
 	    $inuc setAttribute {idref} $a_nid;
 	    $xrel appendChild $inuc;
 	    set ichild {};
 	    set reltype {reltype};
-	    if {$NODES($a_nid,external)} {
-		set external 1; set chld_prfx "e";
-	    } else {
-		set external 0; set chld_prfx "";
-	    }
 	    foreach cid $NODES($a_nid,${chld_prfx}children) {
 		if {$NODES($cid,${chld_prfx}reltype) != $HYPOTACTIC} {continue}
 		if {$ichild != {}} {
@@ -388,22 +391,25 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 	    }
 	} \
 	$PARATACTIC {
-	    set ispan $NODES($a_nid,parent);
+	    set ispan $NODES($a_nid,${prnt_prfx}parent);
 	    # remember the span node
 	    if {[info exists SAVED_PARNUC($ispan)]} {return;}
 	    set SAVED_PARNUC($ispan) 1;
 	    set xrel [$a_xml_doc createElement {parRelation}];
-	    set irelname $NODES($a_nid,relname);
+	    set irelname $NODES($a_nid,${prnt_prfx}relname);
 	    $xrel setAttribute {relname} $irelname;
 	    set xspan [$a_xml_doc createElement {spannode}];
 	    $xspan setAttribute {idref} $ispan;
 	    $xrel appendChild $xspan;
 	    # append nuclei of the span to the XML relation
-	    set nuc_cnt 0;
-	    foreach inuc $NODES($ispan,children) {
+	    set nuc_cnt 0; set nuc_prfx "";
+	    foreach inuc $NODES($ispan,${chld_prfx}children) {
 		# puts stderr "sving multinuc: ispan = $ispan; inuc = $inuc; NODES($inuc,reltype) == $NODES($inuc,reltype);"
-		if {$NODES($inuc,reltype) != $PARATACTIC} {continue;}
-		if {$NODES($inuc,relname) != $irelname} {
+		if { $a_external && $NID2MSGID($ispan) != $NID2MSGID($inuc) } {
+		    set nuc_prfx "e";
+		} else { set nuc_prfx ""; }
+		if {$NODES($inuc,${nuc_prfx}reltype) != $PARATACTIC} {continue;}
+		if {$NODES($inuc,${nuc_prfx}relname) != $irelname} {
 		    error "Invalid data structure: different paratactic relations link to the same span ($ispan).";
 		    return -2;
 		}
@@ -426,6 +432,7 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 
 proc ::rsttool::file::read-relations {a_relations} {
     variable ::rsttool::NODES;
+    variable ::rsttool::FORREST;
     variable ::rsttool::NID2MSGID;
     variable ::rsttool::relations::SPAN;
     variable ::rsttool::relations::HYPOTACTIC;
@@ -435,10 +442,14 @@ proc ::rsttool::file::read-relations {a_relations} {
     namespace import ::rsttool::treeditor::tree::node::get-estart;
     namespace import ::rsttool::treeditor::tree::node::egroup-node-p;
     namespace import ::rsttool::treeditor::tree::node::get-eterminal;
+    namespace import ::rsttool::treeditor::update-roots;
+    namespace import ::rsttool::treeditor::tree::are-siblings;
 
+    set issibling 0;
     set relname ""; set chld_prfx "";
     set ispan {}; set inuc {}; set isat {};
     set ispan_id {}; set inuc_id {}; set isat_id {};
+    set span_msgid 0; set nuc_msgid 0; set sat_msgid 0; set imsgid 0;
     foreach irel [$a_relations childNodes] {
 	switch -nocase -- [$irel nodeName] {
 	    "hyprelation" {
@@ -460,12 +471,25 @@ proc ::rsttool::file::read-relations {a_relations} {
 		    return -4;
 		}
 		set isat_id [xml-get-attr $isat {idref}];
+		set nuc_msgid $NID2MSGID($inuc_id);
+		set sat_msgid $NID2MSGID($isat_id);
+		set span_msgid $NID2MSGID($ispan_id);
+		set imsgid $nuc_msgid;
 		# puts stderr "read-relations: inuc_id == $inuc_id, NODES($inuc_id,external) == $NODES($inuc_id,external)"
 		# puts stderr "read-relations: isat_id == $isat_id, NODES($isat_id,external) == $NODES($isat_id,external)"
+		set issibling 0; set chld_prfx ""; set nuc_prfx ""; set sat_prfx "";
 		if {$NODES($inuc_id,external) && $NODES($isat_id,external)} {
-		    set chld_prfx "e";
-		} else {
-		    set chld_prfx "";
+		    set chld_prfx "e"; set sat_prfx "e";
+		    if { $span_msgid != $nuc_msgid } { set nuc_prfx "e"; }
+		    if { $span_msgid != $sat_msgid } { set sat_prfx "e"; }
+		    if { [set issibling [are-siblings $nuc_msgid $sat_msgid]] } {
+			set imsgid [lindex $FORREST($nuc_msgid) 1];
+			set nuc_prfx "e";
+			if { $NODES($ispan_id,eparent) == {} } {
+			    update-roots $imsgid $ispan_id {add} 1;
+			}
+			update-roots $nuc_msgid $ispan_id {remove} 1;
+		    }
 		}
 		# add parent to span's children
 		set NODES($ispan_id,${chld_prfx}children) \
@@ -474,32 +498,35 @@ proc ::rsttool::file::read-relations {a_relations} {
 			 ::rsttool::treeditor::tree::node::get-${chld_prfx}start];
 		# puts stderr "read-relations: NODES($ispan_id,${chld_prfx}children) = $NODES($ispan_id,${chld_prfx}children)"
 		# remove child and parent from the list of message roots
-		set nuc_msgid $NID2MSGID($inuc_id);
-		set sat_msgid $NID2MSGID($isat_id);
 		if {$nuc_msgid != $sat_msgid} {
 		    # if satellite is not the terminal, get its corresponding terminal
-		    if {$NODES($isat_id,etype) != {text}} {set isat_id $NODES($isat_id,start);}
+		    if {$NODES($isat_id,etype) != {text} && \
+			    [lindex $FORREST($NID2MSGID($NODES($isat_id,end))) 1] !=  $span_msgid} {
+			# check if end node of the sat span is not a
+			# sibling of other children of the current nuc
+			set isat_id $NODES($isat_id,start);
+		    }
 		    # puts stderr "read-relations: ispan_id = $ispan_id";
 		    # puts stderr "read-relations: inuc_id = $inuc_id (msgid = $nuc_msgid)";
 		    # puts stderr "read-relations: isat_id = $isat_id (msgid = $sat_msgid)";
-		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 1;
-		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 1;
+		    update-roots $imsgid $inuc_id {remove} 1;
+		    update-roots $imsgid $isat_id {remove} 1;
 		} else {
-		    ::rsttool::treeditor::update-roots $nuc_msgid $inuc_id {remove} 0;
-		    ::rsttool::treeditor::update-roots $nuc_msgid $isat_id {remove} 0;
+		    update-roots $imsgid $inuc_id {remove} 0;
+		    update-roots $imsgid $isat_id {remove} 0;
 		}
 		# link parent to span
-		set NODES($inuc_id,parent) $ispan_id;
-		set NODES($inuc_id,relname) {span};
-		set NODES($inuc_id,reltype) $SPAN;
+		set NODES($inuc_id,${nuc_prfx}parent) $ispan_id;
+		set NODES($inuc_id,${nuc_prfx}relname) {span};
+		set NODES($inuc_id,${nuc_prfx}reltype) $SPAN;
 		set NODES($inuc_id,${chld_prfx}children) [insort $NODES($inuc_id,${chld_prfx}children) \
 							      [get-${chld_prfx}start $isat_id] $isat_id 0 \
 							      ::rsttool::treeditor::tree::node::get-${chld_prfx}start];
 		# puts stderr "read-relations: 2) NODES($inuc_id,${chld_prfx}children) = $NODES($inuc_id,${chld_prfx}children)";
 		# link child to parent
-		set NODES($isat_id,${chld_prfx}parent) $inuc_id;
-		set NODES($isat_id,${chld_prfx}relname) $relname;
-		set NODES($isat_id,${chld_prfx}reltype) $HYPOTACTIC;
+		set NODES($isat_id,${sat_prfx}parent) $inuc_id;
+		set NODES($isat_id,${sat_prfx}relname) $relname;
+		set NODES($isat_id,${sat_prfx}reltype) $HYPOTACTIC;
 	    }
 	    "parrelation" {
 		if {[set relname [xml-get-attr $irel {relname}]] == {}} {
@@ -512,6 +539,7 @@ proc ::rsttool::file::read-relations {a_relations} {
 		set ispan_id [xml-get-attr $ispan {idref}];
 		set ispan_msgid $NID2MSGID($ispan_id);
 		set nuc_cnt 0;
+		set chld_prfx ""; set nuc_prfx "";
 		set inuc_id {}; set inuc_msgid {};
 		# iterate over nuclei of that paratactic relation
 		foreach inuc [$irel selectNodes ./nucleus] {
@@ -519,14 +547,19 @@ proc ::rsttool::file::read-relations {a_relations} {
 			error "No node id specified for nucleus."
 			return -3;
 		    }
-		    # update parent of the nucleus and add it to span's children
-		    set NODES($inuc_id,parent) $ispan_id;
-		    set NODES($inuc_id,relname) $relname;
-		    set NODES($inuc_id,reltype) $PARATACTIC;
-		    set NODES($ispan_id,children) [insort $NODES($ispan_id,children) \
-						       [get-start $inuc_id] $inuc_id];
 		    incr nuc_cnt;
 		    set inuc_msgid $NID2MSGID($inuc_id);
+		    set chld_prfx ""; set nuc_prfx "";
+		    if { $NODES($ispan_id,external) && $NODES($inuc_id,external) } {
+			set chld_prfx "e";
+			if { $NID2MSGID($ispan_id) != $nuc_msgid } { set nuc_prfx "e"; }
+		    }
+		    # update parent of the nucleus and add it to span's children
+		    set NODES($inuc_id,${nuc_prfx}parent) $ispan_id;
+		    set NODES($inuc_id,${nuc_prfx}relname) $relname;
+		    set NODES($inuc_id,${nuc_prfx}reltype) $PARATACTIC;
+		    set NODES($ispan_id,${chld_prfx}children) [insort $NODES($ispan_id,children) \
+						       [get-start $inuc_id] $inuc_id];
 		    ::rsttool::treeditor::update-roots $inuc_msgid $inuc_id {remove};
 		}
 		if {$nuc_cnt < 2} {
@@ -658,7 +691,8 @@ proc ::rsttool::file::save {} {
 	    } else {
 		write-node $nid $gnodes $xmldoc {span};
 	    }
-	    write-relations $nid $relations $xmldoc;
+	    write-relations $nid $relations $xmldoc 0;
+	    write-relations $nid $relations $xmldoc 1;
 	}
 	# reset array of PARATACTIC nuclei
 	array unset SAVED_PARNUC;

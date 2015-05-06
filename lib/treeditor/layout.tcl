@@ -252,7 +252,9 @@ proc ::rsttool::treeditor::layout::y-layout-subtree {a_nid {a_ypos {}}} {
     set chld_ypos [expr [lindex [$RSTW bbox [ntw $a_nid]] 3] + 30]
     foreach cid $NODES($a_nid,${chld_prfx}children) {
     	if {[info exists VISIBLE_NODES($cid)] && $cid != $a_nid} {
-	    if {$DISPLAYMODE == $DISCUSSION && ![eparent-msgid-p $NID2MSGID($cid)]} {set prnt_prfx "e"}
+	    if { $DISPLAYMODE == $DISCUSSION && ![eparent-msgid-p $NID2MSGID($cid)] } {
+		set prnt_prfx "e";
+	    }
 	    # paratactic child nodes should keep the y position of
 	    # their parent
 	    # puts stderr "y-layout-subtree: cid = $cid, group-relation-p ($NODES($cid,${prnt_prfx}reltype)) NODES($cid,${prnt_prfx}reltype) = [group-relation-p $NODES($cid,${prnt_prfx}reltype)]";
