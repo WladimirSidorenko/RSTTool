@@ -44,8 +44,8 @@ proc ::rsttool::treeditor::layout::redisplay-net {} {
 	set roots2display $MSGID2EROOTS($PRNT_MSGID);
     }
 
-    puts stderr "*** roots2display: roots2display = $roots2display";
-    puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
+    # puts stderr "*** roots2display: roots2display = $roots2display";
+    # puts stderr "*** redisplay-net: VISIBLE_NODES = [array names VISIBLE_NODES]";
     # 3. layout and draw
     # puts stderr "*** redisplay-net: x-layout: roots2display == $roots2display"
     x-layout $roots2display;
@@ -81,17 +81,17 @@ proc ::rsttool::treeditor::layout::x-layout {a_nodes {xpos {}}} {
     if {$xpos == {}} {
 	set xpos [expr $NODE_WIDTH / 2 + 30];
     }
-    puts stderr "x-layout: xpos = $xpos"
+    # puts stderr "x-layout: xpos = $xpos"
     foreach nid $a_nodes {
 	if {![info exists VISIBLE_NODES($nid)]} {continue}
-	puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
+	# puts stderr "x-layout: nid = $nid ([group-node-p $nid])";
     	if {($DISPLAYMODE == $MESSAGE && [group-node-p $nid]) || \
 		($DISPLAYMODE == $DISCUSSION && [egroup-node-p $nid])} {
-	    puts stderr "x-layout: xlayout-group-node $nid";
+	    # puts stderr "x-layout: xlayout-group-node $nid";
     	    set xpos [xlayout-group-node $nid $xpos [expr ($DISPLAYMODE == $DISCUSSION)]];
     	} else {
     	    set NODES($nid,xpos) $xpos;
-	    puts stderr "x-layout: NODES($nid,xpos) == $NODES($nid,xpos)";
+	    # puts stderr "x-layout: NODES($nid,xpos) == $NODES($nid,xpos)";
     	    set xpos [expr $xpos+$xinc];
     	}
     }

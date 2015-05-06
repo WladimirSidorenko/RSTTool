@@ -245,8 +245,8 @@ proc ::rsttool::treeditor::tree::link-multinuc {a_nid1 a_nid2 a_relation \
     namespace import ::rsttool::treeditor::update-roots;
     namespace import ::rsttool::treeditor::layout::update-upwards;
 
-    puts stderr "link-multinuc: a_nid1 == $a_nid1, a_nid2 == $a_nid2, a_relation == $a_relation, \
-a_span_nid = $a_span_nid, a_ext_rel = $a_ext_rel";
+#     puts stderr "link-multinuc: a_nid1 == $a_nid1, a_nid2 == $a_nid2, a_relation == $a_relation, \
+# a_span_nid = $a_span_nid, a_ext_rel = $a_ext_rel";
     if {$a_ext_rel} {return;}
 
     set chld1_wdgt [ntw $a_nid1];
@@ -255,14 +255,14 @@ a_span_nid = $a_span_nid, a_ext_rel = $a_ext_rel";
     # create span node, if necessary
     if {$a_span_nid == {}} {
 	set a_span_nid [make-span-node $a_nid1 $a_nid2 $a_relation 1];
-	puts stderr "link-multinuc: NODES($a_span_nid,children) == $NODES($a_span_nid,children)";
-	set NODES($a_span_nid,ypos) $ypos;
+	# puts stderr "link-multinuc: NODES($a_span_nid,children) == $NODES($a_span_nid,children)";
 	# erase both child subtrees
 	erase-subtree $a_nid1;
 	erase-subtree $a_nid2;
 	set ypos [expr max($NODES($a_nid1,ypos),$NODES($a_nid2,ypos))];
 	set xpos [expr min($NODES([node::get-start-node $a_nid1],xpos), \
 			       $NODES([node::get-start-node $a_nid2],xpos))];
+	set NODES($a_span_nid,ypos) $ypos;
     } else {
 	# update parent
 	set NODES($a_nid2,parent) $a_span_nid;
@@ -316,8 +316,8 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 
     if {$a_chld_msgid == {}} {set a_chld_msgid $NID2MSGID($a_chld_nid)}
 
-    puts stderr "link-chld-to-prnt: a_chld_nid == $a_chld_nid ; a_prnt_nid == $a_prnt_nid ; \
-a_span_nid = $a_span_nid ; a_ext_rel = $a_ext_rel"
+#     puts stderr "link-chld-to-prnt: a_chld_nid == $a_chld_nid ; a_prnt_nid == $a_prnt_nid ; \
+# a_span_nid = $a_span_nid ; a_ext_rel = $a_ext_rel"
     # create a span node for the parent, if it's needed
     set chld_prfx ""; set prnt_prfx ""; set gprnt_prfx "";
     if { $a_ext_rel } {
@@ -378,8 +378,8 @@ a_span_nid = $a_span_nid ; a_ext_rel = $a_ext_rel"
 	# introduce a new group node
 	set span_nid [make-span-node $a_prnt_nid $a_chld_nid $a_relation 0 1 $a_ext_rel];
 	# link the new span node to the previous parent
-	puts stderr "link-chld-to-prnt: 0) span_nid = $span_nid; NODES($span_nid,children) == $NODES($span_nid,children); NODES($span_nid,echildren) == $NODES($span_nid,echildren), NODES($span_nid,parent) == $NODES($span_nid,parent), NODES($span_nid,relname) == $NODES($span_nid,relname), NODES($span_nid,reltype) == $NODES($span_nid,reltype), NODES($span_nid,eparent) == $NODES($span_nid,eparent), NODES($span_nid,erelname) == $NODES($span_nid,erelname), NODES($span_nid,ereltype) == $NODES($span_nid,ereltype)"
-	puts stderr "link-chld-to-prnt: 1) a_span_nid == $a_span_nid; NODES($a_span_nid,echildren) == $NODES($a_span_nid,echildren), NODES($a_span_nid,parent) == $NODES($a_span_nid,parent), NODES($a_span_nid,relname) == $NODES($a_span_nid,relname), NODES($a_span_nid,reltype) == $NODES($a_span_nid,reltype), NODES($a_span_nid,eparent) == $NODES($a_span_nid,eparent), NODES($a_span_nid,erelname) == $NODES($a_span_nid,erelname), NODES($a_span_nid,ereltype) == $NODES($a_span_nid,ereltype)"
+	# puts stderr "link-chld-to-prnt: 0) span_nid = $span_nid; NODES($span_nid,children) == $NODES($span_nid,children); NODES($span_nid,echildren) == $NODES($span_nid,echildren), NODES($span_nid,parent) == $NODES($span_nid,parent), NODES($span_nid,relname) == $NODES($span_nid,relname), NODES($span_nid,reltype) == $NODES($span_nid,reltype), NODES($span_nid,eparent) == $NODES($span_nid,eparent), NODES($span_nid,erelname) == $NODES($span_nid,erelname), NODES($span_nid,ereltype) == $NODES($span_nid,ereltype)"
+	# puts stderr "link-chld-to-prnt: 1) a_span_nid == $a_span_nid; NODES($a_span_nid,echildren) == $NODES($a_span_nid,echildren), NODES($a_span_nid,parent) == $NODES($a_span_nid,parent), NODES($a_span_nid,relname) == $NODES($a_span_nid,relname), NODES($a_span_nid,reltype) == $NODES($a_span_nid,reltype), NODES($a_span_nid,eparent) == $NODES($a_span_nid,eparent), NODES($a_span_nid,erelname) == $NODES($a_span_nid,erelname), NODES($a_span_nid,ereltype) == $NODES($a_span_nid,ereltype)"
 	# variable ::rsttool::MSGID2ROOTS;
 	# variable ::rsttool::MSGID2EROOTS;
 	# puts stderr "link-chld-to-prnt: 2) CRNT_MSGID =  $CRNT_MSGID, MSGID2ROOTS($CRNT_MSGID) == $MSGID2ROOTS($CRNT_MSGID), MSGID2EROOTS($CRNT_MSGID) == $MSGID2EROOTS($CRNT_MSGID)"
@@ -577,7 +577,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
     namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
     namespace import ::rsttool::treeditor::layout::redisplay-net;
 
-    puts stderr "unlink-node: 0) sat = $sat";
+    # puts stderr "unlink-node: 0) sat = $sat";
 
     # 0. handle missed clicks and set appropriate prefixes
     if {$sat == {}} {return;}
@@ -644,7 +644,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	    set delete_span 1;
 	    set replnid $nuc;
 	    set spannid $NODES($nuc,${nuc_prfx}parent);
-	    puts stderr "unlink: spannid == $spannid, nuc == $nuc"
+	    # puts stderr "unlink: spannid == $spannid, nuc == $nuc"
 	    foreach chnid $NODES($nuc,${chld_prfx}children) {
 		if {$external && ![eparent-msgid-p $NID2MSGID($chnid)]} {
 		    set ch_prfx "e";
@@ -660,7 +660,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 	$SPAN {
 	    # if we unlink the nucleus, we have to unlink the span nid
 	    # first and then unlink all the hypotactic satellites
-	    puts stderr "unlink: node::destroy nuc == $nuc";
+	    # puts stderr "unlink: node::destroy nuc == $nuc";
 	    node::destroy $nuc;
 	    set NODES($sat,${sat_prfx}parent) {};
 	    foreach chnid $NODES($sat,${chld_prfx}children) {
@@ -670,7 +670,7 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
 		    set ch_prfx "";
 		}
 		if { $NODES($chnid,${ch_prfx}reltype) == $HYPOTACTIC } {
-		    puts stderr "unlink: chnid == $chnid";
+		    # puts stderr "unlink: chnid == $chnid";
 		    unlink $chnid 0;
 		}
 	    }
@@ -690,9 +690,9 @@ proc ::rsttool::treeditor::tree::unlink {sat {redraw 1}} {
     set NODES($sat,${sat_prfx}reltype) {};
 
     # 3. Delete span node, if necessary
-    puts stderr "unlink-node: 2) delete_span = $delete_span"
+    # puts stderr "unlink-node: 2) delete_span = $delete_span"
     if { $delete_span && $spannid != {} } {
-	puts stderr "unlink-node: 2) destroy-group-node spannid = $spannid replnid = $replnid external = $external;"
+	# puts stderr "unlink-node: 2) destroy-group-node spannid = $spannid replnid = $replnid external = $external;"
 	destroy-group-node $spannid $replnid $external;
     }
     # puts stderr "unlink-node: 2) sat = $sat; NODES(sat,children) == $NODES($sat,children); NODES(sat,echildren) == $NODES($sat,echildren)"

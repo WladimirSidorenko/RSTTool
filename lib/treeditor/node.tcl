@@ -425,16 +425,16 @@ proc ::rsttool::treeditor::tree::node::copy-children {a_trg a_src {a_external 0}
     variable ::rsttool::NODES;
     variable ::rsttool::NID2MSGID;
 
-    puts stderr "copy-children: a_src = $a_src, a_trg = $a_trg, a_external == $a_external;"
+    # puts stderr "copy-children: a_src = $a_src, a_trg = $a_trg, a_external == $a_external;"
     set chld_prfx ""; set chld_prnt_prfx "";
     if { $a_external } {
 	set chld_prfx "e";
     }
 
-    puts stderr "copy-children: NODES($a_src,${chld_prfx}children) = $NODES($a_src,${chld_prfx}children);"
+    # puts stderr "copy-children: NODES($a_src,${chld_prfx}children) = $NODES($a_src,${chld_prfx}children);"
     foreach chnid $NODES($a_src,${chld_prfx}children) {
 	if { [bfs $chnid $a_trg] } {continue;}
-	puts stderr "copy-children: chnid = $chnid;"
+	# puts stderr "copy-children: chnid = $chnid;"
 	if {$a_external && ![eparent-msgid-p $NID2MSGID($chnid)]} {
 	    set chld_prnt_prfx "e";
 	} else {
@@ -444,7 +444,7 @@ proc ::rsttool::treeditor::tree::node::copy-children {a_trg a_src {a_external 0}
 	if { $a_external } {
 	    set NODES($a_trg,echildren) [insort $NODES($a_trg,echildren) \
 					     [get-child-pos $chnid] $chnid 0 get-child-pos];
-	    puts stderr "copy-children: chnid = $chnid;"
+	    # puts stderr "copy-children: chnid = $chnid;"
 	} else {
 	    # append child node to the list of the parent's children
 	    set NODES($a_trg,children) [insort $NODES($a_trg,children) $NODES($chnid,start) $chnid];
@@ -466,7 +466,7 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
     namespace import ::rsttool::treeditor::update-roots;
     namespace import ::rsttool::treeditor::tree::erase-subtree;
 
-    puts stderr "destroy-group-node: gnid == $gnid, replnid == $replnid, external == $external;"
+    # puts stderr "destroy-group-node: gnid == $gnid, replnid == $replnid, external == $external;"
 
     if {$gnid == {}} {return;}
     set gmsg_id $NID2MSGID($gnid);
@@ -507,8 +507,8 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
 	    set NODES($replnid,external) $NODES($gnid,external);
 	    set NODES($replnid,etype) $NODES($gnid,etype);
 	}
-	puts stderr "destroy-group-node: NODES($replnid,external) == $NODES($replnid,external);"
-	puts stderr "destroy-group-node: NODES($replnid,etype) == $NODES($replnid,etype);"
+	# puts stderr "destroy-group-node: NODES($replnid,external) == $NODES($replnid,external);"
+	# puts stderr "destroy-group-node: NODES($replnid,etype) == $NODES($replnid,etype);"
 
 	# add `replnid` to the children of grand-parent
 	if { $grnd_prnt != {} } {
@@ -526,16 +526,18 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
 	copy-children $replnid $gnid 1;
 	copy-children $replnid $gnid 0;
 	# update roots
-	if { [lsearch $MSGID2ROOTS($gmsg_id) $gnid] != -1 } {
+	if { [info exists MSGID2ROOTS($gmsg_id)] && [lsearch $MSGID2ROOTS($gmsg_id) $gnid] != -1 } {
 	    update-roots $gmsg_id $gnid {remove} 0;
 	    update-roots $gmsg_id $replnid {add} 0;
 	}
-	if { [lindex $MSGID2EROOTS($gmsg_id) 0] == $gnid } {
+	if { [info exists MSGID2EROOTS($gmsg_id)] && \
+		 [lindex $MSGID2EROOTS($gmsg_id) 0] == $gnid } {
 	    update-roots $gmsg_id $gnid {remove} 1;
 	    update-roots $gmsg_id $replnid {add} 1;
 	}
 	set pmsg_id [lindex $FORREST($gmsg_id) 1];
-	if { $pmsg_id != {} && [lsearch $MSGID2EROOTS($pmsg_id) $gnid] != -1 } {
+	if { $pmsg_id != {} && [info exists MSGID2EROOTS($pmsg_id)] && \
+		 [lsearch $MSGID2EROOTS($pmsg_id) $gnid] != -1 } {
 	    update-roots $pmsg_id $gnid {remove} 1;
 	    update-roots $pmsg_id $replnid {add} 1;
 	}
@@ -570,12 +572,12 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
 	}
     }
 
-    if { $replnid != {} } {
-	puts stderr "destroy-group-node: NODES(replnid = $replnid,external) == $NODES($replnid,external);"
-	puts stderr "destroy-group-node: NODES(replnid = $replnid,etype) == $NODES($replnid,etype);"
-	puts stderr "destroy-group-node: NODES(replnid = $replnid,children) == $NODES($replnid,children);"
-	puts stderr "destroy-group-node: NODES(replnid = $replnid,echildren) == $NODES($replnid,echildren);"
-    }
+    # if { $replnid != {} } {
+    # 	puts stderr "destroy-group-node: NODES(replnid = $replnid,external) == $NODES($replnid,external);"
+    # 	puts stderr "destroy-group-node: NODES(replnid = $replnid,etype) == $NODES($replnid,etype);"
+    # 	puts stderr "destroy-group-node: NODES(replnid = $replnid,children) == $NODES($replnid,children);"
+    # 	puts stderr "destroy-group-node: NODES(replnid = $replnid,echildren) == $NODES($replnid,echildren);"
+    # }
     # erase group node
     clear $gnid;
 }
@@ -830,7 +832,7 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::utils::ldelete;
 
-    puts stderr "node::clear: nid = $nid;"
+    # puts stderr "node::clear: nid = $nid;"
 
     # remove this node from MSGID's
     set msgid $NID2MSGID($nid);
@@ -872,7 +874,7 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
 	foreach child_nid $NODES($nid,children) {
 	    if {$NODES($child_nid,parent) == $nid} {
 		set NODES($child_nid,parent) {};
-		puts stderr "node::clear: NODES($child_nid,parent) = $NODES($child_nid,parent);"
+		# puts stderr "node::clear: NODES($child_nid,parent) = $NODES($child_nid,parent);"
 	    }
 	}
     }
@@ -882,10 +884,10 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
 	foreach child_nid $NODES($nid,echildren) {
 	    if {$NODES($child_nid,parent) == $nid} {
 		set NODES($child_nid,parent) {};
-		puts stderr "node::clear: NODES($child_nid,parent) = $NODES($child_nid,parent);"
+		# puts stderr "node::clear: NODES($child_nid,parent) = $NODES($child_nid,parent);"
 	    } elseif { $NODES($child_nid,eparent) == $nid } {
 		set NODES($child_nid,eparent) {};
-		puts stderr "node::clear: NODES($child_nid,eparent) = $NODES($child_nid,eparent);"
+		# puts stderr "node::clear: NODES($child_nid,eparent) = $NODES($child_nid,eparent);"
 	    }
 	}
     }
@@ -893,7 +895,7 @@ proc ::rsttool::treeditor::tree::node::clear {nid} {
 
     # update roots
     set MSGID2ROOTS($msgid) [ldelete $MSGID2ROOTS($msgid) $nid];
-    puts stderr "MSGID2EROOTS($msgid) == $MSGID2EROOTS($msgid)";
+    # puts stderr "MSGID2EROOTS($msgid) == $MSGID2EROOTS($msgid)";
     if { [info exists MSGID2EROOTS($msgid)] } {
 	set MSGID2EROOTS($msgid) [ldelete $MSGID2EROOTS($msgid) $nid];
     }

@@ -224,7 +224,7 @@ proc ::rsttool::file::_read_anno {a_xmldoc} {
 	}
     }
     variable ::rsttool::MSGID2EROOTS;
-    puts stderr "load-relation: MSGID2EROOTS == [array names MSGID2EROOTS]"
+    # puts stderr "load-relation: MSGID2EROOTS == [array names MSGID2EROOTS]"
     return 0;
 }
 
@@ -401,7 +401,7 @@ proc ::rsttool::file::write-relations {a_nid a_relations a_xml_doc} {
 	    # append nuclei of the span to the XML relation
 	    set nuc_cnt 0;
 	    foreach inuc $NODES($ispan,children) {
-		puts stderr "sving multinuc: ispan = $ispan; inuc = $inuc; NODES($inuc,reltype) == $NODES($inuc,reltype);"
+		# puts stderr "sving multinuc: ispan = $ispan; inuc = $inuc; NODES($inuc,reltype) == $NODES($inuc,reltype);"
 		if {$NODES($inuc,reltype) != $PARATACTIC} {continue;}
 		if {$NODES($inuc,relname) != $irelname} {
 		    error "Invalid data structure: different paratactic relations link to the same span ($ispan).";
