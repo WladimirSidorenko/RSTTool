@@ -223,17 +223,27 @@ proc ::rsttool::segmenter::next-sentence {{trgframe .editor.text}} {
 }
 
 proc ::rsttool::segmenter::next-thread {{direction {forward}}} {
+    variable ::rsttool::THREADS;
+    variable ::rsttool::THREAD_ID;
+    variable ::rsttool::PRNT_MSGID;
     variable ::rsttool::MSG_QUEUE;
     variable ::rsttool::MSG_PREV_QUEUE;
-    variable ::rsttool::PRNT_MSGID;
 
     next-message $direction;
+    set max_thread_id [expr [llength $THREADS] - 1];
     if { $direction == {forward} } {
-	while { $PRNT_MSGID != {} && $MSG_QUEUE != {} } {
-	    next-message $direction;
+	if { $THREAD_ID < $max_thread_id || [llength $MSG_QUEUE] > 0 } {
+	    set end_cnt 0;
+	    while { $PRNT_MSGID != {} } {
+		next-message $direction;
+		if { $THREAD_ID == $max_thread_id && [llength $MSG_QUEUE] == 0 } {
+		    if { $end_cnt } { break; }
+		    incr end_cnt;
+		}
+	    }
 	}
     } else {
-	while { $PRNT_MSGID != {} && $MSG_PREV_QUEUE != {} } {
+	while { $PRNT_MSGID != {} && [llength $MSG_PREV_QUEUE] > 0 } {
 	    next-message $direction;
 	}
     }

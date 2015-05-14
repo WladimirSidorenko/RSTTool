@@ -214,9 +214,6 @@ proc ::rsttool::treeditor::set-display-mode {a_mode} {
     # set new visible nodes
     switch -nocase -- $a_mode \
 	$MESSAGE {
-	    if {$PRNT_MSGID != {}} {
-		show-nodes $PRNT_MSGID 1;
-	    }
 	    show-nodes $CRNT_MSGID 1;
 	    toggle-button {message} {sunken};
 	    toggle-button {discussion} {raised};
