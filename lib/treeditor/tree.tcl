@@ -761,10 +761,9 @@ proc ::rsttool::treeditor::tree::popup-choose-from-list {Items xpos ypos {put_ca
     set menu_selection {}
 
     if {[winfo exists $my_menu]} {destroy $my_menu}
-    menu $my_menu -tearoff 0
-    if {$tooltip_cmd != {}} {
-	bind-tooltip $my_menu $tooltip_cmd;
-    }
+    menu $my_menu -tearoff 0;
+    bind Menu <KeyPress-Escape> { tk::MenuEscape %W; };
+    if {$tooltip_cmd != {}} {bind-tooltip $my_menu $tooltip_cmd;}
 
     foreach item $Items {
 	if {$num_items < 33} {
@@ -781,7 +780,7 @@ proc ::rsttool::treeditor::tree::popup-choose-from-list {Items xpos ypos {put_ca
 	    }
 	    add-item $my_menu CANCEL "set ::rsttool::treeditor::menu_selection {}"
 	    set cancel_exists 1
-	    bind $my_menu <Any-Leave> {set ::rsttool::treeditor::menu_selection {}};
+	    # bind $my_menu <Any-Leave> {set ::rsttool::treeditor::menu_selection {}};
 	    set my_menu $icascade
 	    add-item $my_menu $item "set ::rsttool::treeditor::menu_selection $item"
 	    set num_items 0
@@ -794,7 +793,6 @@ proc ::rsttool::treeditor::tree::popup-choose-from-list {Items xpos ypos {put_ca
     }
 
     # now make the menu
-    bind $my_menu <Any-Leave> {set ::rsttool::treeditor::menu_selection {}};
     .tmpwin post $xpos $ypos;
     if {[tk windowingsystem] != "aqua"} {
 	tkwait variable ::rsttool::treeditor::menu_selection;

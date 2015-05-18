@@ -179,11 +179,11 @@ proc ::rsttool::utils::menu::add-cascade {menu label newmenu} {
 }
 
 proc ::rsttool::utils::menu::bind-tooltip {a_wdgt {a_cmd {::rsttool::utils::menu::show-tooltip}}} {
-    bind $a_wdgt <<MenuSelect>> [list {*}[subst $a_cmd] %W];
+    bind $a_wdgt <<MenuSelect>> [list {*}[subst $a_cmd] %W; ];
 
-    bind $a_wdgt <Any-Leave> {destroy %W.tooltip};
-    bind $a_wdgt <Any-KeyPress> {destroy %W.tooltip};
-    bind $a_wdgt <Any-Button> {destroy %W.tooltip};
+    bind $a_wdgt <Any-Leave> {destroy %W.tooltip; continue;};
+    bind $a_wdgt <Any-KeyPress> {destroy %W.tooltip; continue;};
+    bind $a_wdgt <Any-Button> {destroy %W.tooltip; continue;};
 }
 
 proc ::rsttool::utils::menu::tooltip {a_wdgt {a_txt {}}} {
@@ -201,16 +201,23 @@ proc ::rsttool::utils::menu::tooltip {a_wdgt {a_txt {}}} {
 
     set width [winfo reqwidth $tooltip.label]
     set height [winfo reqheight $tooltip.label]
-    # a.) Is the pointer in the bottom half of the screen?
+    # a.) Check if pointer is in the bottom half of the screen
     set pointer_below_midline [expr [winfo pointery .] > [expr [winfo screenheight .] / 2.0]]
-    # b.) Tooltip is centred horizontally on pointer.
-    set positionX [expr [winfo pointerx .] - round($width / -2.5)]
-    # c.) Tooltip is displayed above or below depending on pointer Y position.
+    # b.) Position tooltip above or below the pointer Y position
     set positionY [expr [winfo pointery .] + ($pointer_below_midline * -1) * ($height + 35) + \
 		       (35 - (round($height / 2.0) % 35))]
+    # c.) Check if pointer is in the left part of the screen
+    set pointer_left [expr [winfo pointerx .] < [expr [winfo screenwidth .] / 2.0]];
+    # d.) Tooltip is centred horizontally on pointer.
+    if { $pointer_left } {
+	set positionX [expr int([winfo pointerx .] + round($width / 2.5))];
+    } else {
+	set positionX [expr int([winfo pointerx .] - $width * 1.2)];
+    }
 
+    # make sure tooltip fits into the screen window
     if  {[expr $positionX + $width] > [winfo screenwidth .]} {
-	set positionX [expr [winfo screenwidth .] - $width]
+	set positionX [expr [winfo pointerx .] + round($width / -2.5)]
     } elseif {$positionX < 0} {
 	set positionX 0
     }

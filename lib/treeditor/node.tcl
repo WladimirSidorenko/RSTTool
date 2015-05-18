@@ -584,6 +584,14 @@ proc ::rsttool::treeditor::tree::node::destroy-group-node {gnid {replnid {}} {ex
 
 ##################################################
 #  Collapse or Expand Nodes
+proc ::rsttool::treeditor::tree::node::collapse {clicked_node} {
+}
+
+proc ::rsttool::treeditor::tree::node::expand {clicked_node} {
+}
+
+##################################################
+# Disconnect  given nodes from its parent
 proc ::rsttool::treeditor::tree::node::disconnect_node {clicked_node method} {
     variable ::rsttool::NODES;
     variable ::rsttool::treeditor::DISCO_NODE;
