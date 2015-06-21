@@ -298,21 +298,24 @@ proc ::rsttool::treeditor::layout::update-upwards {a_gnid a_chld_nid} {
     variable ::rsttool::treeditor::VISIBLE_NODES;
     namespace import ::rsttool::treeditor::tree::node::draw-span;
     namespace import ::rsttool::treeditor::tree::node::group-node-p;
+    namespace import ::rsttool::treeditor::tree::node::get-end;
+    namespace import ::rsttool::treeditor::tree::node::get-end-node;
+    namespace import ::rsttool::treeditor::tree::node::get-start;
+    namespace import ::rsttool::treeditor::tree::node::get-start-node;
 
     if {[group-node-p $a_gnid] || [egroup-node-p $a_gnid]} {
-	set istart $NODES($NODES($a_gnid,start),start);
-	set iend $NODES($NODES($a_gnid,end),end);
+	set istart [get-start $a_gnid];
+	set iend [get-end $a_gnid];
 
 	# update start and end points of the node
-	if {$NODES($a_chld_nid,start) < $istart} {
-	    set NODES($a_gnid,start) $a_chld_nid;
-	    set NODES($a_gnid,name) "$NODES($a_chld_nid,name)-$NODES($NODES($a_gnid,end),name)";
-	} elseif {$NODES($a_chld_nid,end) > $iend} {
-	    set NODES($a_gnid,end) $a_chld_nid;
-	    set NODES($a_gnid,name) "$NODES($NODES($a_gnid,start),name)-$NODES($a_chld_nid,name)";
+	if { [get-start $a_chld_nid] < $istart} {
+	    set NODES($a_gnid,start) [get-start-node $a_chld_nid];
+	} elseif { [get-end $a_chld_nid] > $iend} {
+	    set NODES($a_gnid,end) [get-end-node $a_chld_nid];
 	} else {
 	    return;
 	}
+	set NODES($a_gnid,name) "$NODES($NODES($a_gnid,start),name)-$NODES($NODES($a_gnid,end),name)";
 	# redraw span lines for visible nodes
 	if {[info exists VISIBLE_NODES($a_gnid)]} {
 	    ::rsttool::treeditor::tree::node::redisplay $a_gnid;
