@@ -315,6 +315,9 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
     namespace import ::rsttool::utils::ldelete;
     namespace import ::rsttool::treeditor::tree::node::get-child-pos;;
     namespace import ::rsttool::treeditor::tree::node::get-end;
+    namespace import ::rsttool::treeditor::tree::node::get-end-node;
+    namespace import ::rsttool::treeditor::tree::node::get-start;
+    namespace import ::rsttool::treeditor::tree::node::get-start-node;
     namespace import ::rsttool::treeditor::tree::node::group-node-p;
     namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
     namespace import ::rsttool::treeditor::layout::update-upwards;
@@ -380,9 +383,6 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 	    }
 	    update-roots $imsgid $a_chld_nid {remove} $a_ext_rel;
 	} else {
-	    if {[get-end $a_span_nid] < [get-end $a_chld_nid]} {
-		set NODES($a_span_nid,end) $a_chld_nid;
-	    }
 	    update-roots $a_chld_msgid $a_chld_nid {remove};
 	}
 	update-upwards $a_span_nid $a_chld_nid;
