@@ -35,7 +35,7 @@ proc ::rsttool::file::new {} {
 
 }
 
-proc ::rsttool::file::open {} {
+proc ::rsttool::file::open {{a_fname {}}} {
     variable HOME;
     variable FTYPES;
     variable ::rsttool::CRNT_PRJ_FILE;
@@ -47,27 +47,28 @@ proc ::rsttool::file::open {} {
     # clear current data
     if { [::rsttool::check-state "Open"] } { return; }
 
-    # set up initial directory
-    set idir $HOME;
-    if {$CRNT_PRJ_FILE != {}} {
-	set idir [file dirname $CRNT_PRJ_FILE];
+    if { $a_fname == {} } {
+	# set up initial directory
+	set idir $HOME;
+	if {$CRNT_PRJ_FILE != {}} {
+	    set idir [file dirname $CRNT_PRJ_FILE];
+	}
+
+	# select anbd read file
+	set a_fname [tk_getOpenFile -filetypes $FTYPES -initialdir $idir -parent . \
+			 -title {Select File}];
+	if {$a_fname == {}} {return;}
     }
-
-    # select anbd read file
-    set fname [tk_getOpenFile -filetypes $FTYPES -initialdir $idir -parent . \
-		   -title {Select File}];
-    if {$fname == {}} {return;}
     ::rsttool::reset
-
     # process XML
-    set xmldoc [load-xml $fname]
+    set xmldoc [load-xml $a_fname]
     set root [$xmldoc documentElement]
     if {[string tolower [$root nodeName]] != "rstprj"} {
 	error "Unknown format of project file.";
 	return;
     }
 
-    set CRNT_PRJ_FILE $fname;
+    set CRNT_PRJ_FILE $a_fname;
     set prj_dir [file dirname $CRNT_PRJ_FILE];
 
     set error 0;

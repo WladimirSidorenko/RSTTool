@@ -1,19 +1,22 @@
 #!/usr/bin/env tclsh
-# -*- mode: tcl; -*-
+# -*- mode: tcl; coding: utf-8; -*-
+
+##################################################################
+# Variables and Constants
 
 ##################################################################
 # Import
-global DIRNAME
 
 ##################################################################
 # Main
 
 # Run all .test files in this file's directory.
 
-if {[catch {namespace eval :: source "$DIRNAME/RSTTool.tcl"}]} {
+if {[catch {namespace eval :: {package require rsttool}}]} {
     puts stderr "Failed to load the program..."
 } else {
-    foreach t [lsort -dict [glob -directory [file dirname [file normalize [info script]]] *.test.tcl]] {
+    puts stderr {Running tests...}
+    foreach t [lsort -dict [glob -nocomplain -directory [file dirname [file normalize [info script]]] *.test.tcl]] {
 	puts -nonewline stderr "$t ..."
 	if {[catch {
 	    namespace eval :: source $t
@@ -24,4 +27,5 @@ if {[catch {namespace eval :: source "$DIRNAME/RSTTool.tcl"}]} {
 	    puts stderr " SUCCESS"
 	}
     }
+    puts stderr {Tests finished...}
 }

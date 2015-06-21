@@ -10,8 +10,10 @@
 set SCRIPT [file normalize [info script]]
 set DIRNAME [file dirname $SCRIPT]
 set BASENAME [file tail $SCRIPT]
-set SRCDIR [file join $DIRNAME src]
-set LIBDIR [file join $SRCDIR Library]
+
+##################################################################
+# Imports
+lappend auto_path [file join $DIRNAME lib]
 
 ##################################################################
 # Methods
