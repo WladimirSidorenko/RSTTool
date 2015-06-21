@@ -180,8 +180,13 @@ proc ::rsttool::main {{argv {}}} {
 
     catch {source $env(HOME)/.wishrc};
     set-state {unchanged};
+
+    if { [llength $argv] == 1 } {
+	::rsttool::file::open {*}$argv
+    } elseif { $argv != {} } {
+	return -code error "::rsttool::main: Incorrect number of arguments: [llength $argv] (0 or 1 expected)"
+    }
 }
 
 ##################################################################
 package provide rsttool $::rsttool::VERSION
-return
