@@ -314,10 +314,6 @@ proc ::rsttool::treeditor::tree::link-chld-to-prnt {a_chld_nid a_prnt_nid a_rela
 
     namespace import ::rsttool::utils::ldelete;
     namespace import ::rsttool::treeditor::tree::node::get-child-pos;;
-    namespace import ::rsttool::treeditor::tree::node::get-end;
-    namespace import ::rsttool::treeditor::tree::node::get-end-node;
-    namespace import ::rsttool::treeditor::tree::node::get-start;
-    namespace import ::rsttool::treeditor::tree::node::get-start-node;
     namespace import ::rsttool::treeditor::tree::node::group-node-p;
     namespace import ::rsttool::treeditor::tree::node::eparent-msgid-p;
     namespace import ::rsttool::treeditor::layout::update-upwards;
